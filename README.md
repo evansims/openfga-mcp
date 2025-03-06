@@ -1,2 +1,2 @@
 # openfga-mcp
-An experimental Model Context Protocol (MCP) for OpenFGA to empower Large Language Models (LLMs).
+An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) that enables Large Language Models (LLMs) to use OpenFGA.

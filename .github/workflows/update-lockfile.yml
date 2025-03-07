@@ -29,8 +29,14 @@ jobs:
           cache: "true"
 
       - name: Generate lockfile
+        id: generate_lockfile
         run: |
-          uv pip sync --lockfile uv.lock
+          echo "Generating uv.lock file..."
+          if ! make update-lockfile; then
+            echo "::error::Failed to generate lockfile. Check for dependency conflicts."
+            exit 1
+          fi
+          echo "Lockfile generated successfully!"
 
       - name: Check for changes
         id: check_changes
@@ -41,6 +47,7 @@ jobs:
           else
             echo "Changes detected in uv.lock"
             echo "has_changes=true" >> $GITHUB_OUTPUT
+            git diff --stat uv.lock
           fi
 
       - name: Commit and push changes
@@ -51,3 +58,9 @@ jobs:
           git add uv.lock
           git commit -m "chore(deps): update uv.lock file"
           git push
+          echo "Successfully committed and pushed updated lockfile!"
+
+      - name: No changes needed
+        if: steps.check_changes.outputs.has_changes != 'true'
+        run: |
+          echo "No changes to uv.lock file were needed. Dependencies are up to date."

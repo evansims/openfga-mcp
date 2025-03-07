@@ -92,10 +92,17 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
+      # Use Makefile to bump version
       - name: Bump version
         id: bump_version
         run: |
-          cz bump --${{ github.event.inputs.version_type }} --yes
+          echo "Bumping version using ${{ github.event.inputs.version_type }} increment..."
+          # Modify the Makefile target to accept version type as an argument
+          if ! RELEASE_TYPE=${{ github.event.inputs.version_type }} make release-ci; then
+            echo "::error::Failed to bump version. Check if there are any conventional commits that warrant a version bump."
+            exit 1
+          fi
+          echo "Version bumped successfully!"
 
       - name: Get version
         id: get_version
@@ -104,10 +111,15 @@ jobs:
           TAG="v$VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION (tag: $TAG)"
 
       - name: Generate changelog
         run: |
+          echo "Generating changelog for version ${{ steps.get_version.outputs.version }}..."
           cz changelog --incremental > CHANGELOG.md
+          echo "Changelog generated successfully!"
+          echo "Preview of changelog:"
+          cat CHANGELOG.md | head -n 10
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -139,27 +151,35 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ needs.config.outputs.python_version }}
-          dependencies: "twine"
           cache: "true"
 
       - name: Verify version
         run: |
           PACKAGE_VERSION=$(python -c "from configparser import ConfigParser; c = ConfigParser(); c.read('pyproject.toml'); print(c['project']['version'].strip('\"'))")
           if [ "$PACKAGE_VERSION" != "${{ needs.prepare-release.outputs.version }}" ]; then
-            echo "Error: Expected version ${{ needs.prepare-release.outputs.version }} but found $PACKAGE_VERSION"
+            echo "::error::Version mismatch! Expected version ${{ needs.prepare-release.outputs.version }} but found $PACKAGE_VERSION"
             exit 1
           fi
           echo "Version verification successful: $PACKAGE_VERSION"
 
-      # Use uv build instead of python -m build
+      # Use Makefile to build the package
       - name: Build package
-        run: |
-          uv build
+        run: make build
         env:
           UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
 
-      - name: Verify package
-        run: twine check dist/*
+      # Use Makefile to publish the package
+      - name: Verify and publish package
+        run: |
+          echo "Verifying package before publishing..."
+          # List the built distributions
+          ls -la dist/
+
+          # Publish to PyPI using Makefile
+          echo "Publishing package to PyPI..."
+          make publish
+        env:
+          UV_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@v4
@@ -168,19 +188,18 @@ jobs:
           path: dist/
           retention-days: 7
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          verbose: true
-          print-hash: true
-
   # Notify about the release
   notify:
     name: Notify
     needs: [config, prepare-release, publish]
+    if: always()
     uses: ./.github/workflows/notify.yml
     with:
-      message: "Version ${{ needs.prepare-release.outputs.version }} has been released!"
+      message: "Release ${{ needs.prepare-release.outputs.version }} process completed"
       details: |
+        Version: ${{ needs.prepare-release.outputs.version }}
+        Tag: ${{ needs.prepare-release.outputs.tag }}
         GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare-release.outputs.tag }}
         PyPI Package: https://pypi.org/project/${{ needs.config.outputs.package_name }}/${{ needs.prepare-release.outputs.version }}/
+        Status: ${{ needs.publish.result == 'success' ? 'Success ✅' : 'Failed ❌' }}
+      success: ${{ needs.publish.result == 'success' }}

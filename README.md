@@ -4,6 +4,7 @@
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 [![PyPI version](https://badge.fury.io/py/openfga-mcp.svg)](https://badge.fury.io/py/openfga-mcp)
 [![uv](https://img.shields.io/badge/uv-package%20manager-blue)](https://github.com/astral-sh/uv)
+[![Docker](https://img.shields.io/badge/docker-container-blue)](https://github.com/evansims/openfga-mcp/pkgs/container/openfga-mcp-server)
 
 An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that enables Large Language Models (LLMs) to read, search, and manipulate [OpenFGA](https://openfga.dev) stores. Unlocks authorization for agentic AI, and fine-grained [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding)✨ for humans. Take a look at the [use cases](#use-cases) for some inspiration.
 
@@ -73,13 +74,40 @@ Connect your LLM application to the MCP server endpoint (default: http://localho
 
 Alternatively, you can run the MCP server using Docker. The project includes a multi-stage Dockerfile that uses `uv` for efficient dependency management.
 
+#### Using Makefile (recommended)
+
+```bash
+# Build the Docker image
+make docker-build
+
+# Run the container
+OPENFGA_API_URL="https://localhost:8000" OPENFGA_STORE_ID="your-store-id" make docker-run
+```
+
+#### Using Docker Compose
+
+```bash
+# Start services with Docker Compose
+OPENFGA_API_URL="https://localhost:8000" OPENFGA_STORE_ID="your-store-id" make docker-compose-up
+
+# View logs
+make docker-compose-logs
+
+# Stop services
+make docker-compose-down
+```
+
+#### Using Docker directly
+
 ```bash
 # Build the Docker image
 docker build -t openfga-mcp-server .
 
 # Run the container
-docker run -p 8090:8090 \
-  openfga-mcp-server --url "https://localhost:8000" --store "your-store-id"
+docker run -p 8000:8000 \
+  -e OPENFGA_API_URL="https://localhost:8000" \
+  -e OPENFGA_STORE_ID="your-store-id" \
+  openfga-mcp-server
 ```
 
 ## Development
@@ -89,7 +117,11 @@ docker run -p 8090:8090 \
 git clone https://github.com/evansims/openfga-mcp.git
 cd openfga-mcp
 
-# Choose your package manager:
+# Using Makefile (recommended)
+make setup
+source .venv/bin/activate
+
+# Or choose your package manager:
 # uv (recommended for speed)
 uv venv .venv && source .venv/bin/activate && uv pip install -e ".[dev]"
 

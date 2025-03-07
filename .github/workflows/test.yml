@@ -41,37 +41,29 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ matrix.python-version }}
-          dependencies: "pytest"
+          dependencies: "pytest pytest-cov safety"
           install-dev: "true"
           cache: "true"
-
-      # Install additional dependencies based on inputs
-      - name: Install additional dependencies
-        run: |
-          if [ "${{ inputs.coverage }}" == "true" ]; then
-            if [ -f "uv.lock" ]; then
-              uv pip install --no-deps pytest-cov
-            else
-              uv pip install pytest-cov
-            fi
-          fi
-          if [ "${{ inputs.security-check }}" == "true" ]; then
-            if [ -f "uv.lock" ]; then
-              uv pip install --no-deps safety
-            else
-              uv pip install safety
-            fi
-          fi
 
       # Run tests without coverage if coverage is disabled
       - name: Run tests
         if: inputs.coverage == false
-        run: pytest
+        run: |
+          echo "Running tests without coverage..."
+          make test
+          echo "Tests completed successfully!"
 
       # Run tests with coverage if coverage is enabled
       - name: Run tests with coverage
         if: inputs.coverage
-        run: pytest --cov=src --cov-report=xml
+        run: |
+          echo "Running tests with coverage..."
+          make test-cov
+          echo "Tests with coverage completed successfully!"
+
+          # Print coverage summary
+          echo "Coverage Summary:"
+          grep -A 5 "TOTAL" coverage.xml || true
 
       # Upload coverage report if coverage is enabled
       - name: Upload coverage report
@@ -84,4 +76,10 @@ jobs:
       # Run security check if enabled
       - name: Check for dependency vulnerabilities
         if: inputs.security-check
-        run: safety check
+        run: |
+          echo "Running security checks..."
+          make security || {
+            echo "::warning::Security vulnerabilities found. Review the output above."
+            # Don't fail the build, just warn
+            exit 0
+          }

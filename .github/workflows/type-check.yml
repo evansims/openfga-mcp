@@ -31,4 +31,12 @@ jobs:
 
       # Run type checking
       - name: Run type checking
-        run: pyright src/
+        id: type_check
+        run: |
+          echo "Running type checking..."
+          if make type-check; then
+            echo "Type checking passed successfully!"
+          else
+            echo "::error::Type checking failed. Please fix the type issues above."
+            exit 1
+          fi

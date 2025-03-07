@@ -1,5 +1,5 @@
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS uv
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
 # Install the project into `/app`
 WORKDIR /app
@@ -10,19 +10,18 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
-# Copy only the files needed for dependency installation first
-COPY pyproject.toml uv.lock ./
+# Copy Makefile and dependency files first for better layer caching
+COPY Makefile pyproject.toml uv.lock ./
 
-# Install the project's dependencies using the lockfile and settings
+# Copy source code
+COPY src/ ./src/
+
+# Install the project's dependencies using the Makefile and lockfile
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev --no-editable
+    make update-lockfile && \
+    uv pip install -e "." --no-dev
 
-# Then, add the rest of the project source code and install it
-# Installing separately from its dependencies allows optimal layer caching
-COPY . .
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
-
+# Final image
 FROM python:3.12-slim-bookworm
 
 # Add metadata labels
@@ -33,7 +32,7 @@ LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Install only the necessary dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git && \
+    apt-get install -y --no-install-recommends git curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -42,9 +41,9 @@ RUN useradd -m app
 
 WORKDIR /app
 
-COPY --from=uv /root/.local /root/.local
-COPY --from=uv --chown=app:app /app/.venv /app/.venv
-COPY --from=uv --chown=app:app /app /app
+# Copy from builder stage
+COPY --from=builder /root/.local /root/.local
+COPY --from=builder /app /app
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH" \

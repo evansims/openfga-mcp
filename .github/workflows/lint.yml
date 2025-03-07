@@ -36,8 +36,14 @@ jobs:
           dependencies: "ruff"
           cache: "true"
 
-      # Run linting with Ruff
+      # Run linting with Makefile
       - name: Lint with Ruff
-        uses: chartboost/ruff-action@v1
-        with:
-          version: latest
+        id: lint
+        run: |
+          echo "Running linting checks..."
+          if make lint; then
+            echo "Linting passed successfully!"
+          else
+            echo "::error::Linting failed. Please fix the issues above."
+            exit 1
+          fi

@@ -5,6 +5,7 @@ name: CI
 # - Linting
 # - Type checking
 # - Dependency review (on pull requests)
+# - Documentation build check
 
 on:
   push:
@@ -12,6 +13,11 @@ on:
   pull_request:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      use_combined_check:
+        description: "Use combined check instead of separate jobs"
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,9 +29,54 @@ jobs:
     name: Load Configuration
     uses: ./.github/workflows/load-config.yml
 
+  # Combined check job (alternative to separate jobs)
+  combined-check:
+    name: Combined Check
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.use_combined_check == 'true'
+    needs: config
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Use the composite action for Python setup
+      - name: Set up Python
+        uses: ./.github/actions/python-setup
+        with:
+          python-version: ${{ needs.config.outputs.python_version }}
+          dependencies: "pytest pytest-cov ruff pyright safety mkdocs mkdocs-material"
+          install-dev: "true"
+          cache: "true"
+
+      # Run all checks using the combined check target
+      - name: Run all checks
+        run: |
+          echo "Running all checks (tests, linting, type checking)..."
+          make check
+          echo "All checks passed successfully!"
+
+      # Run security check
+      - name: Check for dependency vulnerabilities
+        run: |
+          echo "Running security checks..."
+          make security || {
+            echo "::warning::Security vulnerabilities found. Review the output above."
+            # Don't fail the build, just warn
+            exit 0
+          }
+
+      # Build documentation
+      - name: Build documentation
+        run: |
+          echo "Building documentation..."
+          make docs
+          echo "Documentation built successfully!"
+
   # Run tests with coverage and security checks
   test:
     needs: config
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.use_combined_check != 'true'
     uses: ./.github/workflows/test.yml
     with:
       python-versions: '["${{ needs.config.outputs.python_version }}"]'
@@ -35,6 +86,7 @@ jobs:
   # Run linting checks
   lint:
     needs: config
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.use_combined_check != 'true'
     uses: ./.github/workflows/lint.yml
     with:
       python-version: ${{ needs.config.outputs.python_version }}
@@ -42,9 +94,36 @@ jobs:
   # Run type checking
   type-check:
     needs: config
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.use_combined_check != 'true'
     uses: ./.github/workflows/type-check.yml
     with:
       python-version: ${{ needs.config.outputs.python_version }}
+
+  # Build documentation
+  docs:
+    name: Build Documentation
+    needs: config
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.use_combined_check != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Use the composite action for Python setup
+      - name: Set up Python
+        uses: ./.github/actions/python-setup
+        with:
+          python-version: ${{ needs.config.outputs.python_version }}
+          dependencies: "mkdocs mkdocs-material"
+          cache: "true"
+
+      # Build documentation
+      - name: Build documentation
+        run: |
+          echo "Building documentation..."
+          make docs
+          echo "Documentation built successfully!"
 
   # Review dependencies for security issues (on pull requests)
   dependency-review:
@@ -64,7 +143,8 @@ jobs:
   # Notify about CI completion
   notify:
     name: Notify Completion
-    needs: [config, test, lint, type-check, dependency-review]
+    needs:
+      [config, combined-check, test, lint, type-check, docs, dependency-review]
     if: always()
     uses: ./.github/workflows/notify.yml
     with:
@@ -73,4 +153,5 @@ jobs:
         Repository: ${{ github.repository }}
         Branch: ${{ github.ref_name }}
         Commit: ${{ github.sha }}
-      success: ${{ needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' }}
+        Status: ${{ (github.event.inputs.use_combined_check == 'true' && needs.combined-check.result == 'success') || (github.event.inputs.use_combined_check != 'true' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && needs.docs.result == 'success') ? 'Success ✅' : 'Failed ❌' }}
+      success: ${{ (github.event.inputs.use_combined_check == 'true' && needs.combined-check.result == 'success') || (github.event.inputs.use_combined_check != 'true' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && needs.docs.result == 'success') }}

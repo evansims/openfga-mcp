@@ -66,13 +66,18 @@ MCP is supported by [many clients](https://modelcontextprotocol.io/clients), inc
 make setup
 source activate_venv.sh  # Activates the virtual environment
 
-# Run tests and checks
+# Run tests and checks (automatically uses the virtual environment)
 make test
 make lint
 make type-check
 
 # Run all checks
 make check
+
+# Interactive development
+make shell     # Start an interactive shell within the virtual environment
+make repl      # Start a Python REPL within the virtual environment
+make ipython   # Start an IPython REPL within the virtual environment
 
 # Run a custom command in the virtual environment
 make in-venv CMD="python -m openfga_mcp version"

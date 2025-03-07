@@ -53,7 +53,7 @@ RESET := $(shell tput sgr0)
 
 # ===== PHONY Targets =====
 .PHONY: help setup dev test test-cov lint type-check format clean build publish docs docs-serve \
-        release release-ci update run security check all venv in-venv version \
+        release release-ci update run security check all venv in-venv shell repl ipython version \
         docker-build docker-run docker-push docker-compose-up docker-compose-down docker-compose-logs
 
 # ===== Default Target =====
@@ -64,6 +64,9 @@ help:
 	$(SILENT_FLAG)echo "  $(GREEN)setup$(RESET)               - Set up development environment (create venv, install dependencies)"
 	$(SILENT_FLAG)echo "  $(GREEN)venv$(RESET)                - Create activation script and show instructions for virtual environment"
 	$(SILENT_FLAG)echo "  $(GREEN)in-venv$(RESET)             - Run a command within the virtual environment (use CMD=\"command\")"
+	$(SILENT_FLAG)echo "  $(GREEN)shell$(RESET)               - Start an interactive shell within the virtual environment"
+	$(SILENT_FLAG)echo "  $(GREEN)repl$(RESET)                - Start a Python REPL within the virtual environment"
+	$(SILENT_FLAG)echo "  $(GREEN)ipython$(RESET)             - Start an IPython REPL within the virtual environment"
 	$(SILENT_FLAG)echo "  $(GREEN)dev$(RESET)                 - Install package in development mode"
 	$(SILENT_FLAG)echo "  $(GREEN)run$(RESET)                 - Run the server locally"
 	$(SILENT_FLAG)echo "  $(GREEN)update$(RESET)              - Update dependencies to latest versions and sync environment"
@@ -115,33 +118,13 @@ setup: $(VENV_DIR)
 	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && pre-commit install --hook-type commit-msg
 	$(SILENT_FLAG)echo "$(GREEN)Development environment setup complete!$(RESET)"
 	$(SILENT_FLAG)echo "$(YELLOW)To activate the virtual environment, run:$(RESET)"
-	$(SILENT_FLAG)echo "  source $(VENV_ACTIVATE)"
-	$(SILENT_FLAG)echo "$(YELLOW)Or use:$(RESET)"
-	$(SILENT_FLAG)echo "  source activate_venv.sh"
-	$(SILENT_FLAG)$(MAKE) venv
+	$(SILENT_FLAG)echo "  $(GREEN)source activate_venv.sh$(RESET)"
+	$(SILENT_FLAG)$(MAKE) -s venv
 
 venv: $(VENV_DIR)
 	$(SILENT_FLAG)echo "$(BOLD)Virtual environment commands:$(RESET)"
-	$(SILENT_FLAG)echo "$(YELLOW)To activate the virtual environment, run one of these commands:$(RESET)"
-	$(SILENT_FLAG)echo "  $(GREEN)source $(VENV_ACTIVATE)$(RESET)"
+	$(SILENT_FLAG)echo "$(YELLOW)To activate the virtual environment, run:$(RESET)"
 	$(SILENT_FLAG)echo "  $(GREEN)source activate_venv.sh$(RESET)"
-	$(SILENT_FLAG)# Create a more user-friendly activation script
-	$(VERBOSE_FLAG)echo '#!/bin/bash' > activate_venv.sh
-	$(VERBOSE_FLAG)echo '# This script activates the virtual environment for the OpenFGA MCP project' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo 'if [ -n "$$BASH_SOURCE" ]; then' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo '    script_path="$$BASH_SOURCE"' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo 'elif [ -n "$$ZSH_VERSION" ]; then' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo '    script_path="$${(%):-%x}"' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo 'else' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo '    echo "Unable to determine script path. Please source the virtual environment directly:"' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo '    echo "source $(VENV_ACTIVATE)"' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo '    return 1' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo 'fi' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo 'script_dir="$$(cd "$$(dirname "$$script_path")" && pwd)"' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo 'source "$$script_dir/$(VENV_ACTIVATE)"' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo 'echo "$(GREEN)Virtual environment activated!$(RESET)"' >> activate_venv.sh
-	$(VERBOSE_FLAG)echo 'echo "Run $(YELLOW)deactivate$(RESET) to exit the virtual environment"' >> activate_venv.sh
-	$(VERBOSE_FLAG)chmod +x activate_venv.sh
 	$(SILENT_FLAG)echo "$(BOLD)Tip:$(RESET) You can add an alias to your shell profile:"
 	$(SILENT_FLAG)echo "  $(GREEN)alias activate-openfga-mcp='source $$(pwd)/activate_venv.sh'$(RESET)"
 
@@ -295,6 +278,18 @@ docker-compose-logs:
 	$(VERBOSE_FLAG)docker-compose logs -f
 
 # ===== Virtual Environment Commands =====
+shell:
+	$(SILENT_FLAG)echo "$(BOLD)Starting interactive shell in virtual environment...$(RESET)"
+	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && exec $$SHELL
+
+repl:
+	$(SILENT_FLAG)echo "$(BOLD)Starting Python REPL in virtual environment...$(RESET)"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="python"
+
+ipython:
+	$(SILENT_FLAG)echo "$(BOLD)Starting IPython REPL in virtual environment...$(RESET)"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="python -m pip install ipython && ipython"
+
 in-venv:
 	$(SILENT_FLAG)echo "$(BOLD)Running command in virtual environment...$(RESET)"
 	$(SILENT_FLAG)if [ -z "$(CMD)" ]; then \
@@ -302,7 +297,13 @@ in-venv:
 		echo "Usage: make in-venv CMD=\"your command here\""; \
 		exit 1; \
 	fi
-	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && $(CMD)
+	$(VERBOSE_FLAG)if [ -n "$$VIRTUAL_ENV" ] && [ "$$VIRTUAL_ENV" = "$$(pwd)/$(VENV_DIR)" ]; then \
+		echo "$(YELLOW)Virtual environment already activated, running command directly...$(RESET)"; \
+		$(CMD); \
+	else \
+		echo "$(YELLOW)Activating virtual environment...$(RESET)"; \
+		source $(VENV_ACTIVATE) && $(CMD); \
+	fi
 	$(SILENT_FLAG)echo "$(GREEN)Command completed in virtual environment!$(RESET)"
 
 # ===== Pattern Rules =====

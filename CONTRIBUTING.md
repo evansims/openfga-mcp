@@ -51,14 +51,23 @@ Run `make help` to see all available commands.
 
 ### Virtual Environment Management
 
-The Makefile provides improved virtual environment handling:
+The project includes a convenient activation script for the virtual environment:
 
 ```bash
-# Create and show activation instructions
-make venv
+# Activate the virtual environment
+source activate_venv.sh
 
 # Run a command within the virtual environment without activating it
 make in-venv CMD="python -m openfga_mcp version"
+
+# Start an interactive shell within the virtual environment
+make shell
+
+# Start a Python REPL within the virtual environment
+make repl
+
+# Start an IPython REPL within the virtual environment
+make ipython
 ```
 
 Most Makefile commands automatically use the virtual environment, so you don't need to activate it manually for common tasks like `make test`, `make lint`, etc.

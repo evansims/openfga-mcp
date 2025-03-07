@@ -109,17 +109,16 @@ $(VENV_DIR):
 
 setup: $(VENV_DIR)
 	$(SILENT_FLAG)echo "$(BOLD)Setting up development environment...$(RESET)"
-	$(SILENT_FLAG)echo "$(YELLOW)Activating virtual environment...$(RESET)"
-	$(SILENT_FLAG)echo "Run 'source $(VENV_ACTIVATE)' to activate the virtual environment"
 	$(SILENT_FLAG)echo "$(YELLOW)Installing dependencies...$(RESET)"
-	$(VERBOSE_FLAG)$(UV) pip install -e ".[dev,test,docs]"
-	$(VERBOSE_FLAG)pre-commit install
-	$(VERBOSE_FLAG)pre-commit install --hook-type commit-msg
+	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && $(UV) pip install -e ".[dev,test,docs]"
+	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && pre-commit install
+	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && pre-commit install --hook-type commit-msg
 	$(SILENT_FLAG)echo "$(GREEN)Development environment setup complete!$(RESET)"
 	$(SILENT_FLAG)echo "$(YELLOW)To activate the virtual environment, run:$(RESET)"
 	$(SILENT_FLAG)echo "  source $(VENV_ACTIVATE)"
 	$(SILENT_FLAG)echo "$(YELLOW)Or use:$(RESET)"
-	$(SILENT_FLAG)echo "  make venv"
+	$(SILENT_FLAG)echo "  source activate_venv.sh"
+	$(SILENT_FLAG)$(MAKE) venv
 
 venv: $(VENV_DIR)
 	$(SILENT_FLAG)echo "$(BOLD)Virtual environment commands:$(RESET)"
@@ -148,40 +147,40 @@ venv: $(VENV_DIR)
 
 dev:
 	$(SILENT_FLAG)echo "$(BOLD)Installing package in development mode...$(RESET)"
-	$(VERBOSE_FLAG)$(UV) pip install -e "."
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) pip install -e ."
 	$(SILENT_FLAG)echo "$(GREEN)Package installed in development mode!$(RESET)"
 
 # ===== Testing & Quality =====
 test:
 	$(SILENT_FLAG)echo "$(BOLD)Running tests...$(RESET)"
-	$(VERBOSE_FLAG)$(PYTEST) $(TESTS_DIR) $(PYTEST_PARALLEL_FLAG)
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(PYTEST) $(TESTS_DIR) $(PYTEST_PARALLEL_FLAG)"
 	$(SILENT_FLAG)echo "$(GREEN)Tests passed!$(RESET)"
 
 test-cov:
 	$(SILENT_FLAG)echo "$(BOLD)Running tests with coverage...$(RESET)"
-	$(VERBOSE_FLAG)$(PYTEST) --cov=$(PACKAGE_DIR) --cov-report=xml --cov-report=term $(PYTEST_PARALLEL_FLAG)
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(PYTEST) --cov=$(PACKAGE_DIR) --cov-report=xml --cov-report=term $(PYTEST_PARALLEL_FLAG)"
 	$(SILENT_FLAG)echo "$(GREEN)Tests with coverage completed!$(RESET)"
 
 lint:
 	$(SILENT_FLAG)echo "$(BOLD)Running linting checks...$(RESET)"
-	$(VERBOSE_FLAG)$(RUFF) check .
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(RUFF) check ."
 	$(SILENT_FLAG)echo "$(GREEN)Linting passed!$(RESET)"
 
 type-check:
 	$(SILENT_FLAG)echo "$(BOLD)Running type checking...$(RESET)"
-	$(VERBOSE_FLAG)$(PYRIGHT)
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(PYRIGHT)"
 	$(SILENT_FLAG)echo "$(GREEN)Type checking passed!$(RESET)"
 
 format:
 	$(SILENT_FLAG)echo "$(BOLD)Formatting code...$(RESET)"
-	$(VERBOSE_FLAG)$(RUFF) format .
-	$(VERBOSE_FLAG)$(RUFF) check --fix .
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(RUFF) format ."
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(RUFF) check --fix ."
 	$(SILENT_FLAG)echo "$(GREEN)Code formatting complete!$(RESET)"
 
 security:
 	$(SILENT_FLAG)echo "$(BOLD)Running security checks...$(RESET)"
-	$(VERBOSE_FLAG)$(UV) pip install safety
-	$(VERBOSE_FLAG)safety check
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) pip install safety"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="safety check"
 	$(SILENT_FLAG)echo "$(GREEN)Security checks completed!$(RESET)"
 
 check: test lint type-check
@@ -206,33 +205,33 @@ clean:
 
 build: clean
 	$(SILENT_FLAG)echo "$(BOLD)Building package distributions...$(RESET)"
-	$(VERBOSE_FLAG)$(UV) build
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) build"
 	$(SILENT_FLAG)echo "$(GREEN)Build completed! Artifacts available in dist/$(RESET)"
 
 publish: build
 	$(SILENT_FLAG)echo "$(BOLD)Publishing package to PyPI...$(RESET)"
-	$(VERBOSE_FLAG)$(UV) publish
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) publish"
 	$(SILENT_FLAG)echo "$(GREEN)Package published to PyPI!$(RESET)"
 
 docs:
 	$(SILENT_FLAG)echo "$(BOLD)Building documentation...$(RESET)"
-	$(VERBOSE_FLAG)$(MKDOCS) build
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(MKDOCS) build"
 	$(SILENT_FLAG)echo "$(GREEN)Documentation built successfully!$(RESET)"
 
 docs-serve:
 	$(SILENT_FLAG)echo "$(BOLD)Serving documentation locally...$(RESET)"
-	$(VERBOSE_FLAG)$(MKDOCS) serve
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(MKDOCS) serve"
 
 version:
 	$(SILENT_FLAG)echo "$(BOLD)Current version:$(RESET)"
-	$(VERBOSE_FLAG)$(PYTHON) -m openfga_mcp version || \
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(PYTHON) -m openfga_mcp version" || \
 		echo "$(YELLOW)Version information not available. Package may not be installed.$(RESET)"
 
 release:
 	$(SILENT_FLAG)echo "$(BOLD)Preparing release...$(RESET)"
 	$(SILENT_FLAG)echo "Available version types: patch, minor, major"
 	$(VERBOSE_FLAG)read -p "Enter version type: " version_type; \
-	$(CZ) bump --$$version_type --yes
+	$(MAKE) in-venv CMD="$(CZ) bump --$$version_type --yes"
 	$(SILENT_FLAG)echo "$(GREEN)Release prepared successfully!$(RESET)"
 
 release-ci:
@@ -242,14 +241,14 @@ release-ci:
 		echo "Usage: RELEASE_TYPE=patch|minor|major make release-ci"; \
 		exit 1; \
 	fi
-	$(VERBOSE_FLAG)$(CZ) bump --$(RELEASE_TYPE) --yes
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(CZ) bump --$(RELEASE_TYPE) --yes"
 	$(SILENT_FLAG)echo "$(GREEN)Release prepared successfully!$(RESET)"
 
 # ===== Utility Commands =====
 update:
 	$(SILENT_FLAG)echo "$(BOLD)Updating dependencies and lockfile...$(RESET)"
-	$(VERBOSE_FLAG)$(UV) pip compile --upgrade pyproject.toml -o uv.lock
-	$(VERBOSE_FLAG)$(UV) pip sync --lockfile uv.lock
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) pip compile --upgrade pyproject.toml -o uv.lock"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) pip sync --lockfile uv.lock"
 	$(SILENT_FLAG)echo "$(GREEN)Dependencies updated successfully!$(RESET)"
 
 run:

@@ -8,27 +8,26 @@ from .server import serve
 
 __version__ = "0.0.1"
 
-# Create a Typer app with rich formatting
 app = typer.Typer(
-    help="MCP OpenFGA Server - OpenFGA functionality for MCP",
+    help="OpenFGA MCP Server - Use LLMs to read, search, and manipulate OpenFGA stores",
     add_completion=True,
     rich_markup_mode="rich",
 )
 
-# Create a rich console for better output
 console = Console()
 
 
 @app.command()
 def main(
     url: str | None = typer.Option(
-        None, "-u", "--url", help="OpenFGA server to connect to", envvar="OPENFGA_API_URL"
+        "https://localhost:8000",
+        "-u",
+        "--url",
+        help="OpenFGA server to connect to",
+        envvar="OPENFGA_API_URL",
     ),
     store: str | None = typer.Option(
         None, "-s", "--store", help="OpenFGA store ID to use", envvar="OPENFGA_STORE_ID"
-    ),
-    port: int = typer.Option(
-        8090, "-p", "--port", help="Port to run the MCP server on", envvar="MCP_PORT"
     ),
     verbose: int = typer.Option(
         0, "-v", "--verbose", count=True, help="Increase verbosity", show_default=False
@@ -55,7 +54,6 @@ def main(
     console.print(f"[bold green]Starting OpenFGA MCP Server v{__version__}[/bold green]")
     console.print(f"OpenFGA API URL: [blue]{url or 'default'}[/blue]")
     console.print(f"OpenFGA Store ID: [blue]{store or 'default'}[/blue]")
-    console.print(f"MCP Server Port: [blue]{port}[/blue]")
     console.print(f"Log Level: [blue]{logging.getLevelName(logging_level)}[/blue]")
 
     # Call the serve function from server.py

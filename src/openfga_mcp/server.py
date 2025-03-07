@@ -70,10 +70,4 @@ async def serve(url: str | None, store: str | None) -> None:
         store_id=store or "",
     )
 
-    # In a real implementation, we would configure the OpenFGA client here
-    # and make it available to the server
-
-    # Start the MCP server using the CLI
-    # This function doesn't actually start the server directly
-    # The CLI will handle that when the script is run
-    pass
+    openfga_client = OpenFgaClient(configuration)

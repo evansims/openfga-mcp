@@ -1,0 +1,33 @@
+name: Type Check
+
+# This workflow runs type checking on the project code.
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to use"
+        required: false
+        type: string
+        default: "3.10"
+
+jobs:
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Use the composite action for Python setup
+      - name: Set up Python
+        uses: ./.github/actions/python-setup
+        with:
+          python-version: ${{ inputs.python-version }}
+          dependencies: "pyright"
+          install-dev: "true"
+
+      # Run type checking
+      - name: Run type checking
+        run: pyright src/

@@ -1,0 +1,81 @@
+name: "Python Setup"
+description: "Sets up Python with common configurations"
+
+inputs:
+  python-version:
+    description: "Python version to use"
+    required: true
+  cache:
+    description: "Whether to cache pip dependencies"
+    required: false
+    default: "true"
+  dependencies:
+    description: "Space-separated list of dependencies to install"
+    required: false
+    default: ""
+  install-dev:
+    description: "Whether to install dev dependencies"
+    required: false
+    default: "false"
+  working-directory:
+    description: "Working directory for pip install commands"
+    required: false
+    default: "."
+
+outputs:
+  python-path:
+    description: "Path to the Python executable"
+    value: ${{ steps.get-python-info.outputs.python-path }}
+  python-version:
+    description: "Actual Python version installed"
+    value: ${{ steps.get-python-info.outputs.python-version }}
+  pip-version:
+    description: "Installed pip version"
+    value: ${{ steps.get-python-info.outputs.pip-version }}
+
+runs:
+  using: "composite"
+  steps:
+    # Step 1: Set up Python with the specified version
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: ${{ inputs.cache == 'true' && 'pip' || 'false' }}
+
+    # Step 2: Install base dependencies (pip)
+    - name: Install base dependencies
+      shell: bash
+      run: python -m pip install --upgrade pip
+
+    # Step 3: Install specified dependencies if provided
+    - name: Install specified dependencies
+      if: inputs.dependencies != ''
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: python -m pip install ${{ inputs.dependencies }}
+
+    # Step 4: Install dev dependencies if requested
+    - name: Install dev dependencies
+      if: inputs.install-dev == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: python -m pip install -e ".[dev]"
+
+    # Step 5: Get Python information for outputs
+    - name: Get Python information
+      id: get-python-info
+      shell: bash
+      run: |
+        PYTHON_PATH=$(which python)
+        PYTHON_VERSION=$(python --version | cut -d' ' -f2)
+        PIP_VERSION=$(pip --version | cut -d' ' -f2)
+
+        echo "python-path=$PYTHON_PATH" >> $GITHUB_OUTPUT
+        echo "python-version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
+        echo "pip-version=$PIP_VERSION" >> $GITHUB_OUTPUT
+
+        echo "Python setup complete:"
+        echo "- Python path: $PYTHON_PATH"
+        echo "- Python version: $PYTHON_VERSION"
+        echo "- Pip version: $PIP_VERSION"

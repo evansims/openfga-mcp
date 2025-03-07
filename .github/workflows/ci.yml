@@ -1,0 +1,76 @@
+name: CI
+
+# This workflow runs the continuous integration checks on the project:
+# - Tests with coverage and security checks
+# - Linting
+# - Type checking
+# - Dependency review (on pull requests)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Load configuration using the reusable workflow
+  config:
+    name: Load Configuration
+    uses: ./.github/workflows/load-config.yml
+
+  # Run tests with coverage and security checks
+  test:
+    needs: config
+    uses: ./.github/workflows/test.yml
+    with:
+      python-versions: '["${{ needs.config.outputs.python_version }}"]'
+      coverage: true
+      security-check: true
+
+  # Run linting checks
+  lint:
+    needs: config
+    uses: ./.github/workflows/lint.yml
+    with:
+      python-version: ${{ needs.config.outputs.python_version }}
+
+  # Run type checking
+  type-check:
+    needs: config
+    uses: ./.github/workflows/type-check.yml
+    with:
+      python-version: ${{ needs.config.outputs.python_version }}
+
+  # Review dependencies for security issues (on pull requests)
+  dependency-review:
+    name: Review Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: high
+
+  # Notify about CI completion
+  notify:
+    name: Notify Completion
+    needs: [config, test, lint, type-check, dependency-review]
+    if: always()
+    uses: ./.github/workflows/notify.yml
+    with:
+      message: "CI workflow completed"
+      details: |
+        Repository: ${{ github.repository }}
+        Branch: ${{ github.ref_name }}
+        Commit: ${{ github.sha }}
+      success: ${{ needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' }}

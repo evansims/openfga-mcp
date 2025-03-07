@@ -1,0 +1,44 @@
+name: Notification
+
+on:
+  workflow_call:
+    inputs:
+      message:
+        description: "Main notification message"
+        required: true
+        type: string
+      details:
+        description: "Additional details (one per line)"
+        required: false
+        type: string
+        default: ""
+      success:
+        description: "Whether this is a success notification"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  notify:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Determine emoji
+        id: emoji
+        run: |
+          if [ "${{ inputs.success }}" == "true" ]; then
+            echo "value=🎉" >> $GITHUB_OUTPUT
+          else
+            echo "value=⚠️" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send notification
+        run: |
+          echo "${{ steps.emoji.outputs.value }} ${{ inputs.message }}"
+
+          # Print additional details if provided
+          if [ -n "${{ inputs.details }}" ]; then
+            echo ""
+            echo "${{ inputs.details }}"
+          fi

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/evansims/openfga-mcp/discussions
+    about: Please ask and answer questions here.
+  - name: OpenFGA Documentation
+    url: https://openfga.dev/docs
+    about: Learn more about OpenFGA.
+  - name: Model Context Protocol Documentation
+    url: https://modelcontextprotocol.io/
+    about: Learn more about the Model Context Protocol.

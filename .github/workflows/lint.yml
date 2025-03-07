@@ -1,0 +1,42 @@
+name: Lint
+
+# This workflow runs linting checks on the project code.
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to use"
+        required: false
+        type: string
+        default: "3.10"
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Use the composite action for Python setup
+      - name: Set up Python
+        uses: ./.github/actions/python-setup
+        with:
+          python-version: ${{ inputs.python-version }}
+          dependencies: "ruff"
+
+      # Run linting with Ruff
+      - name: Lint with Ruff
+        uses: chartboost/ruff-action@v1
+        with:
+          version: latest

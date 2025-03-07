@@ -1,0 +1,78 @@
+name: Test
+
+# This workflow runs tests on the project with configurable Python versions,
+# coverage reporting, and security checks.
+
+on:
+  workflow_call:
+    inputs:
+      python-versions:
+        description: "Python versions to test on (JSON array)"
+        required: false
+        type: string
+        default: '["3.10", "3.11", "3.12"]'
+      coverage:
+        description: "Whether to generate coverage reports"
+        required: false
+        type: boolean
+        default: true
+      security-check:
+        description: "Whether to run security checks"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  test:
+    name: Test on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJSON(inputs.python-versions) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Use the composite action for Python setup
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: ./.github/actions/python-setup
+        with:
+          python-version: ${{ matrix.python-version }}
+          dependencies: "pytest"
+          install-dev: "true"
+
+      # Install additional dependencies based on inputs
+      - name: Install additional dependencies
+        run: |
+          if [ "${{ inputs.coverage }}" == "true" ]; then
+            python -m pip install pytest-cov
+          fi
+          if [ "${{ inputs.security-check }}" == "true" ]; then
+            python -m pip install safety
+          fi
+
+      # Run tests without coverage if coverage is disabled
+      - name: Run tests
+        if: inputs.coverage == false
+        run: pytest
+
+      # Run tests with coverage if coverage is enabled
+      - name: Run tests with coverage
+        if: inputs.coverage
+        run: pytest --cov=src --cov-report=xml
+
+      # Upload coverage report if coverage is enabled
+      - name: Upload coverage report
+        if: inputs.coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+      # Run security check if enabled
+      - name: Check for dependency vulnerabilities
+        if: inputs.security-check
+        run: safety check

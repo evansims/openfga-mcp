@@ -1,0 +1,57 @@
+name: Setup Python
+
+on:
+  workflow_call:
+    inputs:
+      python_version:
+        description: "Python version to use"
+        required: true
+        type: string
+      install_dependencies:
+        description: "Whether to install dependencies"
+        required: false
+        type: boolean
+        default: true
+      dependencies:
+        description: "Space-separated list of dependencies to install"
+        required: false
+        type: string
+        default: ""
+      install_dev:
+        description: "Whether to install dev dependencies"
+        required: false
+        type: boolean
+        default: false
+      cache:
+        description: "Whether to cache pip dependencies"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  setup:
+    name: Setup Python ${{ inputs.python_version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: ${{ inputs.cache && 'pip' || 'false' }}
+
+      - name: Install dependencies
+        if: inputs.install_dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+          # Install specific dependencies if provided
+          if [ -n "${{ inputs.dependencies }}" ]; then
+            python -m pip install ${{ inputs.dependencies }}
+          fi
+
+          # Install dev dependencies if requested
+          if [ "${{ inputs.install_dev }}" == "true" ]; then
+            python -m pip install -e ".[dev]"
+          fi
+
+          echo "Python setup complete with version ${{ inputs.python_version }}"

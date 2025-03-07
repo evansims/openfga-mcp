@@ -6,33 +6,48 @@ readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "OpenFGA" }]
 maintainers = [{ name = "Evan Sims", email = "evan.sims@okta.com" }]
-keywords = ["mcp", "llm", "automation"]
+keywords = ["mcp", "llm", "automation", "openfga"]
 license = { text = "Apache-2.0" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache-2.0 License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
 ]
-dependencies = [
-    "click>=8.1.7",
-    "mcp>=1.0.0",
-    "pydantic>=2.0.0",
-]
+dependencies = ["click>=8.1.8", "mcp[cli]>=1.3.0", "openfga-sdk>=0.9.1"]
 
 [project.scripts]
-mcp-server-openfga = "mcp_server_openfga:main"
+openfga-mcp-server = "openfga_mcp:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/openfga-mcp"]
+
 [tool.uv]
-dev-dependencies = ["pyright>=1.1.389", "ruff>=0.7.3", "pytest>=8.0.0"]
+dev-dependencies = [
+    "pyright >= 1.1.389",
+    "ruff >= 0.7.3",
+    "pytest >= 8.0.0",
+    "pre-commit >= 3.5.0",
+    "commitizen >= 3.13.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.0.1"
+tag_format = "v$version"
+version_files = [
+    "pyproject.toml:version",
+    "src/openfga-mcp/__init__.py:__version__",
+]
+update_changelog_on_bump = true
+bump_message = "chore(release): bump version to $new_version"

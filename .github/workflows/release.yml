@@ -1,0 +1,182 @@
+name: Release
+
+# This workflow handles the entire release process for the project:
+# 1. Runs quality checks (tests, linting, type checking)
+# 2. Bumps version based on conventional commits
+# 3. Generates changelog
+# 4. Creates GitHub release
+# 5. Publishes to PyPI
+# 6. Sends notification
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Version increment type"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      prerelease:
+        description: "Is this a prerelease?"
+        required: true
+        default: false
+        type: boolean
+      python_version:
+        description: "Python version to use"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  # Load configuration using the reusable workflow
+  config:
+    name: Load Configuration
+    uses: ./.github/workflows/load-config.yml
+    with:
+      python_version_override: ${{ github.event.inputs.python_version }}
+
+  # Run tests, linting, and type checking by reusing existing workflows
+  test:
+    name: Run Tests
+    needs: config
+    uses: ./.github/workflows/test.yml
+    with:
+      python-versions: '["${{ needs.config.outputs.python_version }}"]'
+      coverage: true
+      security-check: true
+
+  lint:
+    name: Run Linting
+    needs: config
+    uses: ./.github/workflows/lint.yml
+    with:
+      python-version: ${{ needs.config.outputs.python_version }}
+
+  type-check:
+    name: Run Type Checking
+    needs: config
+    uses: ./.github/workflows/type-check.yml
+    with:
+      python-version: ${{ needs.config.outputs.python_version }}
+
+  # Bump version, update changelog, and create tag
+  prepare-release:
+    name: Prepare Release
+    needs: [config, test, lint, type-check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag: ${{ steps.get_version.outputs.tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Use the composite action for Python setup
+      - name: Set up Python
+        uses: ./.github/actions/python-setup
+        with:
+          python-version: ${{ needs.config.outputs.python_version }}
+          dependencies: "commitizen build twine"
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          cz bump --${{ github.event.inputs.version_type }} --yes
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=$(python -c "from configparser import ConfigParser; c = ConfigParser(); c.read('pyproject.toml'); print(c['project']['version'].strip('\"'))")
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        run: |
+          cz changelog --incremental > CHANGELOG.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: Release ${{ steps.get_version.outputs.tag }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build and publish to PyPI
+  publish:
+    name: Build and Publish
+    needs: [config, prepare-release]
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.tag }}
+
+      # Use the composite action for Python setup
+      - name: Set up Python
+        uses: ./.github/actions/python-setup
+        with:
+          python-version: ${{ needs.config.outputs.python_version }}
+          dependencies: "build twine"
+
+      - name: Verify version
+        run: |
+          PACKAGE_VERSION=$(python -c "from configparser import ConfigParser; c = ConfigParser(); c.read('pyproject.toml'); print(c['project']['version'].strip('\"'))")
+          if [ "$PACKAGE_VERSION" != "${{ needs.prepare-release.outputs.version }}" ]; then
+            echo "Error: Expected version ${{ needs.prepare-release.outputs.version }} but found $PACKAGE_VERSION"
+            exit 1
+          fi
+          echo "Version verification successful: $PACKAGE_VERSION"
+
+      - name: Build package
+        run: python -m build
+        env:
+          PIP_CACHE_DIR: ${{ runner.temp }}/pip-cache
+
+      - name: Verify package
+        run: twine check dist/*
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+          retention-days: 7
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+          print-hash: true
+
+  # Notify about the release
+  notify:
+    name: Notify
+    needs: [config, prepare-release, publish]
+    uses: ./.github/workflows/notify.yml
+    with:
+      message: "Version ${{ needs.prepare-release.outputs.version }} has been released!"
+      details: |
+        GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare-release.outputs.tag }}
+        PyPI Package: https://pypi.org/project/${{ needs.config.outputs.package_name }}/${{ needs.prepare-release.outputs.version }}/

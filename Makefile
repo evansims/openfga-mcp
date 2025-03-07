@@ -61,48 +61,47 @@ help:
 	$(SILENT_FLAG)echo "$(BOLD)OpenFGA MCP Development Commands$(RESET)"
 	$(SILENT_FLAG)echo "================================="
 	$(SILENT_FLAG)echo "$(BOLD)Development:$(RESET)"
-	$(SILENT_FLAG)echo "  $(GREEN)setup$(RESET)               - Set up development environment (create venv, install dependencies)"
-	$(SILENT_FLAG)echo "  $(GREEN)venv$(RESET)                - Create activation script and show instructions for virtual environment"
-	$(SILENT_FLAG)echo "  $(GREEN)in-venv$(RESET)             - Run a command within the virtual environment (use CMD=\"command\")"
-	$(SILENT_FLAG)echo "  $(GREEN)shell$(RESET)               - Start an interactive shell within the virtual environment"
-	$(SILENT_FLAG)echo "  $(GREEN)repl$(RESET)                - Start a Python REPL within the virtual environment"
-	$(SILENT_FLAG)echo "  $(GREEN)ipython$(RESET)             - Start an IPython REPL within the virtual environment"
+	$(SILENT_FLAG)echo "  $(GREEN)setup$(RESET)               - Set up development environment"
+	$(SILENT_FLAG)echo "  $(GREEN)venv$(RESET)                - Show virtual environment instructions"
+	$(SILENT_FLAG)echo "  $(GREEN)in-venv$(RESET)             - Run command in virtual environment (CMD=\"command\")"
+	$(SILENT_FLAG)echo "  $(GREEN)shell$(RESET)               - Start shell in virtual environment"
+	$(SILENT_FLAG)echo "  $(GREEN)repl$(RESET)                - Start Python REPL"
+	$(SILENT_FLAG)echo "  $(GREEN)ipython$(RESET)             - Start IPython REPL"
 	$(SILENT_FLAG)echo "  $(GREEN)dev$(RESET)                 - Install package in development mode"
 	$(SILENT_FLAG)echo "  $(GREEN)run$(RESET)                 - Run the server locally"
-	$(SILENT_FLAG)echo "  $(GREEN)update$(RESET)              - Update dependencies to latest versions and sync environment"
+	$(SILENT_FLAG)echo "  $(GREEN)update$(RESET)              - Update dependencies"
 	$(SILENT_FLAG)echo ""
-	$(SILENT_FLAG)echo "$(BOLD)Quality Checks:$(RESET)"
+	$(SILENT_FLAG)echo "$(BOLD)Quality:$(RESET)"
 	$(SILENT_FLAG)echo "  $(GREEN)test$(RESET)                - Run tests"
 	$(SILENT_FLAG)echo "  $(GREEN)test-cov$(RESET)            - Run tests with coverage"
-	$(SILENT_FLAG)echo "  $(GREEN)lint$(RESET)                - Run linting checks"
+	$(SILENT_FLAG)echo "  $(GREEN)lint$(RESET)                - Run linting"
 	$(SILENT_FLAG)echo "  $(GREEN)type-check$(RESET)          - Run type checking"
 	$(SILENT_FLAG)echo "  $(GREEN)format$(RESET)              - Format code"
 	$(SILENT_FLAG)echo "  $(GREEN)security$(RESET)            - Run security checks"
-	$(SILENT_FLAG)echo "  $(GREEN)check$(RESET)               - Run all checks (tests, lint, type-check)"
-	$(SILENT_FLAG)echo "  $(GREEN)all$(RESET)                 - Run all checks including security and formatting"
+	$(SILENT_FLAG)echo "  $(GREEN)check$(RESET)               - Run tests, lint, type-check"
+	$(SILENT_FLAG)echo "  $(GREEN)all$(RESET)                 - Run all checks including security"
 	$(SILENT_FLAG)echo ""
 	$(SILENT_FLAG)echo "$(BOLD)Build & Release:$(RESET)"
-	$(SILENT_FLAG)echo "  $(GREEN)clean$(RESET)               - Remove build artifacts and cache directories"
-	$(SILENT_FLAG)echo "  $(GREEN)build$(RESET)               - Build package distributions"
+	$(SILENT_FLAG)echo "  $(GREEN)clean$(RESET)               - Remove build artifacts"
+	$(SILENT_FLAG)echo "  $(GREEN)build$(RESET)               - Build package"
 	$(SILENT_FLAG)echo "  $(GREEN)publish$(RESET)             - Publish package to PyPI"
 	$(SILENT_FLAG)echo "  $(GREEN)docs$(RESET)                - Build documentation"
 	$(SILENT_FLAG)echo "  $(GREEN)docs-serve$(RESET)          - Serve documentation locally"
-	$(SILENT_FLAG)echo "  $(GREEN)release$(RESET)             - Prepare a release (bump version, update changelog)"
-	$(SILENT_FLAG)echo "  $(GREEN)release-ci$(RESET)          - CI-friendly version of release (uses env var RELEASE_TYPE)"
-	$(SILENT_FLAG)echo "  $(GREEN)version$(RESET)             - Display the current project version"
+	$(SILENT_FLAG)echo "  $(GREEN)version$(RESET)             - Display current version"
+	$(SILENT_FLAG)echo "  $(GREEN)release$(RESET)             - Prepare a release"
+	$(SILENT_FLAG)echo "  $(GREEN)release-ci$(RESET)          - CI-friendly release (RELEASE_TYPE=type)"
 	$(SILENT_FLAG)echo ""
-	$(SILENT_FLAG)echo "$(BOLD)Docker Commands:$(RESET)"
+	$(SILENT_FLAG)echo "$(BOLD)Docker:$(RESET)"
 	$(SILENT_FLAG)echo "  $(GREEN)docker-build$(RESET)        - Build Docker image"
 	$(SILENT_FLAG)echo "  $(GREEN)docker-run$(RESET)          - Run Docker container"
 	$(SILENT_FLAG)echo "  $(GREEN)docker-push$(RESET)         - Push Docker image to registry"
 	$(SILENT_FLAG)echo "  $(GREEN)docker-compose-up$(RESET)   - Start services with Docker Compose"
 	$(SILENT_FLAG)echo "  $(GREEN)docker-compose-down$(RESET) - Stop services with Docker Compose"
-	$(SILENT_FLAG)echo "  $(GREEN)docker-compose-logs$(RESET) - View logs from Docker Compose services"
+	$(SILENT_FLAG)echo "  $(GREEN)docker-compose-logs$(RESET) - View Docker Compose logs"
 	$(SILENT_FLAG)echo ""
-	$(SILENT_FLAG)echo "$(BOLD)Usage Notes:$(RESET)"
-	$(SILENT_FLAG)echo "  - Run with V=1 for verbose output: $(GREEN)make V=1 [target]$(RESET)"
-	$(SILENT_FLAG)echo "  - Run with JOBS=N for parallel execution: $(GREEN)make JOBS=4 [target]$(RESET)"
-	$(SILENT_FLAG)echo "  - Create a Makefile.local for custom settings"
+	$(SILENT_FLAG)echo "$(BOLD)Options:$(RESET)"
+	$(SILENT_FLAG)echo "  V=1                    - Verbose output"
+	$(SILENT_FLAG)echo "  JOBS=N                 - Parallel execution (N jobs)"
 
 # ===== Development Environment =====
 $(VENV_DIR):
@@ -112,21 +111,16 @@ $(VENV_DIR):
 
 setup: $(VENV_DIR)
 	$(SILENT_FLAG)echo "$(BOLD)Setting up development environment...$(RESET)"
-	$(SILENT_FLAG)echo "$(YELLOW)Installing dependencies...$(RESET)"
 	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && $(UV) pip install -e ".[dev,test,docs]"
-	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && pre-commit install
-	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && pre-commit install --hook-type commit-msg
-	$(SILENT_FLAG)echo "$(GREEN)Development environment setup complete!$(RESET)"
-	$(SILENT_FLAG)echo "$(YELLOW)To activate the virtual environment, run:$(RESET)"
-	$(SILENT_FLAG)echo "  $(GREEN)source activate_venv.sh$(RESET)"
+	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && pre-commit install && pre-commit install --hook-type commit-msg
+	$(SILENT_FLAG)echo "$(GREEN)Setup complete!$(RESET) Activate with: $(GREEN)source activate_venv.sh$(RESET)"
 	$(SILENT_FLAG)$(MAKE) -s venv
 
 venv: $(VENV_DIR)
-	$(SILENT_FLAG)echo "$(BOLD)Virtual environment commands:$(RESET)"
-	$(SILENT_FLAG)echo "$(YELLOW)To activate the virtual environment, run:$(RESET)"
-	$(SILENT_FLAG)echo "  $(GREEN)source activate_venv.sh$(RESET)"
-	$(SILENT_FLAG)echo "$(BOLD)Tip:$(RESET) You can add an alias to your shell profile:"
-	$(SILENT_FLAG)echo "  $(GREEN)alias activate-openfga-mcp='source $$(pwd)/activate_venv.sh'$(RESET)"
+	$(SILENT_FLAG)echo "$(BOLD)Virtual Environment:$(RESET)"
+	$(SILENT_FLAG)echo "  $(GREEN)source activate_venv.sh$(RESET)  - Activate"
+	$(SILENT_FLAG)echo "  $(GREEN)deactivate$(RESET)               - Deactivate"
+	$(SILENT_FLAG)echo "  $(YELLOW)Tip:$(RESET) Add to your shell profile: $(GREEN)alias activate-openfga='source $$(pwd)/activate_venv.sh'$(RESET)"
 
 dev:
 	$(SILENT_FLAG)echo "$(BOLD)Installing package in development mode...$(RESET)"
@@ -279,32 +273,25 @@ docker-compose-logs:
 
 # ===== Virtual Environment Commands =====
 shell:
-	$(SILENT_FLAG)echo "$(BOLD)Starting interactive shell in virtual environment...$(RESET)"
 	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && exec $$SHELL
 
 repl:
-	$(SILENT_FLAG)echo "$(BOLD)Starting Python REPL in virtual environment...$(RESET)"
 	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="python"
 
 ipython:
-	$(SILENT_FLAG)echo "$(BOLD)Starting IPython REPL in virtual environment...$(RESET)"
 	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="python -m pip install ipython && ipython"
 
 in-venv:
-	$(SILENT_FLAG)echo "$(BOLD)Running command in virtual environment...$(RESET)"
 	$(SILENT_FLAG)if [ -z "$(CMD)" ]; then \
 		echo "$(RED)Error: No command specified$(RESET)"; \
-		echo "Usage: make in-venv CMD=\"your command here\""; \
+		echo "Usage: make in-venv CMD=\"your command\""; \
 		exit 1; \
 	fi
 	$(VERBOSE_FLAG)if [ -n "$$VIRTUAL_ENV" ] && [ "$$VIRTUAL_ENV" = "$$(pwd)/$(VENV_DIR)" ]; then \
-		echo "$(YELLOW)Virtual environment already activated, running command directly...$(RESET)"; \
 		$(CMD); \
 	else \
-		echo "$(YELLOW)Activating virtual environment...$(RESET)"; \
 		source $(VENV_ACTIVATE) && $(CMD); \
 	fi
-	$(SILENT_FLAG)echo "$(GREEN)Command completed in virtual environment!$(RESET)"
 
 # ===== Pattern Rules =====
 %.py: %.py.in

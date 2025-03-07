@@ -1,28 +1,28 @@
 # OpenFGA MCP
 
-OpenFGA MCP provides a bridge between Large Language Models and OpenFGA, allowing for the creation of agentic AI systems that can:
+An MCP server that enables LLMs to interact with OpenFGA authorization stores.
 
-1. **Query authorization data**: Check permissions and relationships
-2. **Modify authorization rules**: Update access control policies
-3. **Explain authorization decisions**: Understand why access was granted or denied
-4. **Analyze authorization patterns**: Identify potential security issues
+## Capabilities
 
-## Getting Started
+- **Query**: Check permissions and relationships
+- **Modify**: Update access control policies
+- **Explain**: Understand authorization decisions
+- **Analyze**: Identify security issues
 
-See the [Installation](installation.md) and [Usage](usage.md) guides to get started.
+## Documentation
 
-## API Reference
-
-For detailed API documentation, see the [API Reference](api-reference.md).
+- [Installation](installation.md)
+- [Usage](usage.md)
+- [API Reference](api-reference.md)
 
 ## Use Cases
 
-- **Dynamic and Context-Aware Access Control**: LLMs interpret natural language to determine permissions based on context
-- **Intelligent Policy Management**: Create or adjust authorization policies through conversational interfaces
-- **Contextual and Adaptive Security**: Identify overly permissive access patterns and recommend improvements
-- **Explainable Authorization**: Provide clear justifications for access decisions
-- **Enhanced Productivity and Automation**: Automate access provisioning based on roles and needs
+1. **Dynamic Access Control**: LLMs interpret natural language for permissions
+2. **Policy Management**: Create/adjust policies through conversation
+3. **Explainable Authorization**: Provide clear justifications
+4. **Policy Debugging**: Diagnose permissions issues
+5. **Secure Collaboration**: Grant temporary access with precise scope
 
 ## Contributing
 
-We welcome contributions! See our [Contributing Guide](contributing.md) for more information.
+See [Contributing Guidelines](../CONTRIBUTING.md).

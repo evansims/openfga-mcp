@@ -1,144 +1,75 @@
-# openfga-mcp
+# OpenFGA MCP
 
-[![CI](https://github.com/evansims/openfga-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/evansims/openfga-mcp/actions/workflows/ci.yml)
-[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
-[![PyPI version](https://badge.fury.io/py/openfga-mcp.svg)](https://badge.fury.io/py/openfga-mcp)
-[![uv](https://img.shields.io/badge/uv-package%20manager-blue)](https://github.com/astral-sh/uv)
-[![Docker](https://img.shields.io/badge/docker-container-blue)](https://github.com/evansims/openfga-mcp/pkgs/container/openfga-mcp-server)
-
-An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that enables Large Language Models (LLMs) to read, search, and manipulate [OpenFGA](https://openfga.dev) stores. Unlocks authorization for agentic AI, and fine-grained [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding)✨ for humans. Take a look at the [use cases](#use-cases) for some inspiration.
+An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that enables Large Language Models (LLMs) to read, search, and manipulate [OpenFGA](https://openfga.dev) stores. Unlocks authorization for agentic AI, and fine-grained [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding)✨ for humans.
 
 Built using the [OpenFGA Python SDK](https://github.com/openfga/python-sdk) and [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
 
-## Requirements
+## Overview
+
+OpenFGA MCP provides a bridge between Large Language Models and OpenFGA, allowing for the creation of agentic AI systems that can:
+
+- Query permissions and relationships
+- Update access control policies
+- Explain authorization decisions
+- Identify potential security issues
+
+## Quick Start
+
+### Requirements
 
 - Python 3.10+
 - OpenFGA
 
-## Quick Start
-
 ### Installation
-
-> **Note:** This project is currently in early development. The package is not yet available on PyPI. Please install from source until the first official release.
-
-#### Installing from source (recommended for now)
-
-```bash
-git clone https://github.com/evansims/openfga-mcp.git
-cd openfga-mcp
-
-# Using uv (recommended)
-uv venv .venv && source .venv/bin/activate && uv pip install -e .
-
-# Using pip
-python -m venv .venv && source .venv/bin/activate && pip install -e .
-
-# Using Poetry
-poetry install && poetry shell
-```
-
-#### Package managers (after official release)
 
 ```bash
 # Using uv (recommended)
 uv pip install openfga-mcp
 
-# Using pip
-pip install openfga-mcp
-
-# Using Poetry
-poetry add openfga-mcp
+# From source (for development)
+git clone https://github.com/evansims/openfga-mcp.git
+cd openfga-mcp
+make setup
+make venv
 ```
 
-### Running the MCP server
+### Running the MCP Server
 
 ```bash
-openfga-mcp-server \
-  --url "https://localhost:8000" \
-  --store "your-store-id"
-```
+# Basic usage
+openfga-mcp-server --url "https://localhost:8000" --store "your-store-id"
 
-#### Additional CLI Options
-
-```bash
-# Get help on available options
-openfga-mcp-server --help
-
-# Enable verbose logging
-openfga-mcp-server --verbose
-```
-
-Connect your LLM application to the MCP server endpoint (default: http://localhost:8090)
-
-### Running with Docker
-
-Alternatively, you can run the MCP server using Docker. The project includes a multi-stage Dockerfile that uses `uv` for efficient dependency management.
-
-#### Using Makefile (recommended)
-
-```bash
-# Build the Docker image
+# With Docker
 make docker-build
-
-# Run the container
 OPENFGA_API_URL="https://localhost:8000" OPENFGA_STORE_ID="your-store-id" make docker-run
 ```
 
-#### Using Docker Compose
+### Connecting to a Client
 
-```bash
-# Start services with Docker Compose
-OPENFGA_API_URL="https://localhost:8000" OPENFGA_STORE_ID="your-store-id" make docker-compose-up
+Connect your LLM application to the MCP server endpoint (default: http://localhost:8090).
 
-# View logs
-make docker-compose-logs
+MCP is supported by [many clients](https://modelcontextprotocol.io/clients), including:
 
-# Stop services
-make docker-compose-down
-```
-
-#### Using Docker directly
-
-```bash
-# Build the Docker image
-docker build -t openfga-mcp-server .
-
-# Run the container
-docker run -p 8000:8000 \
-  -e OPENFGA_API_URL="https://localhost:8000" \
-  -e OPENFGA_STORE_ID="your-store-id" \
-  openfga-mcp-server
-```
+- [Cursor](https://www.cursor.com/cursor)
+- [Windsurf](https://windsurf.dev/)
+- [Cline](https://cline.bot/) (for VSCode)
+- [Claude Desktop](https://docs.anthropic.com/en/docs/claude-desktop/mcp)
+- [Zed](https://zed.dev/)
 
 ## Development
 
 ```bash
-# Clone and setup
-git clone https://github.com/evansims/openfga-mcp.git
-cd openfga-mcp
-
-# Using Makefile (recommended)
+# Setup development environment
 make setup
-source .venv/bin/activate
+make venv
 
-# Or choose your package manager:
-# uv (recommended for speed)
-uv venv .venv && source .venv/bin/activate && uv pip install -e ".[dev]"
+# Run tests and checks
+make test
+make lint
+make type-check
 
-# pip
-python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
-
-# Poetry
-poetry install --with dev && poetry shell
-
-# Set up pre-commit hooks (recommended)
-pre-commit install
-pre-commit install --hook-type commit-msg
-
-# Testing and quality
-pytest
-ruff check .
-pyright
+# Run all checks
+make check
 ```
 
 ## Use Cases
@@ -153,73 +84,44 @@ LLMs interpret natural language to determine permissions based on context.
 
 Create or adjust authorization policies through conversational interfaces.
 
-> **Example:** User requests "Allow team leads to review project files in their department during active projects" → LLM creates the appropriate policy.
+> **Example:** User requests "Allow team leads to review project files in their department" → LLM creates the appropriate policy.
 
-### 3. Contextual and Adaptive Security
-
-Identify overly permissive access patterns and recommend improvements.
-
-> **Example:** LLM notices "Sales representatives have write access to financial forecasts" and suggests restricting to read-only.
-
-### 4. Explainable Authorization
+### 3. Explainable Authorization
 
 Provide clear justifications for access decisions.
 
 > **Example:** When asked "Why can't I view this HR file?", LLM explains "Your Engineering role doesn't have access to HR files."
 
-### 5. Enhanced Productivity and Automation
-
-Automate access provisioning based on roles and needs.
-
-> **Example:** When told "A new employee joined marketing", LLM assigns appropriate permissions.
-
-### 6. Policy Debugging and Troubleshooting
+### 4. Policy Debugging and Troubleshooting
 
 Diagnose permissions issues conversationally.
 
 > **Example:** User asks "Why can marketing contractors edit internal documents?" → LLM identifies the relevant policy rule.
 
-### 7. Secure Collaboration
+### 5. Secure Collaboration
 
 Grant temporary access with precise scope.
 
 > **Example:** User requests "Share the quarterly report with the finance contractor until Friday" → LLM configures temporary access.
 
-### 8. Compliance Management
+## Documentation
 
-Ensure compliance with access-control standards.
+For detailed documentation, including:
 
-> **Example:** LLM reports "Compliance check passed: No unauthorized access to sensitive data in the last 30 days."
+- Complete installation instructions
+- Usage examples with LLMs
+- API reference
+- More use cases and examples
 
-### 9. User-Friendly Interfaces
+Browse [the documentation](./docs) or run:
 
-Allow non-technical users to request or query access rights.
-
-> **Example:** User requests "Give me edit access to project Alpha" → LLM handles the permission change.
-
-### 10. Predictive Access and Risk Management
-
-Flag potential authorization vulnerabilities proactively.
-
-> **Example:** LLM alerts "This user has attempted multiple unauthorized accesses" and suggests reviewing permissions.
-
-## API Documentation
-
-MCP Resources, Tools, and Prompts documentation coming soon.
-
-## Troubleshooting
-
-**Connection Errors**: Verify your OpenFGA API URL is correct and accessible.
+```bash
+make docs-serve
+```
 
 ## Contributing
 
-We welcome contributions from the community! Please see our [Contributing Guidelines](CONTRIBUTING.md) for more information on how to get involved.
-
-Before contributing, please review our [Code of Conduct](CODE_OF_CONDUCT.md).
-
-## Security
-
-If you discover a security vulnerability, please follow our [Security Policy](SECURITY.md) for responsible disclosure.
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for more information.
 
 ## License
 

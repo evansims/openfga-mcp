@@ -1,6 +1,6 @@
-name: Update Lockfile
+name: Update Dependencies
 
-# This workflow updates the uv.lock file to ensure deterministic builds
+# This workflow updates the dependencies and uv.lock file to ensure deterministic builds
 
 on:
   workflow_dispatch:
@@ -32,7 +32,7 @@ jobs:
         id: generate_lockfile
         run: |
           echo "Generating uv.lock file..."
-          if ! make update-lockfile; then
+          if ! make update; then
             echo "::error::Failed to generate lockfile. Check for dependency conflicts."
             exit 1
           fi

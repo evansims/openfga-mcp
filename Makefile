@@ -65,7 +65,7 @@ help:
 	$(SILENT_FLAG)echo "  $(GREEN)venv$(RESET)                - Print command to activate virtual environment"
 	$(SILENT_FLAG)echo "  $(GREEN)dev$(RESET)                 - Install package in development mode"
 	$(SILENT_FLAG)echo "  $(GREEN)run$(RESET)                 - Run the server locally"
-	$(SILENT_FLAG)echo "  $(GREEN)update$(RESET)              - Update the uv.lock file"
+	$(SILENT_FLAG)echo "  $(GREEN)update$(RESET)              - Update dependencies to latest versions and sync environment"
 	$(SILENT_FLAG)echo ""
 	$(SILENT_FLAG)echo "$(BOLD)Quality Checks:$(RESET)"
 	$(SILENT_FLAG)echo "  $(GREEN)test$(RESET)                - Run tests"
@@ -232,9 +232,10 @@ release-ci:
 
 # ===== Utility Commands =====
 update:
-	$(SILENT_FLAG)echo "$(BOLD)Updating uv.lock file...$(RESET)"
+	$(SILENT_FLAG)echo "$(BOLD)Updating dependencies and lockfile...$(RESET)"
+	$(VERBOSE_FLAG)$(UV) pip compile --upgrade pyproject.toml -o uv.lock
 	$(VERBOSE_FLAG)$(UV) pip sync --lockfile uv.lock
-	$(SILENT_FLAG)echo "$(GREEN)Lockfile updated successfully!$(RESET)"
+	$(SILENT_FLAG)echo "$(GREEN)Dependencies updated successfully!$(RESET)"
 
 run:
 	$(SILENT_FLAG)echo "$(BOLD)Running the server locally...$(RESET)"

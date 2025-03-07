@@ -31,6 +31,10 @@ on:
         default: ""
         type: string
 
+# Set default permissions to minimum required
+permissions:
+  contents: read
+
 jobs:
   # Load configuration using the reusable workflow
   config:
@@ -167,6 +171,22 @@ jobs:
         run: make build
         env:
           UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+
+      # Generate Software Bill of Materials (SBOM)
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          format: spdx-json
+          output-file: sbom.spdx.json
+          artifact-name: sbom.spdx.json
+
+      # Upload SBOM as an artifact
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+          retention-days: 90
 
       # Use Makefile to publish the package
       - name: Verify and publish package

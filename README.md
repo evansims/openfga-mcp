@@ -72,6 +72,14 @@ make type-check
 make check
 ```
 
+```bash
+# Get help
+openfga-mcp-server --help
+
+# Run with verbose logging
+openfga-mcp-server -vv --url "https://localhost:8000" --store "your-store-id"
+```
+
 ## Use Cases
 
 ### 1. Dynamic and Context-Aware Access Control

@@ -9,10 +9,10 @@ This guide will help you install and set up the OpenFGA MCP server.
 
 ## Installation Methods
 
-### Using pip (recommended)
+### Using package managers
 
 ```bash
-# Using uv (recommended)
+# Using uv
 uv pip install openfga-mcp
 
 # Using pip
@@ -28,7 +28,7 @@ poetry add openfga-mcp
 git clone https://github.com/evansims/openfga-mcp.git
 cd openfga-mcp
 
-# Using uv (recommended)
+# Using uv
 uv venv .venv && source .venv/bin/activate && uv pip install -e .
 
 # Using pip
@@ -64,7 +64,7 @@ make setup
 source .venv/bin/activate
 
 # Or choose your package manager:
-# uv (recommended for speed)
+# uv
 uv venv .venv && source .venv/bin/activate && uv pip install -e ".[dev,test,docs]"
 
 # pip
@@ -83,7 +83,7 @@ pre-commit install --hook-type commit-msg
 To verify that the installation was successful, run:
 
 ```bash
-openfga-mcp-server --help
+uv run openfga-mcp-server --help
 ```
 
 You should see the help message for the OpenFGA MCP server.

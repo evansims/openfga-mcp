@@ -7,9 +7,13 @@ on:
     inputs:
       python-version:
         description: "Python version to use"
-        required: false
+        required: true
         type: string
         default: "3.10"
+
+# Set default permissions to minimum required
+permissions:
+  contents: read
 
 jobs:
   type-check:

@@ -19,7 +19,7 @@ CZ := cz
 
 # Project settings
 PROJECT_NAME := openfga-mcp
-PACKAGE_DIR := src/openfga-mcp
+PACKAGE_DIR := src/openfga_mcp
 TESTS_DIR := tests
 
 # Docker settings

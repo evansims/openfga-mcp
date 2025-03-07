@@ -75,6 +75,24 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Scan Docker image for vulnerabilities
+      - name: Scan Docker image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.16.1
+        with:
+          image-ref: "ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version || github.sha }}"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+          ignore-unfixed: true
+
+      # Upload Trivy scan results to GitHub Security tab
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2.22.5
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
       # Notify about Docker image build
       - name: Notify
         uses: ./.github/workflows/notify.yml

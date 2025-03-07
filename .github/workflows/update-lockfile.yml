@@ -50,6 +50,25 @@ jobs:
             git diff --stat uv.lock
           fi
 
+      # Validate lockfile before committing
+      - name: Validate lockfile
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          echo "Validating updated lockfile..."
+          # Verify the lockfile can be used to install dependencies
+          if ! uv pip sync --lockfile uv.lock --dry-run; then
+            echo "::error::Lockfile validation failed. The updated lockfile may contain errors."
+            exit 1
+          fi
+
+          # Check for suspicious changes (large number of dependency changes)
+          CHANGED_DEPS=$(git diff uv.lock | grep -c "^[+-]" || echo "0")
+          if [ "$CHANGED_DEPS" -gt "50" ]; then
+            echo "::warning::Large number of dependency changes detected ($CHANGED_DEPS). Please review carefully."
+          fi
+
+          echo "Lockfile validation successful!"
+
       - name: Commit and push changes
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |

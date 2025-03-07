@@ -22,6 +22,12 @@ on:
         type: boolean
         default: true
 
+# Set default permissions to minimum required
+permissions:
+  contents: read
+  # For codecov upload
+  checks: write
+
 jobs:
   test:
     name: Test on Python ${{ matrix.python-version }}
@@ -78,8 +84,15 @@ jobs:
         if: inputs.security-check
         run: |
           echo "Running security checks..."
-          make security || {
-            echo "::warning::Security vulnerabilities found. Review the output above."
-            # Don't fail the build, just warn
-            exit 0
+          # Create a security report file
+          make security > security-report.txt || {
+            if grep -q "Critical" security-report.txt; then
+              echo "::error::Critical security vulnerabilities found. Build failed."
+              cat security-report.txt
+              exit 1
+            else
+              echo "::warning::Security vulnerabilities found. Review the output above."
+              cat security-report.txt
+              exit 0
+            fi
           }

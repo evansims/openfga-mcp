@@ -19,6 +19,10 @@ on:
         type: boolean
         default: false
 
+# Set default permissions to minimum required
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

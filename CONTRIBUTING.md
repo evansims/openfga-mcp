@@ -44,10 +44,24 @@ cd openfga-mcp
 make setup
 
 # Activate the virtual environment
-source .venv/bin/activate
+source activate_venv.sh
 ```
 
 Run `make help` to see all available commands.
+
+### Virtual Environment Management
+
+The Makefile provides improved virtual environment handling:
+
+```bash
+# Create and show activation instructions
+make venv
+
+# Run a command within the virtual environment without activating it
+make in-venv CMD="python -m openfga_mcp version"
+```
+
+Most Makefile commands automatically use the virtual environment, so you don't need to activate it manually for common tasks like `make test`, `make lint`, etc.
 
 ### Manual Setup
 
@@ -88,41 +102,44 @@ While pip and Poetry are still supported, we recommend using uv for the best dev
 The Makefile provides shortcuts for common development tasks:
 
 ```bash
-# Run tests
+# Run tests (automatically uses the virtual environment)
 make test
 
-# Run linting
+# Run linting (automatically uses the virtual environment)
 make lint
 
-# Run type checking
+# Run type checking (automatically uses the virtual environment)
 make type-check
 
-# Format code
+# Format code (automatically uses the virtual environment)
 make format
 
-# Build the package
+# Build the package (automatically uses the virtual environment)
 make build
 
 # Clean build artifacts
 make clean
 
-# Update the lockfile
-make update-lockfile
+# Update dependencies (automatically uses the virtual environment)
+make update
 
-# Run the server locally
+# Run the server locally (automatically uses the virtual environment)
 make run
 ```
 
 ## Testing
 
 ```bash
-# Using Make
+# Using Make (automatically uses the virtual environment)
 make test
 make test-cov  # Run tests with coverage
 
-# Manually
+# Manually (requires activated virtual environment)
 pytest
 pytest --cov=src/openfga-mcp --cov-report=xml --cov-report=term
+
+# Or using in-venv without activating the environment
+make in-venv CMD="pytest"
 ```
 
 ## Style Guide

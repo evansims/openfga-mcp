@@ -30,7 +30,7 @@ uv pip install openfga-mcp
 git clone https://github.com/evansims/openfga-mcp.git
 cd openfga-mcp
 make setup
-make venv
+source activate_venv.sh  # Activates the virtual environment
 ```
 
 ### Running the MCP Server
@@ -38,6 +38,9 @@ make venv
 ```bash
 # Basic usage
 openfga-mcp-server --url "https://localhost:8000" --store "your-store-id"
+
+# Using the Makefile (automatically uses the virtual environment)
+make run
 
 # With Docker
 make docker-build
@@ -61,7 +64,7 @@ MCP is supported by [many clients](https://modelcontextprotocol.io/clients), inc
 ```bash
 # Setup development environment
 make setup
-make venv
+source activate_venv.sh  # Activates the virtual environment
 
 # Run tests and checks
 make test
@@ -70,6 +73,9 @@ make type-check
 
 # Run all checks
 make check
+
+# Run a custom command in the virtual environment
+make in-venv CMD="python -m openfga_mcp version"
 ```
 
 ```bash

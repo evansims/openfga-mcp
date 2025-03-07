@@ -31,33 +31,98 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ## Development Setup
 
+### Using Make (Recommended)
+
+We provide a Makefile with common development tasks to simplify the setup process:
+
+```bash
+# Clone the repository
+git clone https://github.com/evansims/openfga-mcp.git
+cd openfga-mcp
+
+# Set up the development environment (creates venv and installs dependencies)
+make setup
+
+# Activate the virtual environment
+source .venv/bin/activate
+```
+
+Run `make help` to see all available commands.
+
+### Manual Setup
+
+If you prefer not to use Make, you can set up manually:
+
 ```bash
 # Clone and setup
 git clone https://github.com/evansims/openfga-mcp.git
 cd openfga-mcp
 
 # Choose your package manager:
+# uv (recommended for speed)
+uv venv .venv && source .venv/bin/activate && uv pip install -e ".[dev]"
+
 # pip
 python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 
-# uv
-uv venv .venv && source .venv/bin/activate && uv pip install -e ".[dev]"
-
 # Poetry
 poetry install --with dev && poetry shell
+
+# Set up pre-commit hooks
+pre-commit install
+pre-commit install --hook-type commit-msg
+```
+
+## Package Management
+
+This project uses [uv](https://github.com/astral-sh/uv) as the preferred package manager:
+
+- **Speed**: uv is significantly faster than pip for dependency installation
+- **Reliability**: Better dependency resolution and fewer conflicts
+- **Caching**: Efficient caching for faster CI/CD pipelines
+
+While pip and Poetry are still supported, we recommend using uv for the best development experience.
+
+## Development Workflow
+
+The Makefile provides shortcuts for common development tasks:
+
+```bash
+# Run tests
+make test
+
+# Run linting
+make lint
+
+# Run type checking
+make type-check
+
+# Format code
+make format
+
+# Build the package
+make build
+
+# Clean build artifacts
+make clean
+
+# Update the lockfile
+make update-lockfile
+
+# Run the server locally
+make run
 ```
 
 ## Testing
 
 ```bash
-# Run tests
+# Using Make
+make test
+make test-cov  # Run tests with coverage
+
+# Manually
 pytest
-
-# Run linting
-ruff check .
-
-# Run type checking
-pyright
+pytest --cov=src/openfga-mcp --cov-report=xml --cov-report=term
 ```
 
 ## Style Guide

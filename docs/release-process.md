@@ -54,6 +54,29 @@ The release workflow is designed to be modular and reuse existing workflows:
 
 This architecture ensures consistency between regular CI checks and release checks, and makes the workflow more maintainable.
 
+## Optimized Build Process with uv
+
+The project uses [uv](https://github.com/astral-sh/uv) for package management and building:
+
+1. **Performance**: uv is significantly faster than pip for package installation and building
+2. **Deterministic Builds**: Uses uv.lock file for reproducible builds
+3. **Efficient Caching**: Optimized caching of dependencies across workflow runs
+4. **Consistency**: Ensures consistent dependency resolution
+
+Key optimizations in our build process:
+
+1. **Lockfile-Based Installs**: Dependencies are installed using the uv.lock file when available
+2. **Direct uv Build**: Uses `uv build` instead of `python -m build` for faster builds
+3. **Automatic Lockfile Updates**: A dedicated workflow updates the lockfile when dependencies change
+4. **Optimized Caching**: Cache keys include both pyproject.toml and uv.lock for precise caching
+
+All workflows use the Python setup composite action, which:
+
+- Installs uv automatically
+- Sets up appropriate caching for uv
+- Uses uv for all package installations
+- Detects and uses the lockfile when available
+
 ## Reusable Workflows and Actions
 
 The project uses several reusable components to reduce code duplication:
@@ -70,8 +93,10 @@ The project uses several reusable components to reduce code duplication:
    - Used for release notifications and CI completion notifications
 
 3. **python-setup**: A composite action for setting up Python environments
-   - Handles Python installation, dependency caching, and package installation
-   - Provides consistent Python setup across workflows
+   - Handles Python installation, uv installation, and dependency caching
+   - Provides consistent Python and uv setup across workflows
+   - Installs dependencies using uv for better performance
+   - Supports lockfile-based installations for deterministic builds
 
 This approach ensures that all workflows use consistent logic and reduces maintenance overhead.
 
@@ -104,6 +129,8 @@ If the release workflow fails, check:
 2. **Version Mismatch**: Verify that the version in `pyproject.toml` matches the version in `src/openfga-mcp/__init__.py`
 3. **PyPI Publishing**: Check that the repository is properly configured for PyPI trusted publishing
 4. **Configuration**: Verify that `.github/config.yml` exists and contains the expected values
+5. **uv Installation**: Check if there were any issues with installing or using uv
+6. **Lockfile**: Verify that the uv.lock file is up-to-date and valid
 
 ## PyPI Trusted Publishing Setup
 

@@ -3,6 +3,7 @@
 [![CI](https://github.com/evansims/openfga-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/evansims/openfga-mcp/actions/workflows/ci.yml)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 [![PyPI version](https://badge.fury.io/py/openfga-mcp.svg)](https://badge.fury.io/py/openfga-mcp)
+[![uv](https://img.shields.io/badge/uv-package%20manager-blue)](https://github.com/astral-sh/uv)
 
 An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that enables Large Language Models (LLMs) to read, search, and manipulate [OpenFGA](https://openfga.dev) stores. Unlocks authorization for agentic AI, and fine-grained [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding)✨ for humans. Take a look at the [use cases](#use-cases) for some inspiration.
 
@@ -25,11 +26,11 @@ Built using the [OpenFGA Python SDK](https://github.com/openfga/python-sdk) and 
 git clone https://github.com/evansims/openfga-mcp.git
 cd openfga-mcp
 
+# Using uv (recommended)
+uv venv .venv && source .venv/bin/activate && uv pip install -e .
+
 # Using pip
 python -m venv .venv && source .venv/bin/activate && pip install -e .
-
-# Using uv
-uv venv .venv && source .venv/bin/activate && uv pip install -e .
 
 # Using Poetry
 poetry install && poetry shell
@@ -38,11 +39,11 @@ poetry install && poetry shell
 #### Package managers (after official release)
 
 ```bash
+# Using uv (recommended)
+uv pip install openfga-mcp
+
 # Using pip
 pip install openfga-mcp
-
-# Using uv
-uv pip install openfga-mcp
 
 # Using Poetry
 poetry add openfga-mcp
@@ -89,11 +90,11 @@ git clone https://github.com/evansims/openfga-mcp.git
 cd openfga-mcp
 
 # Choose your package manager:
+# uv (recommended for speed)
+uv venv .venv && source .venv/bin/activate && uv pip install -e ".[dev]"
+
 # pip
 python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
-
-# uv
-uv venv .venv && source .venv/bin/activate && uv pip install -e ".[dev]"
 
 # Poetry
 poetry install --with dev && poetry shell
@@ -107,8 +108,6 @@ pytest
 ruff check .
 pyright
 ```
-
-Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to contribute to this project.
 
 ## Use Cases
 

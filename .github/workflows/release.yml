@@ -84,7 +84,8 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ needs.config.outputs.python_version }}
-          dependencies: "commitizen build twine"
+          dependencies: "commitizen"
+          cache: "true"
 
       - name: Configure Git
         run: |
@@ -138,7 +139,8 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ needs.config.outputs.python_version }}
-          dependencies: "build twine"
+          dependencies: "twine"
+          cache: "true"
 
       - name: Verify version
         run: |
@@ -149,10 +151,12 @@ jobs:
           fi
           echo "Version verification successful: $PACKAGE_VERSION"
 
+      # Use uv build instead of python -m build
       - name: Build package
-        run: python -m build
+        run: |
+          uv build
         env:
-          PIP_CACHE_DIR: ${{ runner.temp }}/pip-cache
+          UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
 
       - name: Verify package
         run: twine check dist/*

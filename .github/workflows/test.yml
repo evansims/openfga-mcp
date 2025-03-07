@@ -43,15 +43,24 @@ jobs:
           python-version: ${{ matrix.python-version }}
           dependencies: "pytest"
           install-dev: "true"
+          cache: "true"
 
       # Install additional dependencies based on inputs
       - name: Install additional dependencies
         run: |
           if [ "${{ inputs.coverage }}" == "true" ]; then
-            python -m pip install pytest-cov
+            if [ -f "uv.lock" ]; then
+              uv pip install --no-deps pytest-cov
+            else
+              uv pip install pytest-cov
+            fi
           fi
           if [ "${{ inputs.security-check }}" == "true" ]; then
-            python -m pip install safety
+            if [ -f "uv.lock" ]; then
+              uv pip install --no-deps safety
+            else
+              uv pip install safety
+            fi
           fi
 
       # Run tests without coverage if coverage is disabled

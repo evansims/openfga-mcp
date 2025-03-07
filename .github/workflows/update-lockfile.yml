@@ -1,0 +1,53 @@
+name: Update Lockfile
+
+# This workflow updates the uv.lock file to ensure deterministic builds
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run weekly on Sunday at 00:00 UTC
+    - cron: "0 0 * * 0"
+  push:
+    paths:
+      - "pyproject.toml"
+
+jobs:
+  update-lockfile:
+    name: Update uv.lock
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Use the composite action for Python setup
+      - name: Set up Python
+        uses: ./.github/actions/python-setup
+        with:
+          python-version: "3.10"
+          cache: "true"
+
+      - name: Generate lockfile
+        run: |
+          uv pip sync --lockfile uv.lock
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet uv.lock; then
+            echo "No changes to uv.lock"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected in uv.lock"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add uv.lock
+          git commit -m "chore(deps): update uv.lock file"
+          git push

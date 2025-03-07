@@ -34,6 +34,7 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
           dependencies: "ruff"
+          cache: "true"
 
       # Run linting with Ruff
       - name: Lint with Ruff

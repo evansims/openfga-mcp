@@ -27,6 +27,7 @@ jobs:
           python-version: ${{ inputs.python-version }}
           dependencies: "pyright"
           install-dev: "true"
+          cache: "true"
 
       # Run type checking
       - name: Run type checking

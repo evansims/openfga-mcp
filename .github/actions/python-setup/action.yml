@@ -1,12 +1,12 @@
 name: "Python Setup"
-description: "Sets up Python with common configurations"
+description: "Sets up Python with common configurations and uses uv for package management"
 
 inputs:
   python-version:
     description: "Python version to use"
     required: true
   cache:
-    description: "Whether to cache pip dependencies"
+    description: "Whether to cache dependencies"
     required: false
     default: "true"
   dependencies:
@@ -18,9 +18,17 @@ inputs:
     required: false
     default: "false"
   working-directory:
-    description: "Working directory for pip install commands"
+    description: "Working directory for install commands"
     required: false
     default: "."
+  uv-version:
+    description: "Version of uv to install"
+    required: false
+    default: "latest"
+  sync-mode:
+    description: "Mode for uv sync (frozen, direct, etc.)"
+    required: false
+    default: "direct"
 
 outputs:
   python-path:
@@ -29,9 +37,9 @@ outputs:
   python-version:
     description: "Actual Python version installed"
     value: ${{ steps.get-python-info.outputs.python-version }}
-  pip-version:
-    description: "Installed pip version"
-    value: ${{ steps.get-python-info.outputs.pip-version }}
+  uv-version:
+    description: "Installed uv version"
+    value: ${{ steps.get-python-info.outputs.uv-version }}
 
 runs:
   using: "composite"
@@ -41,41 +49,85 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-        cache: ${{ inputs.cache == 'true' && 'pip' || 'false' }}
+        # Don't use pip caching since we're using uv
+        cache: "false"
 
-    # Step 2: Install base dependencies (pip)
-    - name: Install base dependencies
+    # Step 2: Install uv
+    - name: Install uv
       shell: bash
-      run: python -m pip install --upgrade pip
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-    # Step 3: Install specified dependencies if provided
+    # Step 3: Set up uv caching if enabled
+    - name: Set up uv caching
+      if: inputs.cache == "true"
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/uv
+          ~/.uv
+        key: ${{ runner.os }}-uv-${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}-${{ hashFiles('**/uv.lock') || '' }}
+        restore-keys: |
+          ${{ runner.os }}-uv-${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}-
+          ${{ runner.os }}-uv-${{ inputs.python-version }}-
+
+    # Step 4: Check for uv.lock file and use it if available
+    - name: Check for uv.lock
+      id: check-lock
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if [ -f "uv.lock" ]; then
+          echo "has_lock=true" >> $GITHUB_OUTPUT
+          echo "uv.lock file found, will use for dependency resolution"
+        else
+          echo "has_lock=false" >> $GITHUB_OUTPUT
+          echo "No uv.lock file found, will use direct dependency resolution"
+        fi
+
+    # Step 5: Install specified dependencies if provided
     - name: Install specified dependencies
-      if: inputs.dependencies != ''
+      if: inputs.dependencies != ""
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: python -m pip install ${{ inputs.dependencies }}
+      run: |
+        if [ "${{ steps.check-lock.outputs.has_lock }}" == "true" ]; then
+          echo "Installing dependencies with lockfile..."
+          uv pip install --no-deps ${{ inputs.dependencies }}
+        else
+          echo "Installing dependencies directly..."
+          uv pip install ${{ inputs.dependencies }}
+        fi
 
-    # Step 4: Install dev dependencies if requested
+    # Step 6: Install dev dependencies if requested
     - name: Install dev dependencies
-      if: inputs.install-dev == 'true'
+      if: inputs.install-dev == "true"
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: python -m pip install -e ".[dev]"
+      run: |
+        if [ "${{ steps.check-lock.outputs.has_lock }}" == "true" ]; then
+          echo "Installing dev dependencies with lockfile..."
+          uv pip install --no-deps -e ".[dev]"
+        else
+          echo "Installing dev dependencies directly..."
+          uv pip install -e ".[dev]"
+        fi
 
-    # Step 5: Get Python information for outputs
-    - name: Get Python information
+    # Step 7: Get Python and uv information for outputs
+    - name: Get Python and uv information
       id: get-python-info
       shell: bash
       run: |
         PYTHON_PATH=$(which python)
         PYTHON_VERSION=$(python --version | cut -d' ' -f2)
-        PIP_VERSION=$(pip --version | cut -d' ' -f2)
+        UV_VERSION=$(uv --version | head -n 1)
 
         echo "python-path=$PYTHON_PATH" >> $GITHUB_OUTPUT
         echo "python-version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
-        echo "pip-version=$PIP_VERSION" >> $GITHUB_OUTPUT
+        echo "uv-version=$UV_VERSION" >> $GITHUB_OUTPUT
 
-        echo "Python setup complete:"
+        echo "Python and uv setup complete:"
         echo "- Python path: $PYTHON_PATH"
         echo "- Python version: $PYTHON_VERSION"
-        echo "- Pip version: $PIP_VERSION"
+        echo "- uv version: $UV_VERSION"

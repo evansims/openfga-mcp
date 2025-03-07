@@ -77,7 +77,7 @@ jobs:
 
       # Scan Docker image for vulnerabilities
       - name: Scan Docker image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.16.1
+        uses: aquasecurity/trivy-action@0.29.0
         with:
           image-ref: "ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version || github.sha }}"
           format: "sarif"

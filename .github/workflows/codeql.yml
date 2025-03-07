@@ -23,17 +23,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2.22.5
+        uses: github/codeql-action/init@v3.28.10
         with:
           languages: python
           queries: security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2.22.5
+        uses: github/codeql-action/analyze@v3.28.10
         with:
           category: "/language:python"
 
       - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@v2.22.5
+        uses: github/codeql-action/upload-sarif@v3.28.10
         with:
           sarif_file: results/python.sarif

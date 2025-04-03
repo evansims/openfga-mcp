@@ -1,91 +1,98 @@
-# OpenFGA MCP
+# OpenFGA MCP Server
 
 An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that enables Large Language Models (LLMs) to read, search, and manipulate [OpenFGA](https://openfga.dev) stores. Unlocks authorization for agentic AI, and fine-grained [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding)✨ for humans.
 
-Built using the [OpenFGA Python SDK](https://github.com/openfga/python-sdk) and [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
+## Requirements
 
-## Quick Start
+- Python 3.12+
+- An [OpenFGA server](https://openfga.dev/)
 
-### Requirements
+## Features
 
-- Python 3.10+
-- OpenFGA
+### Tools
 
-### Installation
+- `check`: Check if a user has a relation to an object
+- `list_objects`: List objects of a type that a user has a relation to
+- `write_tuples`: Write tuples to the OpenFGA store
+- `read_tuples`: Read tuples from the OpenFGA store
+- `get_authorization_model`: Get the current authorization model
+
+### Resources
+
+### Prompts
+
+## Usage
+
+We recommend running the server using [UVX](https://docs.astral.sh/uv/guides/tools/#running-tools):
 
 ```bash
-# Using pip/uv
-uv pip install openfga-mcp
-
-# From source
-git clone https://github.com/evansims/openfga-mcp.git
-cd openfga-mcp
-make setup
-source activate_venv.sh
+uvx openfga-mcp@latest
 ```
 
-### Running
+### Configuration
+
+The server accepts the following arguments:
+
+- `--openfga_env`: Fallback to using environment variables
+- `--openfga_url`: URL of your OpenFGA server
+- `--openfga_store`: ID of the store the MCP server will use
+- `--openfga_model`: ID of the authorization model the MCP server will use
+
+For example:
 
 ```bash
-# Direct CLI usage
-openfga-mcp-server --url "https://localhost:8000" --store "your-store-id"
-
-# Using Make
-make run
-
-# With Docker
-make docker-build
-OPENFGA_API_URL="https://localhost:8000" OPENFGA_STORE_ID="your-store-id" make docker-run
+uvx openfga-mcp@latest \
+  --openfga_url="http://127.0.0.1:8000" \
+  --openfga_store="your-store-id" \
+  --openfga_model="your-model-id"
 ```
 
-### Connecting
+If the `--openfga_env` flag is passed, the server will fallback to using the following environment variables:
 
-Connect your LLM application to the MCP server endpoint (default: http://localhost:8090).
+- `OPENFGA_API_URL` - The URL of your OpenFGA server
+- `OPENFGA_STORE_ID` - The ID of the store you wish to use
+- `OPENFGA_MODEL_ID` - The ID of the authorization model you wish to use
 
-Compatible with [MCP clients](https://modelcontextprotocol.io/clients) including Cursor, Windsurf, Cline, Claude Desktop, and Zed.
+### Using with Claude Desktop
+
+To configure Claude to use this server, add the following to your Claude config:
+
+```json
+{
+    "mcpServers": {
+        "openfga-mcp": {
+            "command": "uvx",
+            "args": [
+                "openfga-mcp@latest",
+            ]
+        }
+    }
+}
+```
+
+- You may need to specify the full path to your `uvx` executable. Use `which uvx` to find it.
+- You must restart Claude after updating the configuration.
+
+### Using with Raycast
+
+### Using with Cursor
+
+### Using with Windsurf
 
 ## Development
 
-```bash
-# Setup
-make setup
-source activate_venv.sh
-
-# Common tasks (all run in virtual environment automatically)
-make test        # Run tests
-make lint        # Run linting
-make type-check  # Run type checking
-make check       # Run all checks
-
-# Interactive development
-make shell       # Start shell in virtual environment
-make repl        # Start Python REPL
-make ipython     # Start IPython REPL
-
-# Run a custom command
-make in-venv CMD="python -m openfga_mcp version"
-```
-
-## Use Cases
-
-1. **Dynamic Access Control**: LLMs interpret natural language to determine permissions based on context
-2. **Policy Management**: Create or adjust authorization policies through conversational interfaces
-3. **Explainable Authorization**: Provide clear justifications for access decisions
-4. **Policy Debugging**: Diagnose permissions issues conversationally
-5. **Secure Collaboration**: Grant temporary access with precise scope
-
-## Documentation
-
-For detailed documentation, run:
+To setup your development environment, run:
 
 ```bash
-make docs-serve
+uv sync
 ```
 
-## Contributing
+To run the development server:
 
-See [Contributing Guidelines](CONTRIBUTING.md) for more information.
+```bash
+uv run openfga-mcp
+```
 
 ## License
 
-Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+Apache 2.0

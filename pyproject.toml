@@ -10,7 +10,11 @@ dependencies = [
     "starlette>=0.46.1",
     "uvicorn>=0.34.0",
     "typer[all]>=0.9.0",
-    "ruff>=0.3.0", "pyright>=1.1.353", "pre-commit>=3.6.0", "pytest>=8.0.0"
+    "ruff>=0.3.0",
+    "pyright>=1.1.353",
+    "pre-commit>=3.6.0",
+    "pytest>=8.0.0",
+    "openfga-sdk>=0.9.2",
 ]
 
 [project.scripts]
@@ -21,24 +25,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 120
-select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "B",   # flake8-bugbear
-    "I",   # isort
-    "N",   # naming
-    "UP",  # pyupgrade
-    "ANN", # annotations
-    "PT",  # pytest
-    "RUF", # ruff-specific
-    "SIM", # simplify
-    "ARG", # unused arguments
-    "ERA", # eradicate
-    "PL",  # pylint
-]
-ignore = ["ANN101", "ANN102", "ANN401", "PLR0913"]
 
 [tool.ruff.isort]
 known-first-party = ["openfga_mcp"]
@@ -48,7 +36,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.pyright]
-pythonVersion = "3.10"
+pythonVersion = "3.12"
 include = ["src", "tests"]
 venvPath = "."
 venv = "venv"

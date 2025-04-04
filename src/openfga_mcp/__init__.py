@@ -1,7 +1,5 @@
-from .__main__ import get_alerts, get_forecast, run
+from openfga_mcp.server import run
 
 __all__ = [
-    "get_alerts",
-    "get_forecast",
     "run",
 ]

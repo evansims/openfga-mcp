@@ -33,10 +33,20 @@ uvx openfga-mcp@latest
 
 The server accepts the following arguments:
 
-- `--openfga_env`: Fallback to using environment variables
 - `--openfga_url`: URL of your OpenFGA server
-- `--openfga_store`: ID of the store the MCP server will use
-- `--openfga_model`: ID of the authorization model the MCP server will use
+- `--openfga_store`: ID of the OpenFGA store the MCP server will use
+- `--openfga_model`: ID of the OpenFGA authorization model the MCP server will use
+
+For API token authentication:
+
+- `--openfga_token`: API token for use with your OpenFGA server
+
+For Client Credentials authentication:
+
+- `--openfga_client_id`: Client ID for use with your OpenFGA server
+- `--openfga_client_secret`: Client secret for use with your OpenFGA server
+- `--openfga_api_issuer`: API issuer for use with your OpenFGA server
+- `--openfga_api_audience`: API audience for use with your OpenFGA server
 
 For example:
 
@@ -46,12 +56,6 @@ uvx openfga-mcp@latest \
   --openfga_store="your-store-id" \
   --openfga_model="your-model-id"
 ```
-
-If the `--openfga_env` flag is passed, the server will fallback to using the following environment variables:
-
-- `OPENFGA_API_URL` - The URL of your OpenFGA server
-- `OPENFGA_STORE_ID` - The ID of the store you wish to use
-- `OPENFGA_MODEL_ID` - The ID of the authorization model you wish to use
 
 ### Using with Claude Desktop
 

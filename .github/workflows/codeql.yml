@@ -32,6 +32,3 @@ jobs:
         uses: github/codeql-action/analyze@v3.28.14
         with:
           category: "/language:python"
-
-      - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@v3.28.14

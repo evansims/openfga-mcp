@@ -1,25 +1,13 @@
 name: Release
 
-# This workflow handles the entire release process for the project:
-# 1. Runs quality checks (tests, linting, type checking)
-# 2. Bumps version based on conventional commits
-# 3. Generates changelog
-# 4. Creates GitHub release
-# 5. Publishes to PyPI
-# 6. Sends notification
-
 on:
   workflow_dispatch:
     inputs:
-      version_type:
-        description: "Version increment type"
+      version:
+        description: "Version"
         required: true
-        default: "patch"
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
+        default: "0.0.0"
+        type: string
       prerelease:
         description: "Is this a prerelease?"
         required: true
@@ -28,7 +16,7 @@ on:
       python_version:
         description: "Python version to use"
         required: false
-        default: ""
+        default: "3.12"
         type: string
 
 # Set default permissions to minimum required
@@ -96,18 +84,6 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-      # Use Makefile to bump version
-      - name: Bump version
-        id: bump_version
-        run: |
-          echo "Bumping version using ${{ github.event.inputs.version_type }} increment..."
-          # Modify the Makefile target to accept version type as an argument
-          if ! RELEASE_TYPE=${{ github.event.inputs.version_type }} make release-ci; then
-            echo "::error::Failed to bump version. Check if there are any conventional commits that warrant a version bump."
-            exit 1
-          fi
-          echo "Version bumped successfully!"
-
       - name: Get version
         id: get_version
         run: |
@@ -166,13 +142,11 @@ jobs:
           fi
           echo "Version verification successful: $PACKAGE_VERSION"
 
-      # Use Makefile to build the package
       - name: Build package
-        run: make build
+        run: uv build
         env:
           UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
 
-      # Generate Software Bill of Materials (SBOM)
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
@@ -180,7 +154,6 @@ jobs:
           output-file: sbom.spdx.json
           artifact-name: sbom.spdx.json
 
-      # Upload SBOM as an artifact
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
         with:
@@ -197,9 +170,7 @@ jobs:
 
           # Publish to PyPI using Makefile
           echo "Publishing package to PyPI..."
-          make publish
-        env:
-          UV_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          uv publish
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@v4
@@ -207,19 +178,3 @@ jobs:
           name: python-package-distributions
           path: dist/
           retention-days: 7
-
-  # Notify about the release
-  notify:
-    name: Notify
-    needs: [config, prepare-release, publish]
-    if: always()
-    uses: ./.github/workflows/notify.yml
-    with:
-      message: "Release ${{ needs.prepare-release.outputs.version }} process completed"
-      details: |
-        Version: ${{ needs.prepare-release.outputs.version }}
-        Tag: ${{ needs.prepare-release.outputs.tag }}
-        GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare-release.outputs.tag }}
-        PyPI Package: https://pypi.org/project/${{ needs.config.outputs.package_name }}/${{ needs.prepare-release.outputs.version }}/
-        Status: ${{ needs.publish.result == 'success' ? 'Success ✅' : 'Failed ❌' }}
-      success: ${{ needs.publish.result == 'success' }}

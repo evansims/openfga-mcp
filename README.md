@@ -13,9 +13,8 @@ An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP)
 
 - `check`: Check if a user has a relation to an object
 - `list_objects`: List objects of a type that a user has a relation to
-- `write_tuples`: Write tuples to the OpenFGA store
-- `read_tuples`: Read tuples from the OpenFGA store
-- `get_authorization_model`: Get the current authorization model
+- `list_relations`: List relations for which a user has a relation to an object
+- `list_users`: List users that have a given relationship with a given object
 
 ### Resources
 

@@ -157,5 +157,5 @@ jobs:
         Repository: ${{ github.repository }}
         Branch: ${{ github.ref_name }}
         Commit: ${{ github.sha }}
-        Status: ${{ (github.event.inputs.use_combined_check == 'true' && needs.combined-check.result == 'success') || (github.event.inputs.use_combined_check != 'true' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && needs.docs.result == 'success') ? 'Success ✅' : 'Failed ❌' }}
+        Status: ${{ if((github.event.inputs.use_combined_check == 'true' && needs.combined-check.result == 'success') || (github.event.inputs.use_combined_check != 'true' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && needs.docs.result == 'success'), 'Success ✅', 'Failed ❌') }}
       success: ${{ (github.event.inputs.use_combined_check == 'true' && needs.combined-check.result == 'success') || (github.event.inputs.use_combined_check != 'true' && needs.test.result == 'success' && needs.lint.result == 'success' && needs.type-check.result == 'success' && needs.docs.result == 'success') }}

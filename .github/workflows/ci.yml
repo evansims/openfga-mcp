@@ -22,6 +22,7 @@ on:
 # Set default permissions to minimum required
 permissions:
   contents: read
+  checks: write # Added for codecov upload in test workflow
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

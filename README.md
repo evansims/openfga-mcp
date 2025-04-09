@@ -68,18 +68,16 @@ uvx openfga-mcp@latest \
 
 ### Using with Claude Desktop
 
-To configure Claude to use this server, add the following to your Claude config:
+To configure Claude to use the server, add the following to your Claude config:
 
 ```json
 {
-    "mcpServers": {
-        "openfga-mcp": {
-            "command": "uvx",
-            "args": [
-                "openfga-mcp@latest",
-            ]
-        }
+  "mcpServers": {
+    "openfga-mcp": {
+      "command": "uvx",
+      "args": ["openfga-mcp@latest"]
     }
+  }
 }
 ```
 
@@ -97,13 +95,16 @@ To configure Claude to use this server, add the following to your Claude config:
 To setup your development environment, run:
 
 ```bash
-uv sync
+make setup
 ```
 
 To run the development server:
 
 ```bash
-uv run openfga-mcp
+make run \
+  --openfga_url="http://127.0.0.1:8000" \
+  --openfga_store="your-store-id" \
+  --openfga_model="your-model-id"
 ```
 
 ## License

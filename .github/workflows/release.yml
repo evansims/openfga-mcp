@@ -1,40 +1,52 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version"
-        required: true
-        default: "0.0.0"
-        type: string
-      prerelease:
-        description: "Is this a prerelease?"
-        required: true
-        default: false
-        type: boolean
-      python_version:
-        description: "Python version to use"
-        required: false
-        default: "3.12"
-        type: string
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+      - master
 
 # Set default permissions to minimum required
 permissions:
   contents: read
 
 jobs:
+  # Check if this is a release PR and if it was merged
+  check-release-pr:
+    name: Check Release PR
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v')
+    outputs:
+      version: ${{ steps.extract_version.outputs.version }}
+      is_release: ${{ steps.extract_version.outputs.is_release }}
+    steps:
+      - name: Extract version from branch name
+        id: extract_version
+        run: |
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          if [[ $BRANCH_NAME =~ ^release/v([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "is_release=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Detected release version: $VERSION"
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "Not a valid release branch pattern: $BRANCH_NAME"
+          fi
+
   # Load configuration using the reusable workflow
   config:
     name: Load Configuration
+    needs: check-release-pr
+    if: needs.check-release-pr.outputs.is_release == 'true'
     uses: ./.github/workflows/load-config.yml
-    with:
-      python_version_override: ${{ github.event.inputs.python_version }}
 
   # Run tests, linting, and type checking by reusing existing workflows
   test:
     name: Run Tests
-    needs: config
+    needs: [check-release-pr, config]
+    if: needs.check-release-pr.outputs.is_release == 'true'
     uses: ./.github/workflows/test.yml
     with:
       python-versions: '["${{ needs.config.outputs.python_version }}"]'
@@ -43,138 +55,69 @@ jobs:
 
   lint:
     name: Run Linting
-    needs: config
+    needs: [check-release-pr, config]
+    if: needs.check-release-pr.outputs.is_release == 'true'
     uses: ./.github/workflows/lint.yml
     with:
       python-version: ${{ needs.config.outputs.python_version }}
 
   type-check:
     name: Run Type Checking
-    needs: config
+    needs: [check-release-pr, config]
+    if: needs.check-release-pr.outputs.is_release == 'true'
     uses: ./.github/workflows/type-check.yml
     with:
       python-version: ${{ needs.config.outputs.python_version }}
 
-  # Bump version, update changelog, and create tag
-  prepare-release:
-    name: Prepare Release
-    needs: [config, test, lint, type-check]
+  # Create GitHub release with PR body as release notes
+  create-release:
+    name: Create Release
+    needs: [check-release-pr, config, test, lint, type-check]
+    if: needs.check-release-pr.outputs.is_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
-      tag: ${{ steps.get_version.outputs.tag }}
+      version: ${{ needs.check-release-pr.outputs.version }}
+      tag: ${{ steps.set_tag.outputs.tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Use the composite action for Python setup
-      - name: Set up Python
-        uses: ./.github/actions/python-setup
-        with:
-          python-version: ${{ needs.config.outputs.python_version }}
-          dependencies: "commitizen"
-          cache: "true"
+      - name: Set tag
+        id: set_tag
+        run: |
+          TAG="v${{ needs.check-release-pr.outputs.version }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Release tag: $TAG"
+
+      - name: Check if tag already exists
+        run: |
+          git fetch --tags
+          if git rev-parse "${{ steps.set_tag.outputs.tag }}" >/dev/null 2>&1; then
+            echo "::error::Tag ${{ steps.set_tag.outputs.tag }} already exists. Cannot proceed with release."
+            exit 1
+          fi
+          echo "Tag verification successful: ${{ steps.set_tag.outputs.tag }} does not exist yet."
 
       - name: Configure Git
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-      - name: Get version
-        id: get_version
+      - name: Save PR description to file
         run: |
-          VERSION=$(python -c "from configparser import ConfigParser; c = ConfigParser(); c.read('pyproject.toml'); print(c['project']['version'].strip('\"'))")
-          TAG="v$VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Detected version: $VERSION (tag: $TAG)"
-
-      - name: Generate changelog
-        run: |
-          echo "Generating changelog for version ${{ steps.get_version.outputs.version }}..."
-          cz changelog --incremental > CHANGELOG.md
-          echo "Changelog generated successfully!"
-          echo "Preview of changelog:"
-          cat CHANGELOG.md | head -n 10
+          echo "${{ github.event.pull_request.body }}" > RELEASE_NOTES.md
+          echo "Release notes saved from PR description"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.get_version.outputs.tag }}
-          name: Release ${{ steps.get_version.outputs.tag }}
-          body_path: CHANGELOG.md
-          draft: false
-          prerelease: ${{ github.event.inputs.prerelease }}
+          tag_name: ${{ steps.set_tag.outputs.tag }}
+          name: Release ${{ steps.set_tag.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          draft: true
+          prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
-
-  # Build and publish to PyPI
-  publish:
-    name: Build and Publish
-    needs: [config, prepare-release]
-    runs-on: ubuntu-latest
-    environment: publish
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.prepare-release.outputs.tag }}
-
-      # Use the composite action for Python setup
-      - name: Set up Python
-        uses: ./.github/actions/python-setup
-        with:
-          python-version: ${{ needs.config.outputs.python_version }}
-          cache: "true"
-
-      - name: Verify version
-        run: |
-          PACKAGE_VERSION=$(python -c "from configparser import ConfigParser; c = ConfigParser(); c.read('pyproject.toml'); print(c['project']['version'].strip('\"'))")
-          if [ "$PACKAGE_VERSION" != "${{ needs.prepare-release.outputs.version }}" ]; then
-            echo "::error::Version mismatch! Expected version ${{ needs.prepare-release.outputs.version }} but found $PACKAGE_VERSION"
-            exit 1
-          fi
-          echo "Version verification successful: $PACKAGE_VERSION"
-
-      - name: Build package
-        run: uv build
-        env:
-          UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
-
-      - name: Generate SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          format: spdx-json
-          output-file: sbom.spdx.json
-          artifact-name: sbom.spdx.json
-
-      - name: Upload SBOM
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: sbom.spdx.json
-          retention-days: 90
-
-      # Use Makefile to publish the package
-      - name: Verify and publish package
-        run: |
-          echo "Verifying package before publishing..."
-          # List the built distributions
-          ls -la dist/
-
-          # Publish to PyPI using Makefile
-          echo "Publishing package to PyPI..."
-          uv publish
-
-      - name: Upload package artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-          retention-days: 7

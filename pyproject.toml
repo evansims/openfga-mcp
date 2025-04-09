@@ -36,6 +36,7 @@ default-groups = ["dev", "docs"]
 
 [dependency-groups]
 dev = [
+    "commitizen>=4.5.0, <5",
     "pre-commit>=3.6.0, <4",
     "pyright>=1.1.353, <2",
     "pytest>=8.0.0, <9",

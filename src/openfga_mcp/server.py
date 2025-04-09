@@ -48,7 +48,7 @@ async def check(
     Returns:
         A formatted string containing the result of the authorization check.
     """
-    client = await get_client(ctx)
+    client = await _get_client(ctx)
 
     # Check if the user has the relation to the object
     try:
@@ -86,7 +86,7 @@ async def list_objects(
     Returns:
         A formatted string containing the result of the authorization check.
     """
-    client = await get_client(ctx)
+    client = await _get_client(ctx)
 
     # Get all objects of the given type that the user has a relation with
     try:
@@ -122,7 +122,7 @@ async def list_relations(
     Returns:
         A list of relations for which the specifieduser has a relationship with the object.
     """
-    client = await get_client(ctx)
+    client = await _get_client(ctx)
 
     # Get all relations for which the user has a relationship with the object
     try:
@@ -158,7 +158,7 @@ async def list_users(
     Returns:
         A list of users that have the given relationship with the given object.
     """
-    client = await get_client(ctx)
+    client = await _get_client(ctx)
 
     # Get all relations for which the user has a relationship with the object
     try:
@@ -181,7 +181,7 @@ async def list_users(
         return f"Error listing relations: {e!s}"
 
 
-async def get_client(ctx: Context) -> OpenFgaClient:
+async def _get_client(ctx: Context) -> OpenFgaClient:
     context: ServerContext = ctx.request_context.lifespan_context
     openfga: OpenFga = context.openfga
     return await openfga.client()

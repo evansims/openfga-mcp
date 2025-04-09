@@ -10,6 +10,7 @@ on:
 # Set default permissions to minimum required
 permissions:
   contents: read
+  checks: write
 
 jobs:
   # Check if this is a release PR and if it was merged

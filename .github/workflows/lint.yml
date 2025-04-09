@@ -10,8 +10,6 @@ on:
         required: true
         type: string
         default: "3.12"
-  push:
-    branches: ["main"]
   pull_request:
     branches: ["main"]
 

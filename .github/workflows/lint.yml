@@ -10,12 +10,6 @@ on:
         required: true
         type: string
         default: "3.12"
-  pull_request:
-    branches: ["main"]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 # Set default permissions to minimum required
 permissions:

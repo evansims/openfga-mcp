@@ -71,56 +71,14 @@ runs:
           ${{ runner.os }}-uv-${{ inputs.python-version }}-
 
     # Step 4: Create virtual environment
-    - name: Create virtual environment
+    - name: Create virtual environment and install dependencies
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        uv venv
+        make setup
         echo "Virtual environment created"
 
-    # Step 5: Check for uv.lock file and use it if available
-    - name: Check for uv.lock
-      id: check-lock
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      run: |
-        if [ -f "uv.lock" ]; then
-          echo "has_lock=true" >> $GITHUB_OUTPUT
-          echo "uv.lock file found, will use for dependency resolution"
-        else
-          echo "has_lock=false" >> $GITHUB_OUTPUT
-          echo "No uv.lock file found, will use direct dependency resolution"
-        fi
-
-    # Step 6: Install specified dependencies if provided
-    - name: Install specified dependencies
-      if: inputs.dependencies != ''
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      run: |
-        if [ "${{ steps.check-lock.outputs.has_lock }}" == "true" ]; then
-          echo "Installing dependencies with lockfile..."
-          uv add --frozen ${{ inputs.dependencies }}
-        else
-          echo "Installing dependencies directly..."
-          uv add ${{ inputs.dependencies }}
-        fi
-
-    # Step 7: Install dev dependencies if requested
-    - name: Install dev dependencies
-      if: inputs.install-dev == 'true'
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      run: |
-        if [ "${{ steps.check-lock.outputs.has_lock }}" == "true" ]; then
-          echo "Installing dev dependencies with lockfile..."
-          uv pip install --no-deps -e ".[dev]"
-        else
-          echo "Installing dev dependencies directly..."
-          uv pip install -e ".[dev]"
-        fi
-
-    # Step 8: Get Python and uv information for outputs
+    # Step 5: Get Python and uv information for outputs
     - name: Get Python and uv information
       id: get-python-info
       shell: bash

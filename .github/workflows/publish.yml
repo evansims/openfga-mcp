@@ -3,6 +3,12 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (e.g., v1.2.3)"
+        required: true
+        type: string
 
 # Set default permissions to minimum required
 permissions:
@@ -27,7 +33,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
 
       # Use the composite action for Python setup
       - name: Set up Python
@@ -39,7 +45,7 @@ jobs:
       - name: Extract version from tag
         id: extract_version
         run: |
-          TAG_NAME="${{ github.event.release.tag_name }}"
+          TAG_NAME="${{ github.event.release.tag_name || inputs.tag }}"
           if [[ $TAG_NAME =~ ^v(.*)$ ]]; then
             VERSION="${BASH_REMATCH[1]}"
             echo "version=$VERSION" >> $GITHUB_OUTPUT

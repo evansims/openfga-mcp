@@ -117,7 +117,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.set_tag.outputs.tag }}
-          name: Release ${{ steps.set_tag.outputs.tag }}
+          name: ${{ steps.set_tag.outputs.tag }}
           body_path: RELEASE_NOTES.md
           draft: true
           prerelease: false

@@ -29,7 +29,6 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ inputs.python-version }}
-          dependencies: "ruff"
           cache: "true"
 
       # Run linting with Makefile

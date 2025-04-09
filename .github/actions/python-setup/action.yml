@@ -100,10 +100,10 @@ runs:
       run: |
         if [ "${{ steps.check-lock.outputs.has_lock }}" == "true" ]; then
           echo "Installing dependencies with lockfile..."
-          uv pip install --no-deps ${{ inputs.dependencies }}
+          uv add --frozen ${{ inputs.dependencies }}
         else
           echo "Installing dependencies directly..."
-          uv pip install ${{ inputs.dependencies }}
+          uv add ${{ inputs.dependencies }}
         fi
 
     # Step 7: Install dev dependencies if requested

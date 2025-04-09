@@ -29,7 +29,6 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ inputs.python-version }}
-          dependencies: "pyright"
           install-dev: "true"
           cache: "true"
 

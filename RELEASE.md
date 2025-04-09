@@ -7,7 +7,6 @@
 
 ## Major or Minor Release
 
-Create a GitHub release via UI with the tag being `vX.Y.Z` where `X.Y.Z` is the version,
-and the release title being the same. Then ask someone to review the release.
-
-The package version will be set automatically from the tag.
+1. Create a Pull Request with a release branch name of `release/vX.Y.Z` where `X.Y.Z` is the version.
+2. Include a summary of the changes in the PR description.
+3. Once approved and merged, the release will automatically be created.

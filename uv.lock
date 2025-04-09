@@ -947,19 +947,19 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pre-commit", specifier = ">=3.6.0" },
-    { name = "pyright", specifier = ">=1.1.353" },
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "pytest-cov", specifier = ">=6.1.1" },
-    { name = "ruff", specifier = ">=0.11.4" },
-    { name = "safety", specifier = ">=3.3.1" },
-    { name = "uv-sort", specifier = ">=0.5.0" },
+    { name = "pre-commit", specifier = ">=3.6.0,<4" },
+    { name = "pyright", specifier = ">=1.1.353,<2" },
+    { name = "pytest", specifier = ">=8.0.0,<9" },
+    { name = "pytest-cov", specifier = ">=6.1.1,<7" },
+    { name = "ruff", specifier = ">=0.11.4,<1" },
+    { name = "safety", specifier = ">=3.3.1,<4" },
+    { name = "uv-sort", specifier = ">=0.5.0,<1" },
 ]
 docs = [
-    { name = "mkdocs", specifier = ">=1.6.1" },
-    { name = "mkdocs-glightbox", specifier = ">=0.4.0" },
-    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.5.45" },
-    { name = "mkdocstrings-python", specifier = ">=1.12.2" },
+    { name = "mkdocs", specifier = ">=1.6.1,<2" },
+    { name = "mkdocs-glightbox", specifier = ">=0.4.0,<1" },
+    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.5.45,<10" },
+    { name = "mkdocstrings-python", specifier = ">=1.12.2,<2" },
 ]
 
 [[package]]

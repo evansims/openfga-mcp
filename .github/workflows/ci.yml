@@ -50,7 +50,6 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ needs.config.outputs.python_version }}
-          dependencies: "pytest pytest-cov ruff pyright safety mkdocs mkdocs-material"
           install-dev: "true"
           cache: "true"
 
@@ -120,7 +119,6 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ needs.config.outputs.python_version }}
-          dependencies: "mkdocs mkdocs-material"
           cache: "true"
 
       # Build documentation

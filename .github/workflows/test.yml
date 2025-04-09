@@ -47,7 +47,6 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ matrix.python-version }}
-          dependencies: "pytest pytest-cov safety"
           install-dev: "true"
           cache: "true"
 

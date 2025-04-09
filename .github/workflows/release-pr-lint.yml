@@ -1,0 +1,39 @@
+name: Release PR Lint
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  validate-release-pr:
+    name: Validate Release PR
+    runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'release/v')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from branch name
+        id: extract_version
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          if [[ $BRANCH_NAME =~ ^release/v([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Detected release version: $VERSION"
+          else
+            echo "::error::Branch name does not follow the required pattern 'release/vX.X.X'"
+            exit 1
+          fi
+
+      - name: Check if tag already exists
+        run: |
+          git fetch --tags
+          TAG="v${{ steps.extract_version.outputs.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists. Please use a different version."
+            exit 1
+          fi
+          echo "Tag verification successful: $TAG does not exist yet."

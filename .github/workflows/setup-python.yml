@@ -39,19 +39,9 @@ jobs:
           python-version: ${{ inputs.python_version }}
           cache: ${{ inputs.cache && 'pip' || 'false' }}
 
+      - uses: astral-sh/setup-uv@v1
+        with:
+          version: "latest"
+
       - name: Install dependencies
-        if: inputs.install_dependencies
-        run: |
-          python -m pip install --upgrade pip
-
-          # Install specific dependencies if provided
-          if [ -n "${{ inputs.dependencies }}" ]; then
-            python -m pip install ${{ inputs.dependencies }}
-          fi
-
-          # Install dev dependencies if requested
-          if [ "${{ inputs.install_dev }}" == "true" ]; then
-            python -m pip install -e ".[dev]"
-          fi
-
-          echo "Python setup complete with version ${{ inputs.python_version }}"
+        run: uv sync --frozen --all-extras --dev -p ${{ inputs.python_version }}

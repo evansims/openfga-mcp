@@ -9,15 +9,7 @@ on:
         description: "Python version to use"
         required: true
         type: string
-        default: "3.10"
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+        default: "3.12"
 
 # Set default permissions to minimum required
 permissions:
@@ -37,7 +29,6 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ inputs.python-version }}
-          dependencies: "ruff"
           cache: "true"
 
       # Run linting with Makefile

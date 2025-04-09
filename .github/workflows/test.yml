@@ -10,7 +10,7 @@ on:
         description: "Python versions to test on (JSON array)"
         required: false
         type: string
-        default: '["3.10", "3.11", "3.12"]'
+        default: '["3.12"]'
       coverage:
         description: "Whether to generate coverage reports"
         required: false
@@ -47,7 +47,6 @@ jobs:
         uses: ./.github/actions/python-setup
         with:
           python-version: ${{ matrix.python-version }}
-          dependencies: "pytest pytest-cov safety"
           install-dev: "true"
           cache: "true"
 

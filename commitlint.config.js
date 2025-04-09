@@ -25,6 +25,7 @@ module.exports = {
         'style',
         'test',
         'security',
+        'release',
       ],
     ],
   },

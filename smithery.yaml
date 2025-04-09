@@ -1,0 +1,67 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - openfgaUrl
+      - openfgaStore
+      - openfgaModel
+    properties:
+      openfgaUrl:
+        type: string
+        description: URL of the OpenFGA server
+      openfgaStore:
+        type: string
+        description: ID of the OpenFGA store to use
+      openfgaModel:
+        type: string
+        description: ID of the OpenFGA authorization model to use
+      openfgaToken:
+        type: string
+        description: Optional API token for authentication with the OpenFGA server
+      openfgaClientId:
+        type: string
+        description: Optional client ID for client credentials authentication
+      openfgaClientSecret:
+        type: string
+        description: Optional client secret for client credentials authentication
+      openfgaApiIssuer:
+        type: string
+        description: Optional API issuer for client credentials authentication
+      openfgaApiAudience:
+        type: string
+        description: Optional API audience for client credentials authentication
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'openfga-mcp',
+      args: [
+        '--openfga_url', config.openfgaUrl,
+        '--openfga_store', config.openfgaStore,
+        '--openfga_model', config.openfgaModel
+      ].concat(
+        config.openfgaToken ? ['--openfga_token', config.openfgaToken] : []
+      ).concat(
+        config.openfgaClientId ? ['--openfga_client_id', config.openfgaClientId] : []
+      ).concat(
+        config.openfgaClientSecret ? ['--openfga_client_secret', config.openfgaClientSecret] : []
+      ).concat(
+        config.openfgaApiIssuer ? ['--openfga_api_issuer', config.openfgaApiIssuer] : []
+      ).concat(
+        config.openfgaApiAudience ? ['--openfga_api_audience', config.openfgaApiAudience] : []
+      ),
+      env: {}
+    })
+  exampleConfig:
+    openfgaUrl: http://127.0.0.1:8000
+    openfgaStore: example-store-id
+    openfgaModel: example-model-id
+    openfgaToken: example-token
+    openfgaClientId: example-client-id
+    openfgaClientSecret: example-client-secret
+    openfgaApiIssuer: example-api-issuer
+    openfgaApiAudience: example-api-audience

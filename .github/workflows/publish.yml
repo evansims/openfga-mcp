@@ -25,7 +25,9 @@ jobs:
     name: Build and Publish
     needs: [config]
     runs-on: ubuntu-latest
-    environment: publish
+    environment:
+      name: pypi
+      url: https://pypi.org/p/openfga-mcp
     permissions:
       id-token: write
       contents: read
@@ -55,6 +57,35 @@ jobs:
             echo "::error::Could not extract version from tag $TAG_NAME"
             exit 1
           fi
+
+      - name: Verify GitHub Release exists
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name || inputs.tag }}"
+
+          # When triggered by the release event, this check is redundant
+          # but important for workflow_dispatch triggers
+          echo "Verifying GitHub Release exists for tag: $TAG_NAME"
+
+          # Use GitHub API to check if the release exists
+          RELEASE_INFO=$(curl -s \
+            -H "Authorization: token ${{ github.token }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME")
+
+          # Check if API returned an error (release not found)
+          if [[ $RELEASE_INFO == *"Not Found"* ]]; then
+            echo "::error::GitHub Release for tag $TAG_NAME does not exist. Please create a release first."
+            exit 1
+          fi
+
+          # Extract release ID to confirm it's a valid release
+          RELEASE_ID=$(echo $RELEASE_INFO | jq -r .id)
+          if [[ -z "$RELEASE_ID" || "$RELEASE_ID" == "null" ]]; then
+            echo "::error::GitHub Release information for tag $TAG_NAME could not be retrieved."
+            exit 1
+          fi
+
+          echo "GitHub Release verification successful: Found release ID $RELEASE_ID for tag $TAG_NAME"
 
       - name: Install package in development mode
         run: |
@@ -96,7 +127,7 @@ jobs:
           retention-days: 90
 
       - name: Verify and publish package
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@release/v1.12.4
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@v4

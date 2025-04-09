@@ -30,6 +30,7 @@ jobs:
       url: https://pypi.org/p/openfga-mcp
     permissions:
       id-token: write
+      actions: read
       contents: read
     steps:
       - name: Checkout repository
@@ -115,6 +116,7 @@ jobs:
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
+          file: dist/openfga_mcp-*.whl
           format: spdx-json
           output-file: sbom.spdx.json
           artifact-name: sbom.spdx.json

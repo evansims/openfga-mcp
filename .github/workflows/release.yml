@@ -113,6 +113,46 @@ jobs:
           echo "${{ github.event.pull_request.body }}" > RELEASE_NOTES.md
           echo "Release notes saved from PR description"
 
+      - name: Install package in development mode
+        run: |
+          python -m pip install -e .
+          echo "Package installed in development mode"
+
+      - name: Verify package version
+        run: |
+          # Get current package version directly from the package
+          PACKAGE_VERSION=$(python -m openfga_mcp --version)
+
+          echo "Package version: $PACKAGE_VERSION"
+          echo "Expected version: ${{ steps.extract_version.outputs.version }}"
+
+          if [ "$PACKAGE_VERSION" != "${{ steps.extract_version.outputs.version }}" ]; then
+            echo "::error::Version mismatch! Expected version ${{ steps.extract_version.outputs.version }} but found $PACKAGE_VERSION"
+            exit 1
+          fi
+
+          echo "Version verification successful: $PACKAGE_VERSION matches tag version"
+
+      - name: Build package
+        run: make build
+        env:
+          UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          file: dist/openfga_mcp-*.whl
+          format: spdx-json
+          output-file: sbom.spdx.json
+          artifact-name: sbom.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+          retention-days: 90
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -122,3 +162,10 @@ jobs:
           draft: true
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+          retention-days: 7

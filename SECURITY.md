@@ -1,16 +1,8 @@
 # Security Policy
 
-## Supported Versions
-
-We currently support the following versions with security updates:
-
-| Version | Supported          |
-| ------- | ------------------ |
-| latest  | :white_check_mark: |
-
 ## Reporting a Vulnerability
 
-The OpenFGA MCP team takes security vulnerabilities seriously. We appreciate your efforts to responsibly disclose your findings.
+The maintainers take security vulnerabilities seriously. We appreciate your efforts to responsibly disclose your findings.
 
 To report a security vulnerability, please **DO NOT** open a public GitHub issue. Instead, please email security concerns to [hello@evansims.com](mailto:hello@evansims.com) with "SECURITY" in the subject line.
 

@@ -58,9 +58,6 @@ help:
 	$(SILENT_FLAG)echo "  $(GREEN)venv$(RESET)                - Show virtual environment instructions"
 	$(SILENT_FLAG)echo "  $(GREEN)in-venv$(RESET)             - Run command in virtual environment (CMD=\"command\")"
 	$(SILENT_FLAG)echo "  $(GREEN)shell$(RESET)               - Start shell in virtual environment"
-	$(SILENT_FLAG)echo "  $(GREEN)repl$(RESET)                - Start Python REPL"
-	$(SILENT_FLAG)echo "  $(GREEN)ipython$(RESET)             - Start IPython REPL"
-	$(SILENT_FLAG)echo "  $(GREEN)dev$(RESET)                 - Install package in development mode"
 	$(SILENT_FLAG)echo "  $(GREEN)run$(RESET)                 - Run the server locally"
 	$(SILENT_FLAG)echo "  $(GREEN)update$(RESET)              - Update dependencies"
 	$(SILENT_FLAG)echo ""
@@ -78,11 +75,7 @@ help:
 	$(SILENT_FLAG)echo "  $(GREEN)clean$(RESET)               - Remove build artifacts"
 	$(SILENT_FLAG)echo "  $(GREEN)build$(RESET)               - Build package"
 	$(SILENT_FLAG)echo "  $(GREEN)publish$(RESET)             - Publish package to PyPI"
-	$(SILENT_FLAG)echo "  $(GREEN)docs$(RESET)                - Build documentation"
-	$(SILENT_FLAG)echo "  $(GREEN)docs-serve$(RESET)          - Serve documentation locally"
 	$(SILENT_FLAG)echo "  $(GREEN)version$(RESET)             - Display current version"
-	$(SILENT_FLAG)echo "  $(GREEN)release$(RESET)             - Prepare a release"
-	$(SILENT_FLAG)echo "  $(GREEN)release-ci$(RESET)          - CI-friendly release (RELEASE_TYPE=type)"
 	$(SILENT_FLAG)echo ""
 	$(SILENT_FLAG)echo "$(BOLD)Options:$(RESET)"
 	$(SILENT_FLAG)echo "  V=1                    - Verbose output"
@@ -96,7 +89,7 @@ $(VENV_DIR):
 
 setup: $(VENV_DIR)
 	$(SILENT_FLAG)echo "$(BOLD)Setting up development environment...$(RESET)"
-	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && $(UV) pip install -e ".[dev,test,docs]"
+	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && $(UV) sync --frozen --all-extras --dev
 	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && pre-commit install && pre-commit install --hook-type commit-msg
 	$(SILENT_FLAG)echo "$(GREEN)Setup complete!$(RESET) Activate with: $(GREEN)source activate_venv.sh$(RESET)"
 	$(SILENT_FLAG)$(MAKE) -s venv
@@ -105,12 +98,6 @@ venv: $(VENV_DIR)
 	$(SILENT_FLAG)echo "$(BOLD)Virtual Environment:$(RESET)"
 	$(SILENT_FLAG)echo "  $(GREEN)source activate_venv.sh$(RESET)  - Activate"
 	$(SILENT_FLAG)echo "  $(GREEN)deactivate$(RESET)               - Deactivate"
-	$(SILENT_FLAG)echo "  $(YELLOW)Tip:$(RESET) Add to your shell profile: $(GREEN)alias activate-openfga='source $$(pwd)/activate_venv.sh'$(RESET)"
-
-dev:
-	$(SILENT_FLAG)echo "$(BOLD)Installing package in development mode...$(RESET)"
-	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) pip install -e ."
-	$(SILENT_FLAG)echo "$(GREEN)Package installed in development mode!$(RESET)"
 
 # ===== Testing & Quality =====
 test:
@@ -176,14 +163,14 @@ publish: build
 
 version:
 	$(SILENT_FLAG)echo "$(BOLD)Current version:$(RESET)"
-	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(PYTHON) -m openfga_mcp version" || \
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(PYTHON) -m openfga_mcp --version" || \
 		echo "$(YELLOW)Version information not available. Package may not be installed.$(RESET)"
 
 # ===== Utility Commands =====
 update:
 	$(SILENT_FLAG)echo "$(BOLD)Updating dependencies and lockfile...$(RESET)"
-	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) lock"
-	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) sync"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) lock --resolution lowest-direct"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="$(UV) sync --frozen --all-extras --dev"
 	$(SILENT_FLAG)echo "$(GREEN)Dependencies updated successfully!$(RESET)"
 
 run:
@@ -193,12 +180,6 @@ run:
 # ===== Virtual Environment Commands =====
 shell:
 	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && exec $$SHELL
-
-repl:
-	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="python"
-
-ipython:
-	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="python -m pip install ipython && ipython"
 
 in-venv:
 	$(SILENT_FLAG)if [ -z "$(CMD)" ]; then \

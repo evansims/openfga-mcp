@@ -7,12 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-04-10
+
 ### Added
 
 - Initial project setup
 - MCP server implementation for OpenFGA
-- Docker support
 - GitHub templates and workflows
 - Conventional Commits support
-
-[Unreleased]: https://github.com/evansims/openfga-mcp/compare/v0.0.1...HEAD

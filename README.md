@@ -1,5 +1,7 @@
 # OpenFGA MCP Server
 
+[![smithery badge](https://smithery.ai/badge/@evansims/openfga-mcp)](https://smithery.ai/server/@evansims/openfga-mcp)
+
 An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that enables Large Language Models (LLMs) to read, search, and manipulate [OpenFGA](https://openfga.dev) stores. Unlocks authorization for agentic AI, and fine-grained [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding)✨ for humans.
 
 ## Requirements
@@ -27,6 +29,14 @@ We recommend running the server using [UVX](https://docs.astral.sh/uv/guides/too
 
 ```bash
 uvx openfga-mcp@latest
+```
+
+### Installing via Smithery
+
+To install OpenFGA MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@evansims/openfga-mcp):
+
+```bash
+npx -y @smithery/cli install @evansims/openfga-mcp --client claude
 ```
 
 ### Configuration

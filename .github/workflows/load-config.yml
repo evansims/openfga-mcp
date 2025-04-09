@@ -58,7 +58,7 @@ jobs:
         id: load_config
         run: |
           # Default values in case config file is missing or values are not found
-          DEFAULT_PYTHON_VERSION="3.10"
+          DEFAULT_PYTHON_VERSION="3.12"
           DEFAULT_PACKAGE_NAME=$(basename $GITHUB_REPOSITORY)
           DEFAULT_BRANCH="main"
 

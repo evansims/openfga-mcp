@@ -9,12 +9,13 @@ dependencies = [
     "mcp>=1.4.1",
     "starlette>=0.46.1",
     "uvicorn>=0.34.0",
-    "typer[all]>=0.9.0",
     "ruff>=0.3.0",
     "pyright>=1.1.353",
     "pre-commit>=3.6.0",
     "pytest>=8.0.0",
+    "pytest-cov>=6.1.1",
     "openfga-sdk>=0.9.2",
+    "safety>=3.3.1",
 ]
 
 [project.scripts]
@@ -28,11 +29,10 @@ build-backend = "hatchling.build"
 target-version = "py312"
 line-length = 120
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["openfga_mcp"]
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.pyright]

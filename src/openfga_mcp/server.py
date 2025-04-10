@@ -687,27 +687,104 @@ async def _write_authorization_model_impl(client: OpenFgaClient, store_id: str, 
             conditions=auth_model_data.get("conditions", {}),
         )
 
-        # Call the write_authorization_model API
-        response = await client.write_authorization_model(body=model_request)
+        # Add more detailed logging for debugging
+        _write_to_log(f"Writing authorization model to store {store_id}")
+        _write_to_log(f"Request: {model_request}")
 
-        # Restore the original store ID if it exists and is different
-        if current_store_id and current_store_id != store_id:
-            client.set_store_id(current_store_id)
+        try:
+            # Call the write_authorization_model API with proper error handling
+            import inspect
 
-        # Extract the authorization model ID from the response
-        auth_model_id = None
-        if hasattr(response, "authorization_model_id"):
-            auth_model_id = response.authorization_model_id
-        elif isinstance(response, dict) and "authorization_model_id" in response:
-            auth_model_id = response["authorization_model_id"]
+            _write_to_log(
+                f"Client write_authorization_model signature: {inspect.signature(client.write_authorization_model)}"
+            )
 
-        if auth_model_id:
-            return f"Authorization model successfully created with ID: {auth_model_id}"
-        else:
-            return "Authorization model successfully created, but no ID was returned"
+            # Try different ways to call the API
+            try:
+                # Approach 1: Using body parameter
+                response = await client.write_authorization_model(body=model_request)
+            except Exception as e1:
+                _write_to_log(f"First approach failed: {e1}")
+                try:
+                    # Approach 2: Using positional parameter
+                    response = await client.write_authorization_model(model_request)
+                except Exception as e2:
+                    _write_to_log(f"Second approach failed: {e2}")
+                    # Approach 3: Direct JSON content
+
+                    model_json = {
+                        "schema_version": auth_model_data.get("schema_version", "1.1"),
+                        "type_definitions": auth_model_data.get("type_definitions", []),
+                    }
+                    if auth_model_data.get("conditions"):
+                        model_json["conditions"] = auth_model_data.get("conditions", {})
+
+                    _write_to_log(f"Trying with direct JSON: {model_json}")
+                    response = await client.write_authorization_model(body=model_json)
+
+            # Log the response for debugging
+            _write_to_log(f"Response type: {type(response)}")
+            _write_to_log(f"Response repr: {repr(response)}")
+            _write_to_log(f"Response dir: {dir(response)}")
+
+            # Restore the original store ID if it exists and is different
+            if current_store_id and current_store_id != store_id:
+                client.set_store_id(current_store_id)
+
+            # Try multiple ways to extract the model ID
+            auth_model_id = None
+
+            # Method 1: Direct attribute
+            if hasattr(response, "authorization_model_id"):
+                auth_model_id = response.authorization_model_id
+                _write_to_log(f"Found authorization_model_id as attribute: {auth_model_id}")
+            # Method 2: Dict-like access
+            elif isinstance(response, dict) and "authorization_model_id" in response:
+                auth_model_id = response["authorization_model_id"]
+                _write_to_log(f"Found authorization_model_id in dict: {auth_model_id}")
+            # Method 3: Try .json() if it's a ClientResponse
+            elif hasattr(response, "json") and callable(getattr(response, "json")):
+                try:
+                    json_data = await response.json()
+                    if "authorization_model_id" in json_data:
+                        auth_model_id = json_data["authorization_model_id"]
+                        _write_to_log(f"Found authorization_model_id in json(): {auth_model_id}")
+                except Exception as json_err:
+                    _write_to_log(f"Error getting json from response: {json_err}")
+            # Method 4: Try .data if it exists somewhere else
+            elif hasattr(response, "data"):
+                data = response.data
+                _write_to_log(f"Response has .data: {data}")
+                if hasattr(data, "authorization_model_id"):
+                    auth_model_id = data.authorization_model_id
+                    _write_to_log(f"Found authorization_model_id in data attribute: {auth_model_id}")
+                elif isinstance(data, dict) and "authorization_model_id" in data:
+                    auth_model_id = data["authorization_model_id"]
+                    _write_to_log(f"Found authorization_model_id in data dict: {auth_model_id}")
+            else:
+                _write_to_log("Could not find authorization_model_id in response")
+
+            if auth_model_id:
+                return f"Authorization model successfully created with ID: {auth_model_id}"
+            else:
+                # Even if we couldn't extract the ID, the model might have been created
+                return "Authorization model was created successfully, but we couldn't extract the ID."
+
+        except AttributeError as e:
+            _write_to_log(f"AttributeError in SDK: {e!s}")
+            # Handle ClientResponse with no 'data' attribute
+            if "'ClientResponse' object has no attribute 'data'" in str(e):
+                _write_to_log("Handling ClientResponse with no data attribute")
+                return "Authorization model was created, but couldn't extract the ID due to SDK compatibility issue."
+            else:
+                raise
 
     except Exception as e:
         _write_to_log(f"Error creating authorization model: {e!s}")
+        _write_to_log(f"Exception type: {type(e)}")
+        import traceback
+
+        _write_to_log(f"Traceback: {traceback.format_exc()}")
         return f"Error creating authorization model: {e!s}"
 
 

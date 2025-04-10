@@ -21,7 +21,16 @@ class OpenFga:
             config = self.get_config()
             # Ensure store_id is set if store_name was used
             await self._ensure_store_id(config)
-            self._client = OpenFgaClient(configuration=config)
+            print(f"Creating new OpenFGA client with config: {config}")
+            try:
+                self._client = OpenFgaClient(configuration=config)
+                print(f"OpenFGA client created: {self._client}")
+                # Verify/debug client methods
+                client_methods = [method for method in dir(self._client) if not method.startswith("_")]
+                print(f"Available client methods: {client_methods}")
+            except Exception as e:
+                print(f"Error creating OpenFGA client: {e}")
+                raise
         return self._client
 
     def get_config(self) -> ClientConfiguration:

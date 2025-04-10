@@ -18,7 +18,7 @@ dependencies = [
     "httpx>=0.28, <0.29",
     "mcp>=1.4, <2",
     "openfga-sdk>=0.9, <1",
-    "starlette>=0.27, <0.28",
+    "starlette>=0.27, <0.47",
     "uvicorn>=0.23, <0.24",
 ]
 

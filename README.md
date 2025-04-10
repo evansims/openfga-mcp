@@ -61,7 +61,7 @@ For example:
 
 ```bash
 uvx openfga-mcp@latest \
-  --openfga_url="http://127.0.0.1:8000" \
+  --openfga_url="http://127.0.0.1:8080" \
   --openfga_store="your-store-id" \
   --openfga_model="your-model-id"
 ```
@@ -102,7 +102,7 @@ To run the development server:
 
 ```bash
 make run \
-  --openfga_url="http://127.0.0.1:8000" \
+  --openfga_url="http://127.0.0.1:8080" \
   --openfga_store="your-store-id" \
   --openfga_model="your-model-id"
 ```

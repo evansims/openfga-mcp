@@ -46,7 +46,7 @@ def start_services() -> Generator[str, None, None]:
     print("Running seed script...")
     seed_env = os.environ.copy()
     seed_env["FGA_API_SCHEME"] = "http"
-    seed_env["FGA_API_HOST"] = "localhost:8080"
+    seed_env["FGA_API_HOST"] = "127.0.0.1:8080"
 
     # Actually run the seed script
     seed_script = os.path.join(os.path.dirname(__file__), "seed_fga.py")
@@ -63,7 +63,7 @@ def start_services() -> Generator[str, None, None]:
     print(f"Starting MCP server on {TEST_SERVER_URL}...")
     server_env = os.environ.copy()
     server_env["FGA_API_SCHEME"] = "http"
-    server_env["FGA_API_HOST"] = "localhost:8080"
+    server_env["FGA_API_HOST"] = "127.0.0.1:8080"
     server_env["FGA_STORE_NAME"] = "test_store"
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     server_env["PYTHONPATH"] = project_root + os.pathsep + server_env.get("PYTHONPATH", "")
@@ -305,3 +305,15 @@ async def test_list_users_no_results(start_services: str):
         server_url, "list_users", {"object": "nonexistent", "type": "document", "relation": "viewer"}
     )
     assert response_nonexistent == "No users found with the viewer relationship with nonexistent"
+
+
+@pytest.mark.asyncio
+async def test_list_stores(start_services: str):
+    """Test list_stores functionality."""
+    server_url = start_services
+
+    # List all stores (no parameters supported)
+    response = await call_mcp_tool(server_url, "list_stores", {})
+    assert "Found stores:" in response
+    assert "ID:" in response
+    assert "Name: test_store" in response  # From seed_fga.py that creates 'test_store'

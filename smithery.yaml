@@ -57,7 +57,7 @@ startCommand:
       env: {}
     })
   exampleConfig:
-    openfgaUrl: http://127.0.0.1:8000
+    openfgaUrl: http://127.0.0.1:8080
     openfgaStore: example-store-id
     openfgaModel: example-model-id
     openfgaToken: example-token

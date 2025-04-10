@@ -16,4 +16,4 @@ RUN pip install --no-cache-dir .
 # Expose any necessary ports if applicable (not strictly required for stdio based MCP)
 
 # Set the default command. The command here uses dummy arguments; the actual parameters will be provided via Smithery config at runtime.
-CMD ["openfga-mcp", "--openfga_url", "http://127.0.0.1:8000", "--openfga_store", "store-id", "--openfga_model", "model-id"]
+CMD ["openfga-mcp", "--openfga_url", "http://127.0.0.1:8080", "--openfga_store", "store-id", "--openfga_model", "model-id"]

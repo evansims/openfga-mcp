@@ -17,7 +17,7 @@ from starlette.routing import Mount, Route
 from openfga_mcp.openfga import OpenFga
 
 
-@dataclass(frozen=True)
+@dataclass
 class ServerContext:
     openfga: OpenFga
 
@@ -26,19 +26,76 @@ class ServerContext:
 type JsonDict = dict[str, Any]
 
 
+def _write_to_log(message: Any, log_file: str = "openfga_mcp.log") -> None:
+    """
+    Helper method to log messages to a local file.
+
+    Args:
+        message: The message to log (can be any type, will be converted to string)
+        log_file: Path to the log file (defaults to openfga_mcp.log in the current directory)
+    """
+    try:
+        import datetime
+        import json
+        import os
+
+        # Create directory if it doesn't exist
+        log_dir = os.path.dirname(log_file)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
+        # Get current timestamp
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Convert message to string
+        if isinstance(message, dict) or isinstance(message, list):
+            message_str = json.dumps(message)
+        else:
+            message_str = str(message)
+
+        # Write to log file with timestamp
+        with open(log_file, "a") as f:
+            f.write(f"[{timestamp}] {message_str}\n")
+    except Exception as e:
+        # Silent failure - don't interrupt main flow if logging fails
+        print(f"Error writing to log file: {e}")
+
+
 @asynccontextmanager
-async def openfga_mcp_lifespan(app: Starlette) -> AsyncIterator[JsonDict]:
+async def openfga_sse_lifespan(app: Starlette) -> AsyncIterator[JsonDict]:
     """Get OpenFga instance and store it in app state."""
+    _write_to_log("openfga_sse_lifespan")
+
     openfga = OpenFga()
     server_context = ServerContext(openfga)
     app.state.server_context = server_context
+
+    _write_to_log(app)
+
     try:
         yield {"server_context": server_context}
     finally:
         await openfga.close()
 
 
-mcp = FastMCP("openfga-mcp")
+@asynccontextmanager
+async def openfga_mcp_lifespan(server: FastMCP) -> AsyncIterator[JsonDict]:
+    """Get OpenFga instance and store it in app state."""
+    _write_to_log("openfga_mcp_lifespan")
+    _write_to_log(server)
+
+    openfga = OpenFga()
+    server_context = ServerContext(openfga)
+
+    _write_to_log(openfga)
+
+    try:
+        yield {"server_context": server_context}
+    finally:
+        await openfga.close()
+
+
+mcp = FastMCP("openfga-mcp", lifespan=openfga_mcp_lifespan)
 
 
 async def health_check(request: Request) -> PlainTextResponse:
@@ -46,7 +103,7 @@ async def health_check(request: Request) -> PlainTextResponse:
 
 
 mcp_server_instance = mcp._mcp_server
-starlette_app = Starlette(debug=True, lifespan=openfga_mcp_lifespan)
+starlette_app = Starlette(debug=True, lifespan=openfga_sse_lifespan)
 
 
 async def handle_mcp_post(request: Request) -> JSONResponse:
@@ -65,8 +122,10 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
             return JSONResponse({"error": "Missing 'tool' in request body"}, status_code=400)
 
         args = body.get("args", {})
-        if not args:
-            return JSONResponse({"error": f"Missing 'args' for tool {tool_name}"}, status_code=400)
+
+        _write_to_log("handle_mcp_post")
+        _write_to_log(args)
+        _write_to_log(request)
 
         try:
             server_context = request.app.state.server_context
@@ -91,6 +150,8 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
                 if not all(k in args for k in ["object", "type", "relation"]):
                     return JSONResponse({"error": "Missing required args for list_users"}, status_code=400)
                 result = await _list_users_impl(client, **args)
+            case "list_stores":
+                result = await _list_stores_impl(client)
             case _:
                 return JSONResponse({"error": f"Unsupported tool: {tool_name}"}, status_code=400)
 
@@ -225,9 +286,45 @@ async def _list_users_impl(client: OpenFgaClient, object: str, type: str, relati
         return f"Error listing users: {e!s}"
 
 
-async def _get_client(ctx: Context | None = None, app: Starlette | None = None) -> OpenFgaClient:
+async def _list_stores_impl(client: OpenFgaClient) -> str:
+    try:
+        response = await client.list_stores()
+
+        # Extract stores safely from various response formats
+        stores = []
+
+        # Handle different possible response structures
+        if hasattr(response, "stores") and response.stores:
+            stores = response.stores
+        elif isinstance(response, dict) and "stores" in response:
+            stores = response["stores"]
+
+        # Format the response
+        if stores:
+            stores_info = []
+            for store in stores:
+                store_id = store.id if hasattr(store, "id") else store.get("id", "unknown")
+                store_name = store.name if hasattr(store, "name") else store.get("name", "unknown")
+                created_at = store.created_at if hasattr(store, "created_at") else store.get("created_at", "unknown")
+                stores_info.append(f"ID: {store_id}, Name: {store_name}, Created: {created_at}")
+
+            stores_str = "\n".join(stores_info)
+            result = f"Found stores:\n{stores_str}"
+
+            return result
+        else:
+            return "No stores found"
+    except Exception as e:
+        return f"Error listing stores: {e!s}"
+
+
+async def _get_client(ctx: Context | None = None, app: Starlette | FastMCP | None = None) -> OpenFgaClient:
     """Retrieves the OpenFgaClient from context or app state."""
     server_ctx: ServerContext | None = None
+
+    _write_to_log("_get_client")
+    _write_to_log(ctx)
+    _write_to_log(app)
 
     match (ctx, app):
         case (Context() as c, _) if (
@@ -266,9 +363,19 @@ async def list_users(ctx: Context, object: str, type: str, relation: str) -> str
     return await _list_users_impl(await _get_client(ctx), object=object, type=type, relation=relation)
 
 
+@mcp.tool()
+async def list_stores(ctx: Context) -> str:
+    _write_to_log("list_stores")
+    _write_to_log(ctx)
+    return await _list_stores_impl(await _get_client(ctx))
+
+
 def run() -> None:
     """Run the OpenFga MCP server."""
     args = OpenFga().args()
+
+    _write_to_log("run()")
+    _write_to_log(args)
 
     match args.transport:
         case "stdio":

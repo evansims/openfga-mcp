@@ -95,7 +95,6 @@ setup: $(VENV_DIR)
 	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && $(UV) sync --frozen --all-extras --dev
 	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && pre-commit install && pre-commit install --hook-type commit-msg
 	$(SILENT_FLAG)echo "$(GREEN)Setup complete!$(RESET) Activate with: $(GREEN)source activate_venv.sh$(RESET)"
-	$(SILENT_FLAG)$(MAKE) -s venv
 
 dev: setup
 	$(SILENT_FLAG)echo "$(BOLD)Starting development server...$(RESET)"

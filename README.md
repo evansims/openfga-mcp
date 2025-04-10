@@ -15,6 +15,8 @@ An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP)
 
 - `create_store`: Creates a new Store. ([create-store](https://openfga.dev/api/service#/Stores/CreateStore))
 - `list_stores`: List all stores. ([list-stores](https://openfga.dev/api/service#/Stores/ListStores))
+- `get_store`: Get a store details. ([get-store](https://openfga.dev/api/service#/Stores/GetStore))
+- `delete_store`: Delete a store. ([delete-store](https://openfga.dev/api/service#/Stores/DeleteStore))
 - `get_store_id_by_name`: Get the ID of a store by it's name.
 
 - `check`: Check if a user has a relation to an object. ([check](https://openfga.dev/api/service#/Assertions/Check))

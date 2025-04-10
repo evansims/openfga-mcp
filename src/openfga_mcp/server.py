@@ -163,6 +163,10 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
                 if "store_id" not in args:
                     return JSONResponse({"error": "Missing required arg 'store_id' for get_store"}, status_code=400)
                 result = await _get_store_impl(client, **args)
+            case "delete_store":
+                if "store_id" not in args:
+                    return JSONResponse({"error": "Missing required arg 'store_id' for delete_store"}, status_code=400)
+                result = await _delete_store_impl(client, **args)
             case "create_store":
                 if "name" not in args:
                     return JSONResponse({"error": "Missing required arg 'name' for create_store"}, status_code=400)
@@ -519,6 +523,55 @@ async def get_store(ctx: Context, store_id: str) -> str:
     _write_to_log(f"get_store: {store_id}")
     _write_to_log(ctx)
     return await _get_store_impl(await _get_client(ctx), store_id=store_id)
+
+
+async def _delete_store_impl(client: OpenFgaClient, store_id: str) -> str:
+    """
+    Deletes a store by its ID.
+
+    Args:
+        client: The OpenFGA client
+        store_id: The ID of the store to delete
+
+    Returns:
+        A string with the result of the operation
+    """
+    try:
+        # Save the current store ID
+        current_store_id = client.get_store_id()
+
+        # Set the store ID for this request
+        client.set_store_id(store_id)
+
+        # Call the delete_store API
+        await client.delete_store()
+
+        # Restore the original store ID if it exists and is different
+        if current_store_id and current_store_id != store_id:
+            client.set_store_id(current_store_id)
+
+        return f"Store with ID '{store_id}' has been successfully deleted"
+
+    except Exception as e:
+        _write_to_log(f"Error deleting store: {e!s}")
+        return f"Error deleting store: {e!s}"
+
+
+@mcp.tool()
+async def delete_store(ctx: Context, store_id: str) -> str:
+    """
+    Deletes a store by its ID.
+
+    Args:
+        ctx: The MCP context
+        store_id: The ID of the store to delete
+
+    Returns:
+        A string with the result of the operation
+    """
+    _write_to_log(f"delete_store: {store_id}")
+    _write_to_log(ctx)
+    return await _delete_store_impl(await _get_client(ctx), store_id=store_id)
 
 
 def run() -> None:

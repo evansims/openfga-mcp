@@ -363,3 +363,31 @@ async def test_get_store(start_services: str):
     assert "Store details:" in response
     assert f"ID: {store_id}" in response
     assert "Name:" in response
+
+
+@pytest.mark.asyncio
+async def test_delete_store(start_services: str):
+    """Test delete_store functionality."""
+    server_url = start_services
+
+    # First, create a new store to delete
+    store_name = f"delete_test_store_{uuid.uuid4().hex[:8]}"
+    create_response = await call_mcp_tool(server_url, "create_store", {"name": store_name})
+
+    # Extract the store ID from the creation response
+    import re
+
+    match = re.search(r"ID: ([a-zA-Z0-9-]+)", create_response)
+    assert match, "Could not find store ID in the create store response"
+
+    store_id = match.group(1)
+
+    # Delete the store
+    delete_response = await call_mcp_tool(server_url, "delete_store", {"store_id": store_id})
+
+    # Verify the delete response
+    assert f"Store with ID '{store_id}' has been successfully deleted" in delete_response
+
+    # List stores to verify the store is no longer in the list
+    list_response = await call_mcp_tool(server_url, "list_stores", {})
+    assert store_name not in list_response

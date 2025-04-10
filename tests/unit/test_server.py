@@ -47,6 +47,7 @@ async def mock_openfga_sdk_client():
     client.list_stores = AsyncMock()
     client.create_store = AsyncMock()
     client.get_store = AsyncMock()
+    client.delete_store = AsyncMock()
     client.get_store_id = MagicMock(return_value=None)
     client.set_store_id = MagicMock()
     client.close = AsyncMock()  # For lifespan testing
@@ -522,6 +523,78 @@ async def test_get_store_impl_exception(mock_openfga_sdk_client):
     assert f"Error retrieving store: {str(exception)}" == result
 
 
+@pytest.mark.asyncio
+async def test_delete_store_impl_success(mock_openfga_sdk_client):
+    """Test _delete_store_impl with successful store deletion."""
+    # Setup the delete_store method to complete successfully
+    mock_openfga_sdk_client.delete_store.return_value = None  # Usually returns nothing on success
+
+    # Execute the delete operation
+    result = await server._delete_store_impl(mock_openfga_sdk_client, store_id="01FQH7V8BEG3GPQW93KTRFR8JB")
+
+    # Verify the result message
+    assert result == "Store with ID '01FQH7V8BEG3GPQW93KTRFR8JB' has been successfully deleted"
+
+    # Verify the store ID was properly set
+    mock_openfga_sdk_client.set_store_id.assert_any_call("01FQH7V8BEG3GPQW93KTRFR8JB")
+    mock_openfga_sdk_client.delete_store.assert_awaited_once()
+
+    # With our setup, get_store_id returns None so we never reset to a previous ID
+    assert mock_openfga_sdk_client.set_store_id.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_delete_store_impl_with_previous_id(mock_openfga_sdk_client):
+    """Test _delete_store_impl with a previous store ID set."""
+    # Set up the mock to return a previous store ID
+    mock_openfga_sdk_client.get_store_id.return_value = "previous_store_id"
+
+    # Setup the delete_store method to complete successfully
+    mock_openfga_sdk_client.delete_store.return_value = None
+
+    # Execute the delete operation on a different store ID
+    result = await server._delete_store_impl(mock_openfga_sdk_client, store_id="store_to_delete")
+
+    # Verify the result message
+    assert result == "Store with ID 'store_to_delete' has been successfully deleted"
+
+    # Verify the store ID was set to the target ID and then reset back to the previous ID
+    mock_openfga_sdk_client.set_store_id.assert_any_call("store_to_delete")
+    mock_openfga_sdk_client.set_store_id.assert_any_call("previous_store_id")
+    assert mock_openfga_sdk_client.set_store_id.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_delete_store_impl_same_id(mock_openfga_sdk_client):
+    """Test _delete_store_impl when deleting the currently selected store."""
+    # Set up the mock to return the same store ID we'll delete
+    current_id = "current_store_id"
+    mock_openfga_sdk_client.get_store_id.return_value = current_id
+
+    # Setup the delete_store method to complete successfully
+    mock_openfga_sdk_client.delete_store.return_value = None
+
+    # Execute the delete operation on the same store ID
+    result = await server._delete_store_impl(mock_openfga_sdk_client, store_id=current_id)
+
+    # Verify the result message
+    assert result == f"Store with ID '{current_id}' has been successfully deleted"
+
+    # Verify the store ID was set, but not reset (since it's the same ID)
+    mock_openfga_sdk_client.set_store_id.assert_called_once_with(current_id)
+    mock_openfga_sdk_client.delete_store.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_delete_store_impl_exception(mock_openfga_sdk_client):
+    """Test _delete_store_impl handles exceptions."""
+    exception = ApiException("Store not found or permission denied")
+    mock_openfga_sdk_client.delete_store.side_effect = exception
+
+    result = await server._delete_store_impl(mock_openfga_sdk_client, store_id="nonexistent_id")
+    assert f"Error deleting store: {str(exception)}" == result
+
+
 # --- Test /call POST Endpoint ---
 
 
@@ -657,6 +730,33 @@ async def test_call_get_store_missing_id(test_app: AsyncClient):
 
     assert response.status_code == 400
     assert "Missing required arg 'store_id' for get_store" in response.text
+
+
+@pytest.mark.asyncio
+async def test_call_delete_store_success(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the delete_store tool successfully."""
+    # Setup the delete_store method to complete successfully
+    mock_openfga_sdk_client.delete_store.return_value = None
+
+    payload = {"tool": "delete_store", "args": {"store_id": "01FQH7V8BEG3GPQW93KTRFR8JB"}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+    assert "Store with ID '01FQH7V8BEG3GPQW93KTRFR8JB' has been successfully deleted" in response.json()["result"]
+
+    # Verify the correct request was made
+    mock_openfga_sdk_client.set_store_id.assert_any_call("01FQH7V8BEG3GPQW93KTRFR8JB")
+    mock_openfga_sdk_client.delete_store.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_call_delete_store_missing_id(test_app: AsyncClient):
+    """Test POST /call for the delete_store tool with missing store_id argument."""
+    payload = {"tool": "delete_store", "args": {}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'store_id' for delete_store" in response.text
 
 
 @pytest.mark.asyncio

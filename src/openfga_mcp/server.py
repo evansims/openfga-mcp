@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 import uvicorn
 from mcp.server.fastmcp import Context, FastMCP
@@ -9,7 +9,6 @@ from mcp.server.sse import SseServerTransport
 from openfga_sdk import FgaObject, OpenFgaClient
 from openfga_sdk.client.client import ClientListObjectsRequest, ClientListRelationsRequest, ClientListUsersRequest
 from openfga_sdk.client.models.check_request import ClientCheckRequest
-from openfga_sdk.models import CheckResponse, ListObjectsResponse, ListUsersResponse
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse
@@ -131,10 +130,17 @@ async def _check_impl(client: OpenFgaClient, user: str, relation: str, object: s
     try:
         body = ClientCheckRequest(user=user, relation=relation, object=object)
         response = await client.check(body)
-        check_response = cast(CheckResponse, response)
+
+        # Extract allowed state safely, handling both object and dict responses
+        allowed = False
+        if hasattr(response, "allowed"):
+            allowed = response.allowed
+        elif isinstance(response, dict) and "allowed" in response:
+            allowed = response["allowed"]
+
         return (
             f"{user} has the relation {relation} to {object}"
-            if check_response.allowed
+            if allowed
             else f"{user} does not have the relation {relation} to {object}"
         )
     except Exception as e:
@@ -145,11 +151,14 @@ async def _list_objects_impl(client: OpenFgaClient, user: str, relation: str, ty
     try:
         body = ClientListObjectsRequest(user=user, relation=relation, type=type)
         response = await client.list_objects(body)
-        # Type cast to fix linter errors
-        list_objects_response = cast(ListObjectsResponse, response)
 
-        # Handle case where objects might be None or not an iterable
-        objects = list_objects_response.objects or []
+        # Extract objects safely from various response formats
+        objects = []
+        if hasattr(response, "objects"):
+            objects = response.objects or []
+        elif isinstance(response, dict) and "objects" in response:
+            objects = response["objects"] or []
+
         object_list_str = ", ".join(objects)
 
         # Always use the same format to maintain test compatibility
@@ -164,13 +173,18 @@ async def _list_relations_impl(client: OpenFgaClient, user: str, relations: str,
         body = ClientListRelationsRequest(user=user, relations=relations_list, object=object)
         response = await client.list_relations(body)
 
-        # Handle response directly
-        if not response:
-            # Use empty string for relations to maintain compatibility with tests
-            relations_str = ""
-        else:
-            # Ensure response is a sequence before joining
-            relations_str = ", ".join(str(rel) for rel in response)
+        # Extract relations safely from various possible response formats
+        relations_result = []
+
+        # Response could be an iterable directly
+        if response is not None:
+            if hasattr(response, "__iter__"):
+                relations_result = list(response)
+            elif isinstance(response, dict) and "relations" in response:
+                relations_result = response["relations"]
+
+        # Join the relations into a string for the response
+        relations_str = ", ".join(str(rel) for rel in relations_result)
 
         return f"{user} has the {relations_str} relationships with {object}"
     except Exception as e:
@@ -188,11 +202,22 @@ async def _list_users_impl(client: OpenFgaClient, object: str, type: str, relati
             user_filters=[UserTypeFilter(type="user")],
         )
         response = await client.list_users(body)
-        list_users_response = cast(ListUsersResponse, response)
 
-        if list_users_response and list_users_response.users:
-            user_ids = [u.object.id for u in list_users_response.users if u.object and u.object.id]
-            users_str = ", ".join(user_ids)
+        # Extract users safely from various response formats
+        users = []
+
+        # Handle different possible response structures
+        if hasattr(response, "users") and response.users:
+            for user in response.users:
+                if hasattr(user, "object") and user.object and hasattr(user.object, "id"):
+                    users.append(user.object.id)
+        elif isinstance(response, dict) and "users" in response:
+            for user in response["users"]:
+                if isinstance(user, dict) and "object" in user and user["object"] and "id" in user["object"]:
+                    users.append(user["object"]["id"])
+
+        if users:
+            users_str = ", ".join(users)
             return f"{users_str} have the {relation} relationship with {object}"
         else:
             return f"No users found with the {relation} relationship with {object}"

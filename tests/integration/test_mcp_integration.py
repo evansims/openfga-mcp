@@ -48,6 +48,15 @@ def start_services() -> Generator[str, None, None]:
     seed_env["FGA_API_SCHEME"] = "http"
     seed_env["FGA_API_HOST"] = "localhost:8080"
 
+    # Actually run the seed script
+    seed_script = os.path.join(os.path.dirname(__file__), "seed_fga.py")
+    try:
+        subprocess.run(["python", seed_script], env=seed_env, check=True, capture_output=True, text=True)
+        print("Seed script executed successfully")
+    except subprocess.CalledProcessError as e:
+        print(f"Seed script failed: {e.stdout}\n{e.stderr}")
+        raise
+
     print("Seed script finished.")
 
     # 2. Start MCP Server Process
@@ -142,16 +151,36 @@ def start_services() -> Generator[str, None, None]:
 async def call_mcp_tool(server_url: str, tool_name: str, args: dict) -> str:
     mcp_endpoint = urljoin(server_url, "/call")  # Use the new direct POST endpoint
     request_body = {"tool": tool_name, "args": args}
+
+    print(f"Calling tool {tool_name} with args: {args}")
     async with httpx.AsyncClient() as client:
-        response = await client.post(mcp_endpoint, json=request_body)
-        response.raise_for_status()  # Raise exception for bad status codes
-        # Assuming the server returns JSON like {"result": "...string..."}
-        # Adjust based on actual server response format if different
-        response_data = response.json()
-        if "result" in response_data:
-            return response_data["result"]
-        else:
-            raise ValueError(f"MCP response did not contain 'result': {response_data}")
+        try:
+            response = await client.post(mcp_endpoint, json=request_body)
+            print(f"HTTP Status: {response.status_code}")
+
+            # Log full response for debugging
+            print(f"Response content: {response.text}")
+
+            response.raise_for_status()  # Raise exception for bad status codes
+
+            # Safer parsing of response data
+            try:
+                response_data = response.json()
+                print(f"Parsed JSON: {response_data}")
+
+                if "result" in response_data:
+                    return response_data["result"]
+                elif "error" in response_data:
+                    return f"API Error: {response_data['error']}"
+                else:
+                    return f"Unexpected response format: {response_data}"
+            except Exception as json_error:
+                return f"Error parsing response JSON: {json_error}, Response text: {response.text}"
+
+        except httpx.HTTPStatusError as http_err:
+            return f"HTTP Error: {http_err}"
+        except Exception as e:
+            return f"Unexpected error: {e}"
 
 
 @pytest.mark.asyncio

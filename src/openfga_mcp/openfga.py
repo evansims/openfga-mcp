@@ -73,23 +73,52 @@ class OpenFga:
         )
         async with OpenFgaClient(configuration=temp_config) as temp_client:
             try:
+                # Get the raw stores response, this avoids the 'data' attribute issue
                 stores_resp = await temp_client.list_stores()
-                # Suppress potential linter error for stores attribute
-                found_store = next((s for s in stores_resp.stores if s.name == store_name), None)  # type: ignore
+
+                # Extract stores safely
+                stores = []
+                found_store = None
+
+                if hasattr(stores_resp, "stores"):
+                    # Direct access works
+                    stores = stores_resp.stores or []
+                elif isinstance(stores_resp, dict) and "stores" in stores_resp:
+                    # Dictionary access
+                    stores = stores_resp["stores"] or []
+
+                # Try to find the store by name
+                for store in stores:
+                    if isinstance(store, dict) and store.get("name") == store_name:
+                        found_store = store
+                        break
+                    elif hasattr(store, "name") and store.name == store_name:
+                        found_store = store
+                        break
+
                 if found_store:
-                    config.store_id = found_store.id
+                    if isinstance(found_store, dict) and "id" in found_store:
+                        config.store_id = found_store["id"]
+                    elif hasattr(found_store, "id"):
+                        config.store_id = found_store.id
+
                     print(f"Found store '{store_name}' with ID: {config.store_id}")
                 else:
-                    # Optionally, create the store if it doesn't exist
-                    # print(f"Store '{store_name}' not found. Consider creating it or checking FGA_STORE_NAME.")
-                    # raise ValueError(f"Store '{store_name}' not found.")
-                    # For now, let's try creating it (matches seed script behavior)
+                    # Store not found, create it
                     print(f"Store '{store_name}' not found, attempting to create...")
                     from openfga_sdk.models.create_store_request import CreateStoreRequest
 
                     create_req = CreateStoreRequest(name=store_name)
                     create_resp = await temp_client.create_store(body=create_req)
-                    config.store_id = create_resp.id  # type: ignore
+
+                    # Try to extract ID from various possible response formats
+                    if hasattr(create_resp, "id"):
+                        config.store_id = create_resp.id
+                    elif isinstance(create_resp, dict) and "id" in create_resp:
+                        config.store_id = create_resp["id"]
+                    else:
+                        raise ValueError(f"Couldn't extract store ID from response: {create_resp}")
+
                     print(f"Created store '{store_name}' with ID: {config.store_id}")
 
             except ApiException as e:
@@ -102,7 +131,8 @@ class OpenFga:
                 raise
 
         # Clear the temporary attribute
-        delattr(config, "store_name_for_lookup")
+        if hasattr(config, "store_name_for_lookup"):
+            delattr(config, "store_name_for_lookup")
 
     async def close(self) -> None:
         """Close the underlying OpenFGA client connection."""

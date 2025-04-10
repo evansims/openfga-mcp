@@ -11,11 +11,13 @@ from mcp.server.fastmcp import Context
 from openfga_sdk import OpenFgaClient
 from openfga_sdk.exceptions import ApiException
 from openfga_sdk.models import (
+    AuthorizationModel,
     CheckResponse,
     FgaObject,
     ListObjectsResponse,
     ListStoresResponse,
     ListUsersResponse,
+    ReadAuthorizationModelsResponse,
     Store,
     User,
     WriteAuthorizationModelResponse,
@@ -50,6 +52,8 @@ async def mock_openfga_sdk_client():
     client.get_store = AsyncMock()
     client.delete_store = AsyncMock()
     client.write_authorization_model = AsyncMock()
+    client.read_authorization_models = AsyncMock()
+    client.get_authorization_model = AsyncMock()
     client.get_store_id = MagicMock(return_value=None)
     client.set_store_id = MagicMock()
     client.close = AsyncMock()  # For lifespan testing
@@ -711,6 +715,118 @@ async def test_write_authorization_model_impl_exception(mock_openfga_sdk_client)
     assert f"Error creating authorization model: {str(exception)}" == result
 
 
+@pytest.mark.asyncio
+async def test_read_authorization_models_impl_success(mock_openfga_sdk_client):
+    """Test _read_authorization_models_impl with successful models retrieval."""
+
+    type_defs = [{"type": "user", "relations": {}}]
+
+    models = [
+        AuthorizationModel(id="01FQH7V8BEG3GPQW93KTRFR8JB", schema_version="1.1", type_definitions=type_defs),
+        AuthorizationModel(id="01GXSA8YR785C4FYS3C0RTG7B1", schema_version="1.1", type_definitions=type_defs),
+    ]
+
+    mock_response = ReadAuthorizationModelsResponse(authorization_models=models, continuation_token="next_token_123")
+    mock_openfga_sdk_client.read_authorization_models.return_value = mock_response
+
+    result = await server._read_authorization_models_impl(mock_openfga_sdk_client, store_id="test_store_id")
+
+    # Verify the result contains all models information
+    assert "Authorization models for store test_store_id:" in result
+    assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB" in result
+    assert "ID: 01GXSA8YR785C4FYS3C0RTG7B1" in result
+    assert "Schema: 1.1" in result
+    assert "Types: 1" in result
+    assert "Continuation token: next_token_123" in result
+
+    # Verify the store ID was properly set and reset
+    mock_openfga_sdk_client.set_store_id.assert_called_once_with("test_store_id")
+    mock_openfga_sdk_client.read_authorization_models.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_read_authorization_models_impl_with_options(mock_openfga_sdk_client):
+    """Test _read_authorization_models_impl with pagination options."""
+    type_defs = [{"type": "user", "relations": {}}]
+    models = [AuthorizationModel(id="01FQH7V8BEG3GPQW93KTRFR8JB", schema_version="1.1", type_definitions=type_defs)]
+    mock_response = ReadAuthorizationModelsResponse(authorization_models=models)
+    mock_openfga_sdk_client.read_authorization_models.return_value = mock_response
+
+    # Test with pagination options
+    await server._read_authorization_models_impl(
+        mock_openfga_sdk_client, store_id="test_store_id", continuation_token="previous_token", page_size=10
+    )
+
+    # Verify options were passed correctly
+    call_args = mock_openfga_sdk_client.read_authorization_models.await_args[0][0]
+    assert call_args["continuation_token"] == "previous_token"
+    assert call_args["page_size"] == 10
+
+
+@pytest.mark.asyncio
+async def test_read_authorization_models_impl_with_previous_id(mock_openfga_sdk_client):
+    """Test _read_authorization_models_impl with a previous store ID set."""
+    # Set up the mock to return a previous store ID
+    mock_openfga_sdk_client.get_store_id.return_value = "previous_store_id"
+
+    type_defs = [{"type": "user", "relations": {}}]
+    models = [AuthorizationModel(id="01FQH7V8BEG3GPQW93KTRFR8JB", schema_version="1.1", type_definitions=type_defs)]
+    mock_response = ReadAuthorizationModelsResponse(authorization_models=models)
+    mock_openfga_sdk_client.read_authorization_models.return_value = mock_response
+
+    await server._read_authorization_models_impl(mock_openfga_sdk_client, store_id="new_store_id")
+
+    # Verify the store ID was set to the new ID and then reset back to the previous ID
+    mock_openfga_sdk_client.set_store_id.assert_any_call("new_store_id")
+    mock_openfga_sdk_client.set_store_id.assert_any_call("previous_store_id")
+    assert mock_openfga_sdk_client.set_store_id.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_read_authorization_models_impl_empty_response(mock_openfga_sdk_client):
+    """Test _read_authorization_models_impl with no models in the response."""
+    mock_response = ReadAuthorizationModelsResponse(authorization_models=[])
+    mock_openfga_sdk_client.read_authorization_models.return_value = mock_response
+
+    result = await server._read_authorization_models_impl(mock_openfga_sdk_client, store_id="empty_store_id")
+
+    assert "No authorization models found for store empty_store_id" == result
+
+
+@pytest.mark.asyncio
+async def test_read_authorization_models_impl_dict_response(mock_openfga_sdk_client):
+    """Test _read_authorization_models_impl with dict response."""
+    # Mock response as a dictionary
+    mock_response = {
+        "authorization_models": [
+            {
+                "id": "01FQH7V8BEG3GPQW93KTRFR8JB",
+                "schema_version": "1.1",
+                "type_definitions": [{"type": "user", "relations": {}}],
+            }
+        ],
+        "continuation_token": "dict_token",
+    }
+    mock_openfga_sdk_client.read_authorization_models.return_value = mock_response
+
+    result = await server._read_authorization_models_impl(mock_openfga_sdk_client, store_id="dict_store_id")
+
+    assert "Authorization models for store dict_store_id:" in result
+    assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB" in result
+    assert "Continuation token: dict_token" in result
+
+
+@pytest.mark.asyncio
+async def test_read_authorization_models_impl_exception(mock_openfga_sdk_client):
+    """Test _read_authorization_models_impl handles exceptions."""
+    exception = ApiException("Store not found")
+    mock_openfga_sdk_client.read_authorization_models.side_effect = exception
+
+    result = await server._read_authorization_models_impl(mock_openfga_sdk_client, store_id="nonexistent_id")
+
+    assert f"Error reading authorization models: {str(exception)}" == result
+
+
 # --- Test /call POST Endpoint ---
 
 
@@ -985,3 +1101,204 @@ async def test_health_check(test_app: AsyncClient):
     response = await test_app.get("/healthz")
     assert response.status_code == 200
     assert response.text == "OK"
+
+
+@pytest.mark.asyncio
+async def test_call_read_authorization_models_success(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the read_authorization_models tool successfully."""
+    # Create mock authorization models
+    type_defs = [{"type": "user", "relations": {}}]
+    models = [
+        AuthorizationModel(id="01FQH7V8BEG3GPQW93KTRFR8JB", schema_version="1.1", type_definitions=type_defs),
+        AuthorizationModel(id="01GXSA8YR785C4FYS3C0RTG7B1", schema_version="1.1", type_definitions=type_defs),
+    ]
+    mock_response = ReadAuthorizationModelsResponse(authorization_models=models, continuation_token="next_token_123")
+    mock_openfga_sdk_client.read_authorization_models.return_value = mock_response
+
+    payload = {"tool": "read_authorization_models", "args": {"store_id": "test_store_id"}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+    assert "Authorization models for store test_store_id:" in response.json()["result"]
+    assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB" in response.json()["result"]
+    assert "ID: 01GXSA8YR785C4FYS3C0RTG7B1" in response.json()["result"]
+
+    # Verify the correct request was made
+    mock_openfga_sdk_client.set_store_id.assert_any_call("test_store_id")
+    mock_openfga_sdk_client.read_authorization_models.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_call_read_authorization_models_with_pagination(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the read_authorization_models tool with pagination parameters."""
+    # Create mock models
+    type_defs = [{"type": "user", "relations": {}}]
+    models = [AuthorizationModel(id="01FQH7V8BEG3GPQW93KTRFR8JB", schema_version="1.1", type_definitions=type_defs)]
+    mock_response = ReadAuthorizationModelsResponse(authorization_models=models)
+    mock_openfga_sdk_client.read_authorization_models.return_value = mock_response
+
+    payload = {
+        "tool": "read_authorization_models",
+        "args": {"store_id": "test_store_id", "continuation_token": "page_token", "page_size": 10},
+    }
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+
+    # Verify pagination parameters were passed correctly
+    call_args = mock_openfga_sdk_client.read_authorization_models.await_args[0][0]
+    assert call_args["continuation_token"] == "page_token"
+    assert call_args["page_size"] == 10
+
+
+@pytest.mark.asyncio
+async def test_call_read_authorization_models_missing_store_id(test_app: AsyncClient):
+    """Test POST /call for the read_authorization_models tool with missing store_id argument."""
+    payload = {"tool": "read_authorization_models", "args": {}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'store_id' for read_authorization_models" in response.text
+
+
+@pytest.mark.asyncio
+async def test_get_authorization_model_impl_success(mock_openfga_sdk_client):
+    """Test _get_authorization_model_impl with successful model retrieval."""
+    # Create a mock authorization model response
+    model_id = "01FQH7V8BEG3GPQW93KTRFR8JB"
+    type_defs = [
+        {"type": "user", "relations": {}},
+        {"type": "document", "relations": {"viewer": {"this": {}}}},
+    ]
+
+    mock_response = AuthorizationModel(id=model_id, schema_version="1.1", type_definitions=type_defs)
+    mock_openfga_sdk_client.get_authorization_model.return_value = mock_response
+
+    # Call the implementation
+    result = await server._get_authorization_model_impl(
+        mock_openfga_sdk_client, store_id="test_store_id", authorization_model_id=model_id
+    )
+
+    # Verify the result contains expected information
+    assert "Authorization model details:" in result
+    assert f"ID: {model_id}" in result
+    assert "Schema version: 1.1" in result
+    assert "Types: 2" in result
+    assert "Type names: user, document" in result
+
+    # Verify the client API was called with correct parameters
+    mock_openfga_sdk_client.set_store_id.assert_called_once_with("test_store_id")
+    mock_openfga_sdk_client.get_authorization_model.assert_awaited_once_with(model_id)
+
+
+@pytest.mark.asyncio
+async def test_get_authorization_model_impl_with_previous_id(mock_openfga_sdk_client):
+    """Test _get_authorization_model_impl with a previous store ID set."""
+    # Set up the mock to return a previous store ID
+    mock_openfga_sdk_client.get_store_id.return_value = "previous_store_id"
+
+    model_id = "01GXSA8YR785C4FYS3C0RTG7B1"
+    mock_response = AuthorizationModel(id=model_id, schema_version="1.1", type_definitions=[])
+    mock_openfga_sdk_client.get_authorization_model.return_value = mock_response
+
+    # Call the implementation
+    await server._get_authorization_model_impl(
+        mock_openfga_sdk_client, store_id="new_store_id", authorization_model_id=model_id
+    )
+
+    # Verify the store ID was set to the new ID and then reset back to the previous ID
+    mock_openfga_sdk_client.set_store_id.assert_any_call("new_store_id")
+    mock_openfga_sdk_client.set_store_id.assert_any_call("previous_store_id")
+    assert mock_openfga_sdk_client.set_store_id.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_get_authorization_model_impl_dict_response(mock_openfga_sdk_client):
+    """Test _get_authorization_model_impl with dict response."""
+    # Create a mock response as a dictionary
+    model_id = "01FQH7V8BEG3GPQW93KTRFR8JB"
+    mock_response = {
+        "id": model_id,
+        "schema_version": "1.1",
+        "type_definitions": [
+            {"type": "user", "relations": {}},
+            {"type": "document", "relations": {"viewer": {"this": {}}}},
+        ],
+    }
+    mock_openfga_sdk_client.get_authorization_model.return_value = mock_response
+
+    # Call the implementation
+    result = await server._get_authorization_model_impl(
+        mock_openfga_sdk_client, store_id="test_store_id", authorization_model_id=model_id
+    )
+
+    # Verify the result contains expected information
+    assert "Authorization model details:" in result
+    assert f"ID: {model_id}" in result
+    assert "Schema version: 1.1" in result
+    assert "Types: 2" in result
+    assert "Type names: user, document" in result
+
+
+@pytest.mark.asyncio
+async def test_get_authorization_model_impl_exception(mock_openfga_sdk_client):
+    """Test _get_authorization_model_impl handles exceptions."""
+    exception = ApiException("Model not found")
+    mock_openfga_sdk_client.get_authorization_model.side_effect = exception
+
+    model_id = "nonexistent_id"
+    result = await server._get_authorization_model_impl(
+        mock_openfga_sdk_client, store_id="test_store_id", authorization_model_id=model_id
+    )
+
+    assert f"Error retrieving authorization model: {str(exception)}" == result
+
+
+@pytest.mark.asyncio
+async def test_call_get_authorization_model_success(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the get_authorization_model tool successfully."""
+    # Create a mock authorization model response
+    model_id = "01FQH7V8BEG3GPQW93KTRFR8JB"
+    type_defs = [
+        {"type": "user", "relations": {}},
+        {"type": "document", "relations": {"viewer": {"this": {}}}},
+    ]
+
+    mock_response = AuthorizationModel(id=model_id, schema_version="1.1", type_definitions=type_defs)
+    mock_openfga_sdk_client.get_authorization_model.return_value = mock_response
+
+    # Call the API
+    payload = {
+        "tool": "get_authorization_model",
+        "args": {"store_id": "test_store_id", "authorization_model_id": model_id},
+    }
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+    assert "Authorization model details:" in response.json()["result"]
+    assert f"ID: {model_id}" in response.json()["result"]
+    assert "Schema version: 1.1" in response.json()["result"]
+
+    # Verify the client API was called correctly
+    mock_openfga_sdk_client.set_store_id.assert_any_call("test_store_id")
+    mock_openfga_sdk_client.get_authorization_model.assert_awaited_once_with(model_id)
+
+
+@pytest.mark.asyncio
+async def test_call_get_authorization_model_missing_store_id(test_app: AsyncClient):
+    """Test POST /call for the get_authorization_model tool with missing store_id argument."""
+    payload = {"tool": "get_authorization_model", "args": {"authorization_model_id": "01FQH7V8BEG3GPQW93KTRFR8JB"}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'store_id' for get_authorization_model" in response.text
+
+
+@pytest.mark.asyncio
+async def test_call_get_authorization_model_missing_model_id(test_app: AsyncClient):
+    """Test POST /call for the get_authorization_model tool with missing authorization_model_id argument."""
+    payload = {"tool": "get_authorization_model", "args": {"store_id": "test_store_id"}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'authorization_model_id' for get_authorization_model" in response.text

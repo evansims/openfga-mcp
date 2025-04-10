@@ -179,6 +179,23 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
                         status_code=400,
                     )
                 result = await _write_authorization_model_impl(client, **args)
+            case "read_authorization_models":
+                if "store_id" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'store_id' for read_authorization_models"}, status_code=400
+                    )
+                result = await _read_authorization_models_impl(client, **args)
+            case "get_authorization_model":
+                if "store_id" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'store_id' for get_authorization_model"}, status_code=400
+                    )
+                if "authorization_model_id" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'authorization_model_id' for get_authorization_model"},
+                        status_code=400,
+                    )
+                result = await _get_authorization_model_impl(client, **args)
             case "create_store":
                 if "name" not in args:
                     return JSONResponse({"error": "Missing required arg 'name' for create_store"}, status_code=400)
@@ -711,6 +728,227 @@ async def write_authorization_model(ctx: Context, store_id: str, auth_model_data
     _write_to_log(ctx)
     return await _write_authorization_model_impl(
         await _get_client(ctx), store_id=store_id, auth_model_data=auth_model_data
+    )
+
+
+async def _read_authorization_models_impl(
+    client: OpenFgaClient, store_id: str, continuation_token: str | None = None, page_size: int | None = None
+) -> str:
+    """
+    Reads all authorization models for a store.
+
+    Args:
+        client: The OpenFGA client
+        store_id: The ID of the store to read models from
+        continuation_token: Optional token for pagination
+        page_size: Optional page size for pagination
+
+    Returns:
+        A string with authorization models information
+    """
+    try:
+        # Save the current store ID
+        current_store_id = client.get_store_id()
+
+        # Set the store ID for this request
+        client.set_store_id(store_id)
+
+        # Prepare options for the API call
+        options = {}
+        if page_size is not None:
+            options["page_size"] = page_size
+        if continuation_token is not None:
+            options["continuation_token"] = continuation_token
+
+        # Call the read_authorization_models API
+        response = await client.read_authorization_models(options if options else None)
+
+        # Restore the original store ID if it exists and is different
+        if current_store_id and current_store_id != store_id:
+            client.set_store_id(current_store_id)
+
+        # Parse and format the response
+        models_info = []
+        models = []
+
+        # Extract authorization models from the response
+        if hasattr(response, "authorization_models") and response.authorization_models:
+            models = response.authorization_models
+        elif isinstance(response, dict) and "authorization_models" in response:
+            models = response["authorization_models"]
+
+        # Format each model's information
+        if models:
+            for model in models:
+                model_info = []
+
+                # Extract model ID
+                model_id = None
+                if hasattr(model, "id"):
+                    model_id = model.id
+                elif isinstance(model, dict) and "id" in model:
+                    model_id = model["id"]
+
+                if model_id:
+                    model_info.append(f"ID: {model_id}")
+
+                # Extract schema version
+                schema_version = None
+                if hasattr(model, "schema_version"):
+                    schema_version = model.schema_version
+                elif isinstance(model, dict) and "schema_version" in model:
+                    schema_version = model["schema_version"]
+
+                if schema_version:
+                    model_info.append(f"Schema: {schema_version}")
+
+                # Extract type definitions count
+                type_defs = None
+                if hasattr(model, "type_definitions"):
+                    type_defs = model.type_definitions
+                elif isinstance(model, dict) and "type_definitions" in model:
+                    type_defs = model["type_definitions"]
+
+                if type_defs:
+                    model_info.append(f"Types: {len(type_defs)}")
+
+                # Add this model's info to the list
+                if model_info:
+                    models_info.append(" | ".join(model_info))
+
+        # Format the final result
+        if models_info:
+            continuation_info = ""
+            if hasattr(response, "continuation_token") and response.continuation_token:
+                continuation_info = f"\nContinuation token: {response.continuation_token}"
+            elif isinstance(response, dict) and "continuation_token" in response and response["continuation_token"]:
+                continuation_info = f"\nContinuation token: {response['continuation_token']}"
+
+            return f"Authorization models for store {store_id}:\n" + "\n".join(models_info) + continuation_info
+        else:
+            return f"No authorization models found for store {store_id}"
+
+    except Exception as e:
+        _write_to_log(f"Error reading authorization models: {e!s}")
+        return f"Error reading authorization models: {e!s}"
+
+
+@mcp.tool()
+async def read_authorization_models(
+    ctx: Context, store_id: str, continuation_token: str | None = None, page_size: int | None = None
+) -> str:
+    """
+    Reads all authorization models for a store.
+
+    Args:
+        ctx: The MCP context
+        store_id: The ID of the store to read models from
+        continuation_token: Optional token for pagination
+        page_size: Optional page size for pagination
+
+    Returns:
+        A string with authorization models information
+    """
+    _write_to_log(f"read_authorization_models: {store_id}")
+    _write_to_log(ctx)
+    return await _read_authorization_models_impl(
+        await _get_client(ctx), store_id=store_id, continuation_token=continuation_token, page_size=page_size
+    )
+
+
+async def _get_authorization_model_impl(client: OpenFgaClient, store_id: str, authorization_model_id: str) -> str:
+    """
+    Gets a specific authorization model by ID.
+
+    Args:
+        client: The OpenFGA client
+        store_id: The ID of the store containing the model
+        authorization_model_id: The ID of the authorization model to retrieve
+
+    Returns:
+        A string with the authorization model information
+    """
+    try:
+        # Save the current store ID
+        current_store_id = client.get_store_id()
+
+        # Set the store ID for this request
+        client.set_store_id(store_id)
+
+        # Call the get_authorization_model API
+        response = await client.get_authorization_model(authorization_model_id)
+
+        # Restore the original store ID if it exists and is different
+        if current_store_id and current_store_id != store_id:
+            client.set_store_id(current_store_id)
+
+        # Format the authorization model information
+        model_info = []
+
+        # Extract model ID
+        if hasattr(response, "id"):
+            model_info.append(f"ID: {response.id}")
+        elif isinstance(response, dict) and "id" in response:
+            model_info.append(f"ID: {response['id']}")
+        else:
+            model_info.append(f"ID: {authorization_model_id}")
+
+        # Extract schema version
+        if hasattr(response, "schema_version"):
+            model_info.append(f"Schema version: {response.schema_version}")
+        elif isinstance(response, dict) and "schema_version" in response:
+            model_info.append(f"Schema version: {response['schema_version']}")
+
+        # Extract type definitions
+        type_defs = None
+        if hasattr(response, "type_definitions"):
+            type_defs = response.type_definitions
+        elif isinstance(response, dict) and "type_definitions" in response:
+            type_defs = response["type_definitions"]
+
+        if type_defs:
+            model_info.append(f"Types: {len(type_defs)}")
+            # Add summary of types
+            type_names = []
+            for type_def in type_defs:
+                name = None
+                if hasattr(type_def, "type"):
+                    name = type_def.type
+                elif isinstance(type_def, dict) and "type" in type_def:
+                    name = type_def["type"]
+                if name:
+                    type_names.append(name)
+
+            if type_names:
+                model_info.append(f"Type names: {', '.join(type_names)}")
+
+        if model_info:
+            return f"Authorization model details:\n{', '.join(model_info)}"
+        else:
+            return f"Authorization model with ID '{authorization_model_id}' found, but no details were returned"
+
+    except Exception as e:
+        _write_to_log(f"Error retrieving authorization model: {e!s}")
+        return f"Error retrieving authorization model: {e!s}"
+
+
+@mcp.tool()
+async def get_authorization_model(ctx: Context, store_id: str, authorization_model_id: str) -> str:
+    """
+    Gets a specific authorization model by ID.
+
+    Args:
+        ctx: The MCP context
+        store_id: The ID of the store containing the model
+        authorization_model_id: The ID of the authorization model to retrieve
+
+    Returns:
+        A string with the authorization model information
+    """
+    _write_to_log(f"get_authorization_model: {store_id}, {authorization_model_id}")
+    _write_to_log(ctx)
+    return await _get_authorization_model_impl(
+        await _get_client(ctx), store_id=store_id, authorization_model_id=authorization_model_id
     )
 
 

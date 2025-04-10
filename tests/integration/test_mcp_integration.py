@@ -434,3 +434,133 @@ async def test_write_authorization_model(start_services: str):
 
     # Clean up - delete the store
     await call_mcp_tool(server_url, "delete_store", {"store_id": store_id})
+
+
+@pytest.mark.asyncio
+async def test_read_authorization_models(start_services: str):
+    """Test read_authorization_models functionality."""
+    server_url = start_services
+
+    # First, create a new store to add models to
+    store_name = f"read_models_test_store_{uuid.uuid4().hex[:8]}"
+    create_response = await call_mcp_tool(server_url, "create_store", {"name": store_name})
+
+    # Extract the store ID from the creation response
+    import re
+
+    match = re.search(r"ID: ([a-zA-Z0-9-]+)", create_response)
+    assert match, "Could not find store ID in the create store response"
+
+    store_id = match.group(1)
+
+    # Create two simple authorization models
+    auth_model_data1 = {
+        "schema_version": "1.1",
+        "type_definitions": [
+            {"type": "user", "relations": {}},
+            {"type": "document", "relations": {"viewer": {"this": {}}}},
+        ],
+    }
+
+    auth_model_data2 = {
+        "schema_version": "1.1",
+        "type_definitions": [
+            {"type": "user", "relations": {}},
+            {"type": "folder", "relations": {"owner": {"this": {}}}},
+            {"type": "document", "relations": {"viewer": {"this": {}}, "owner": {"this": {}}}},
+        ],
+    }
+
+    # Write the first authorization model to the store
+    model1_response = await call_mcp_tool(
+        server_url, "write_authorization_model", {"store_id": store_id, "auth_model_data": auth_model_data1}
+    )
+    assert "Authorization model successfully created with ID:" in model1_response
+
+    # Write the second authorization model to the store
+    model2_response = await call_mcp_tool(
+        server_url, "write_authorization_model", {"store_id": store_id, "auth_model_data": auth_model_data2}
+    )
+    assert "Authorization model successfully created with ID:" in model2_response
+
+    # Read all authorization models for the store
+    models_response = await call_mcp_tool(server_url, "read_authorization_models", {"store_id": store_id})
+
+    # Verify the response contains information about both models
+    assert "Authorization models for store" in models_response
+    assert "Schema: 1.1" in models_response
+    # Should find at least two models
+    assert models_response.count("ID:") >= 2
+
+    # Test pagination (optional)
+    page_response = await call_mcp_tool(server_url, "read_authorization_models", {"store_id": store_id, "page_size": 1})
+
+    # Verify pagination works (should return continuation token)
+    if "Continuation token:" in page_response:
+        # Try getting the next page using the token
+        token = re.search(r"Continuation token: ([^\n]+)", page_response)
+        if token:
+            next_page_response = await call_mcp_tool(
+                server_url, "read_authorization_models", {"store_id": store_id, "continuation_token": token.group(1)}
+            )
+            # Just make sure the call succeeds, we don't need to verify the content
+            assert "Authorization models for store" in next_page_response
+
+    # Clean up - delete the store
+    await call_mcp_tool(server_url, "delete_store", {"store_id": store_id})
+
+
+@pytest.mark.asyncio
+async def test_get_authorization_model(start_services: str):
+    """Test get_authorization_model functionality."""
+    server_url = start_services
+
+    # First, create a new store to add a model to
+    store_name = f"get_model_test_store_{uuid.uuid4().hex[:8]}"
+    create_response = await call_mcp_tool(server_url, "create_store", {"name": store_name})
+
+    # Extract the store ID from the creation response
+    import re
+
+    match = re.search(r"ID: ([a-zA-Z0-9-]+)", create_response)
+    assert match, "Could not find store ID in the create store response"
+
+    store_id = match.group(1)
+
+    # Create an authorization model
+    auth_model_data = {
+        "schema_version": "1.1",
+        "type_definitions": [
+            {"type": "user", "relations": {}},
+            {"type": "document", "relations": {"viewer": {"this": {}}, "owner": {"this": {}}}},
+            {"type": "folder", "relations": {"admin": {"this": {}}}},
+        ],
+    }
+
+    # Write the authorization model to the store
+    model_response = await call_mcp_tool(
+        server_url, "write_authorization_model", {"store_id": store_id, "auth_model_data": auth_model_data}
+    )
+    assert "Authorization model successfully created with ID:" in model_response
+
+    # Extract the model ID
+    model_id_match = re.search(r"ID: ([a-zA-Z0-9-]+)", model_response)
+    assert model_id_match, "Could not find model ID in the creation response"
+    model_id = model_id_match.group(1)
+
+    # Get the specific authorization model
+    get_model_response = await call_mcp_tool(
+        server_url, "get_authorization_model", {"store_id": store_id, "authorization_model_id": model_id}
+    )
+
+    # Verify the response contains all expected information
+    assert "Authorization model details:" in get_model_response
+    assert f"ID: {model_id}" in get_model_response
+    assert "Schema version: 1.1" in get_model_response
+    assert "Types: 3" in get_model_response
+    assert "user" in get_model_response
+    assert "document" in get_model_response
+    assert "folder" in get_model_response
+
+    # Clean up - delete the store
+    await call_mcp_tool(server_url, "delete_store", {"store_id": store_id})

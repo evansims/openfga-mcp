@@ -27,11 +27,15 @@ An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP)
 - `read_authorization_models`: List all authorization models. ([read-authorization-models](https://openfga.dev/api/service#/Authorization%20Models/ReadAuthorizationModels))
 - `get_authorization_model`: Get a particular version of an authorization model details. ([get-authorization-model](https://openfga.dev/api/service#/Authorization%20Models/ReadAuthorizationModel))
 
-#### Assertions
+#### Relationship Tuples Management
+
+- `write_relation_tuples`: Write relation tuples. ([write-relation-tuples](https://openfga.dev/api/service#/Relationship%20Tuples/Write))
+- `read_relation_tuples`: Read relation tuples. ([read-relation-tuples](https://openfga.dev/api/service#/Relationship%20Tuples/Read))
+
+#### Relationship Queries
 
 - `check`: Check if a user has a relation to an object. ([check](https://openfga.dev/api/service#/Assertions/Check))
 - `list_objects`: List objects of a type that a user has a relation to. ([list-objects](https://openfga.dev/api/service#/Assertions/ListObjects))
-- `list_relations`: List relations for which a user has a relation to an object. ([list-relations](https://openfga.dev/api/service#/Assertions/ListRelations))
 - `list_users`: List users that have a given relationship with a given object. ([list-users](https://openfga.dev/api/service#/Assertions/ListUsers))
 
 ### Resources

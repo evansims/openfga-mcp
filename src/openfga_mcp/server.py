@@ -196,6 +196,22 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
                         status_code=400,
                     )
                 result = await _get_authorization_model_impl(client, **args)
+            case "read_relation_tuples":
+                if "store_id" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'store_id' for read_relation_tuples"}, status_code=400
+                    )
+                result = await _read_relation_tuples_impl(client, **args)
+            case "write_relation_tuples":
+                if "store_id" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'store_id' for write_relation_tuples"}, status_code=400
+                    )
+                if "tuples" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'tuples' for write_relation_tuples"}, status_code=400
+                    )
+                result = await _write_relation_tuples_impl(client, **args)
             case "create_store":
                 if "name" not in args:
                     return JSONResponse({"error": "Missing required arg 'name' for create_store"}, status_code=400)
@@ -1026,6 +1042,310 @@ async def get_authorization_model(ctx: Context, store_id: str, authorization_mod
     _write_to_log(ctx)
     return await _get_authorization_model_impl(
         await _get_client(ctx), store_id=store_id, authorization_model_id=authorization_model_id
+    )
+
+
+async def _read_relation_tuples_impl(
+    client: OpenFgaClient,
+    store_id: str,
+    user: str | None = None,
+    relation: str | None = None,
+    object: str | None = None,
+    object_type: str | None = None,
+    continuation_token: str | None = None,
+    page_size: int | None = None,
+) -> str:
+    """
+    Reads relationship tuples from a specific store.
+
+    Args:
+        client: The OpenFGA client
+        store_id: The ID of the store to read tuples from
+        user: Optional user to filter tuples
+        relation: Optional relation to filter tuples
+        object: Optional object to filter tuples
+        object_type: Optional object type to filter tuples
+        continuation_token: Optional token for pagination
+        page_size: Optional page size for pagination
+
+    Returns:
+        A string with relationship tuples information
+    """
+    try:
+        # Save the current store ID
+        current_store_id = client.get_store_id()
+
+        # Set the store ID for this request
+        client.set_store_id(store_id)
+
+        # Prepare options for the API call
+        options = {}
+        if page_size is not None:
+            options["page_size"] = page_size
+        if continuation_token is not None:
+            options["continuation_token"] = continuation_token
+
+        # Add filter parameters if provided
+        query = {}
+        if user is not None:
+            query["user"] = user
+        if relation is not None:
+            query["relation"] = relation
+        if object is not None:
+            query["object"] = object
+        if object_type is not None:
+            query["object_type"] = object_type
+
+        # Add query to options if we have any filters
+        if query:
+            options["query"] = query
+
+        # Call the read_tuples API
+        response = await client.read_tuples(options if options else None)
+
+        # Restore the original store ID if it exists and is different
+        if current_store_id and current_store_id != store_id:
+            client.set_store_id(current_store_id)
+
+        # Parse and format the response
+        tuples_info = []
+        tuples = []
+
+        # Extract tuples from the response
+        if hasattr(response, "tuples") and response.tuples:
+            tuples = response.tuples
+        elif isinstance(response, dict) and "tuples" in response:
+            tuples = response["tuples"]
+
+        # Format each tuple's information
+        if tuples:
+            for tuple_item in tuples:
+                tuple_info = []
+
+                # Extract user
+                user = None
+                if hasattr(tuple_item, "user"):
+                    user = tuple_item.user
+                elif isinstance(tuple_item, dict) and "user" in tuple_item:
+                    user = tuple_item["user"]
+
+                # Extract relation
+                relation = None
+                if hasattr(tuple_item, "relation"):
+                    relation = tuple_item.relation
+                elif isinstance(tuple_item, dict) and "relation" in tuple_item:
+                    relation = tuple_item["relation"]
+
+                # Extract object
+                obj = None
+                if hasattr(tuple_item, "object"):
+                    obj = tuple_item.object
+                elif isinstance(tuple_item, dict) and "object" in tuple_item:
+                    obj = tuple_item["object"]
+
+                # Only add tuples that have all required parts
+                if user and relation and obj:
+                    tuple_info.append(f"User: {user}")
+                    tuple_info.append(f"Relation: {relation}")
+                    tuple_info.append(f"Object: {obj}")
+
+                    # Handle conditions if present
+                    condition_name = None
+                    if hasattr(tuple_item, "condition") and tuple_item.condition:
+                        condition_name = tuple_item.condition.name
+                    elif isinstance(tuple_item, dict) and "condition" in tuple_item and tuple_item["condition"]:
+                        condition_name = tuple_item["condition"].get("name")
+
+                    if condition_name:
+                        tuple_info.append(f"Condition: {condition_name}")
+
+                    tuples_info.append(" | ".join(tuple_info))
+
+        # Format the final result
+        if tuples_info:
+            continuation_info = ""
+            if hasattr(response, "continuation_token") and response.continuation_token:
+                continuation_info = f"\nContinuation token: {response.continuation_token}"
+            elif isinstance(response, dict) and "continuation_token" in response and response["continuation_token"]:
+                continuation_info = f"\nContinuation token: {response['continuation_token']}"
+
+            return f"Relationship tuples in store {store_id}:\n" + "\n".join(tuples_info) + continuation_info
+        else:
+            return f"No relationship tuples found in store {store_id}"
+
+    except Exception as e:
+        _write_to_log(f"Error reading relationship tuples: {e!s}")
+        return f"Error reading relationship tuples: {e!s}"
+
+
+@mcp.tool()
+async def read_relation_tuples(
+    ctx: Context,
+    store_id: str,
+    user: str | None = None,
+    relation: str | None = None,
+    object: str | None = None,
+    object_type: str | None = None,
+    continuation_token: str | None = None,
+    page_size: int | None = None,
+) -> str:
+    """
+    Reads relationship tuples from a specific store.
+
+    Args:
+        ctx: The MCP context
+        store_id: The ID of the store to read tuples from
+        user: Optional user to filter tuples
+        relation: Optional relation to filter tuples
+        object: Optional object to filter tuples
+        object_type: Optional object type to filter tuples
+        continuation_token: Optional token for pagination
+        page_size: Optional page size for pagination
+
+    Returns:
+        A string with relationship tuples information
+    """
+    _write_to_log(f"read_relation_tuples: {store_id}")
+    _write_to_log(ctx)
+    return await _read_relation_tuples_impl(
+        await _get_client(ctx),
+        store_id=store_id,
+        user=user,
+        relation=relation,
+        object=object,
+        object_type=object_type,
+        continuation_token=continuation_token,
+        page_size=page_size,
+    )
+
+
+async def _write_relation_tuples_impl(
+    client: OpenFgaClient,
+    store_id: str,
+    tuples: list,
+    authorization_model_id: str | None = None,
+) -> str:
+    """
+    Writes relationship tuples to a specific store.
+
+    Args:
+        client: The OpenFGA client
+        store_id: The ID of the store to write tuples to
+        tuples: List of tuples to write, each containing user, relation, object
+        authorization_model_id: Optional ID of authorization model to use for validation
+
+    Returns:
+        A string with the result of the operation
+    """
+    try:
+        # Save the current store ID
+        current_store_id = client.get_store_id()
+
+        # Set the store ID for this request
+        client.set_store_id(store_id)
+
+        # Process the tuples to ensure they have the correct format
+        writes = []
+
+        for tuple_item in tuples:
+            # Each tuple must have user, relation, and object
+            if not all(k in tuple_item for k in ["user", "relation", "object"]):
+                return (
+                    f"Error: Each tuple must have 'user', 'relation', and 'object' fields. Invalid tuple: {tuple_item}"
+                )
+
+            # Create a properly formatted tuple_key
+            tuple_key = {"user": tuple_item["user"], "relation": tuple_item["relation"], "object": tuple_item["object"]}
+
+            write_entry = {"tuple_key": tuple_key}
+
+            # Add condition if specified
+            if "condition" in tuple_item and tuple_item["condition"]:
+                write_entry["condition"] = tuple_item["condition"]
+
+            writes.append(write_entry)
+
+        _write_to_log(f"Original tuples: {tuples}")
+        _write_to_log(f"Formatted writes: {writes}")
+
+        # Prepare the request body
+        request_body = {"writes": writes}
+        if authorization_model_id:
+            request_body["authorization_model_id"] = authorization_model_id
+
+        # Try using the httpx library to make a direct REST API call
+        try:
+            import os
+
+            import httpx
+
+            # Get the API configuration from environment
+            api_scheme = os.environ.get("FGA_API_SCHEME", "http")
+            api_host = os.environ.get("FGA_API_HOST", "localhost:8080")
+
+            # Construct the API URL for writing tuples
+            api_url = f"{api_scheme}://{api_host}/stores/{store_id}/write"
+            _write_to_log(f"API URL: {api_url}")
+
+            # Make the API request
+            async with httpx.AsyncClient() as http_client:
+                response = await http_client.post(api_url, json=request_body, timeout=30.0)
+
+                _write_to_log(f"Response status: {response.status_code}")
+                _write_to_log(f"Response content: {response.text}")
+
+                # Check if the request was successful
+                if response.status_code >= 200 and response.status_code < 300:
+                    # Restore the original store ID if it exists and is different
+                    if current_store_id and current_store_id != store_id:
+                        client.set_store_id(current_store_id)
+
+                    return f"Successfully wrote {len(tuples)} relationship tuples to store {store_id}"
+                else:
+                    # Return the error information
+                    error_msg = f"API error: {response.status_code} - {response.text}"
+                    _write_to_log(error_msg)
+                    return f"Error writing relationship tuples: {error_msg}"
+
+        except Exception as e:
+            _write_to_log(f"Error making direct API call: {e}")
+            return f"Error writing relationship tuples: Failed to make API call - {e}"
+
+    except Exception as e:
+        _write_to_log(f"Error writing relationship tuples: {e!s}")
+        _write_to_log(f"Exception type: {type(e)}")
+        import traceback
+
+        _write_to_log(f"Traceback: {traceback.format_exc()}")
+        return f"Error writing relationship tuples: {e!s}"
+
+
+@mcp.tool()
+async def write_relation_tuples(
+    ctx: Context,
+    store_id: str,
+    tuples: list,
+    authorization_model_id: str | None = None,
+) -> str:
+    """
+    Writes relationship tuples to a specific store.
+
+    Args:
+        ctx: The MCP context
+        store_id: The ID of the store to write tuples to
+        tuples: List of tuples to write, each containing user, relation, object
+        authorization_model_id: Optional ID of authorization model to use for validation
+
+    Returns:
+        A string with the result of the operation
+    """
+    _write_to_log(f"write_relation_tuples: {store_id}")
+    _write_to_log(ctx)
+    return await _write_relation_tuples_impl(
+        await _get_client(ctx),
+        store_id=store_id,
+        tuples=tuples,
+        authorization_model_id=authorization_model_id,
     )
 
 

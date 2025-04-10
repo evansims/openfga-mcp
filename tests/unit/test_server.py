@@ -54,6 +54,8 @@ async def mock_openfga_sdk_client():
     client.write_authorization_model = AsyncMock()
     client.read_authorization_models = AsyncMock()
     client.get_authorization_model = AsyncMock()
+    client.read_tuples = AsyncMock()
+    client.write_tuples = AsyncMock()
     client.get_store_id = MagicMock(return_value=None)
     client.set_store_id = MagicMock()
     client.close = AsyncMock()  # For lifespan testing
@@ -1301,3 +1303,382 @@ async def test_call_get_authorization_model_missing_model_id(test_app: AsyncClie
 
     assert response.status_code == 400
     assert "Missing required arg 'authorization_model_id' for get_authorization_model" in response.text
+
+
+@pytest.mark.asyncio
+async def test_read_relation_tuples_impl_success(mock_openfga_sdk_client):
+    """Test _read_relation_tuples_impl with successful tuples retrieval."""
+    # Create some mock tuples
+    tuples = [
+        {"user": "user:anne", "relation": "viewer", "object": "document:readme"},
+        {"user": "user:bob", "relation": "editor", "object": "document:report"},
+    ]
+
+    mock_response = {"tuples": tuples, "continuation_token": "next_token_123"}
+    mock_openfga_sdk_client.read_tuples.return_value = mock_response
+
+    # Call the implementation with no filters
+    result = await server._read_relation_tuples_impl(mock_openfga_sdk_client, store_id="test_store_id")
+
+    # Verify the result contains all tuples information
+    assert "Relationship tuples in store test_store_id:" in result
+    assert "User: user:anne | Relation: viewer | Object: document:readme" in result
+    assert "User: user:bob | Relation: editor | Object: document:report" in result
+    assert "Continuation token: next_token_123" in result
+
+    # Verify the store ID was properly set
+    mock_openfga_sdk_client.set_store_id.assert_called_once_with("test_store_id")
+    mock_openfga_sdk_client.read_tuples.assert_awaited_once()
+    # Verify read_tuples was called with no options
+    mock_openfga_sdk_client.read_tuples.assert_awaited_once_with(None)
+
+
+@pytest.mark.asyncio
+async def test_read_relation_tuples_impl_with_filters(mock_openfga_sdk_client):
+    """Test _read_relation_tuples_impl with filters."""
+    mock_response = {"tuples": [{"user": "user:anne", "relation": "viewer", "object": "document:readme"}]}
+    mock_openfga_sdk_client.read_tuples.return_value = mock_response
+
+    # Call with filters
+    await server._read_relation_tuples_impl(
+        mock_openfga_sdk_client,
+        store_id="test_store_id",
+        user="user:anne",
+        relation="viewer",
+        object="document:readme",
+        object_type="document",
+    )
+
+    # Verify options were passed correctly
+    call_args = mock_openfga_sdk_client.read_tuples.await_args[0][0]
+    assert call_args["query"]["user"] == "user:anne"
+    assert call_args["query"]["relation"] == "viewer"
+    assert call_args["query"]["object"] == "document:readme"
+    assert call_args["query"]["object_type"] == "document"
+
+
+@pytest.mark.asyncio
+async def test_read_relation_tuples_impl_with_pagination(mock_openfga_sdk_client):
+    """Test _read_relation_tuples_impl with pagination options."""
+    mock_response = {"tuples": [{"user": "user:anne", "relation": "viewer", "object": "document:readme"}]}
+    mock_openfga_sdk_client.read_tuples.return_value = mock_response
+
+    # Call with pagination options
+    await server._read_relation_tuples_impl(
+        mock_openfga_sdk_client, store_id="test_store_id", continuation_token="page_token", page_size=10
+    )
+
+    # Verify pagination options were passed correctly
+    call_args = mock_openfga_sdk_client.read_tuples.await_args[0][0]
+    assert call_args["continuation_token"] == "page_token"
+    assert call_args["page_size"] == 10
+
+
+@pytest.mark.asyncio
+async def test_read_relation_tuples_impl_with_previous_id(mock_openfga_sdk_client):
+    """Test _read_relation_tuples_impl with a previous store ID set."""
+    # Set up the mock to return a previous store ID
+    mock_openfga_sdk_client.get_store_id.return_value = "previous_store_id"
+
+    mock_response = {"tuples": []}
+    mock_openfga_sdk_client.read_tuples.return_value = mock_response
+
+    await server._read_relation_tuples_impl(mock_openfga_sdk_client, store_id="new_store_id")
+
+    # Verify the store ID was set to the new ID and then reset back to the previous ID
+    mock_openfga_sdk_client.set_store_id.assert_any_call("new_store_id")
+    mock_openfga_sdk_client.set_store_id.assert_any_call("previous_store_id")
+    assert mock_openfga_sdk_client.set_store_id.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_read_relation_tuples_impl_empty_response(mock_openfga_sdk_client):
+    """Test _read_relation_tuples_impl with no tuples in the response."""
+    mock_response = {"tuples": []}
+    mock_openfga_sdk_client.read_tuples.return_value = mock_response
+
+    result = await server._read_relation_tuples_impl(mock_openfga_sdk_client, store_id="empty_store_id")
+
+    assert "No relationship tuples found in store empty_store_id" == result
+
+
+@pytest.mark.asyncio
+async def test_read_relation_tuples_impl_exception(mock_openfga_sdk_client):
+    """Test _read_relation_tuples_impl handles exceptions."""
+    exception = ApiException("Store not found")
+    mock_openfga_sdk_client.read_tuples.side_effect = exception
+
+    result = await server._read_relation_tuples_impl(mock_openfga_sdk_client, store_id="nonexistent_id")
+
+    assert f"Error reading relationship tuples: {str(exception)}" == result
+
+
+@pytest.mark.asyncio
+async def test_call_read_relation_tuples_success(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the read_relation_tuples tool successfully."""
+    # Create mock tuples
+    tuples = [
+        {"user": "user:anne", "relation": "viewer", "object": "document:readme"},
+        {"user": "user:bob", "relation": "editor", "object": "document:report"},
+    ]
+
+    # Mock successful response
+    mock_openfga_sdk_client.read_tuples.return_value = {"tuples": tuples}
+
+    # Call the API
+    payload = {"tool": "read_relation_tuples", "args": {"store_id": "test_store_id"}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+    assert "Relationship tuples in store test_store_id:" in response.json()["result"]
+    assert "User: user:anne | Relation: viewer | Object: document:readme" in response.json()["result"]
+    assert "User: user:bob | Relation: editor | Object: document:report" in response.json()["result"]
+
+    # Verify the client API was called correctly
+    mock_openfga_sdk_client.set_store_id.assert_any_call("test_store_id")
+    mock_openfga_sdk_client.read_tuples.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_call_read_relation_tuples_with_filters(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the read_relation_tuples tool with filters."""
+    mock_response = {"tuples": [{"user": "user:anne", "relation": "viewer", "object": "document:readme"}]}
+    mock_openfga_sdk_client.read_tuples.return_value = mock_response
+
+    # Call with filter parameters
+    payload = {
+        "tool": "read_relation_tuples",
+        "args": {"store_id": "test_store_id", "user": "user:anne", "relation": "viewer", "object": "document:readme"},
+    }
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+
+    # Verify filter options were used correctly
+    call_args = mock_openfga_sdk_client.read_tuples.await_args[0][0]
+    assert call_args["query"]["user"] == "user:anne"
+    assert call_args["query"]["relation"] == "viewer"
+    assert call_args["query"]["object"] == "document:readme"
+
+
+@pytest.mark.asyncio
+async def test_call_read_relation_tuples_missing_store_id(test_app: AsyncClient):
+    """Test POST /call for the read_relation_tuples tool with missing store_id argument."""
+    payload = {"tool": "read_relation_tuples", "args": {}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'store_id' for read_relation_tuples" in response.text
+
+
+@pytest.mark.asyncio
+async def test_write_relation_tuples_impl_success(mock_openfga_sdk_client):
+    """Test _write_relation_tuples_impl with successful tuple writing."""
+    # Create some sample tuples
+    tuples = [
+        {"user": "user:anne", "relation": "viewer", "object": "document:readme"},
+        {"user": "user:bob", "relation": "editor", "object": "document:report"},
+    ]
+
+    # Mock httpx.AsyncClient for direct HTTP calls
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = '{"success": true}'
+
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await server._write_relation_tuples_impl(
+            mock_openfga_sdk_client, store_id="test_store_id", tuples=tuples
+        )
+
+    # Verify the result message
+    assert "Successfully wrote 2 relationship tuples to store test_store_id" == result
+
+    # Verify the client was called correctly
+    mock_openfga_sdk_client.set_store_id.assert_called_once_with("test_store_id")
+    mock_client.post.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_write_relation_tuples_impl_with_authorization_model_id(mock_openfga_sdk_client):
+    """Test _write_relation_tuples_impl with authorization model ID."""
+    tuples = [{"user": "user:anne", "relation": "viewer", "object": "document:readme"}]
+    model_id = "01GXSA8YR785C4FYS3C0RTG7B1"
+
+    # Mock httpx.AsyncClient for direct HTTP calls
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = '{"success": true}'
+
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await server._write_relation_tuples_impl(
+            mock_openfga_sdk_client, store_id="test_store_id", tuples=tuples, authorization_model_id=model_id
+        )
+
+    # Verify success
+    assert "Successfully wrote 1 relationship tuples to store test_store_id" == result
+
+    # Verify the request includes the authorization model ID
+    call_args, call_kwargs = mock_client.post.call_args
+    assert "authorization_model_id" in call_kwargs["json"]
+    assert call_kwargs["json"]["authorization_model_id"] == model_id
+
+
+@pytest.mark.asyncio
+async def test_write_relation_tuples_impl_with_condition(mock_openfga_sdk_client):
+    """Test _write_relation_tuples_impl with conditional tuples."""
+    # Create tuples with conditions
+    tuples = [
+        {
+            "user": "user:anne",
+            "relation": "viewer",
+            "object": "document:readme",
+            "condition": {"name": "time_based", "context": {"time_before": "2023-12-31T23:59:59Z"}},
+        }
+    ]
+
+    # Mock httpx.AsyncClient for direct HTTP calls
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = '{"success": true}'
+
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await server._write_relation_tuples_impl(
+            mock_openfga_sdk_client, store_id="test_store_id", tuples=tuples
+        )
+
+    # Verify success
+    assert "Successfully wrote 1 relationship tuples to store test_store_id" == result
+
+    # Verify the request includes the condition
+    call_args, call_kwargs = mock_client.post.call_args
+    writes = call_kwargs["json"]["writes"]
+    assert "condition" in writes[0]
+    assert writes[0]["condition"]["name"] == "time_based"
+
+
+@pytest.mark.asyncio
+async def test_write_relation_tuples_impl_with_previous_id(mock_openfga_sdk_client):
+    """Test _write_relation_tuples_impl with a previous store ID set."""
+    # Set up the mock to return a previous store ID
+    mock_openfga_sdk_client.get_store_id.return_value = "previous_store_id"
+
+    tuples = [{"user": "user:anne", "relation": "viewer", "object": "document:readme"}]
+
+    # Mock httpx.AsyncClient for direct HTTP calls
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = '{"success": true}'
+
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        await server._write_relation_tuples_impl(mock_openfga_sdk_client, store_id="new_store_id", tuples=tuples)
+
+    # Verify the store ID was set to the new ID and then reset back to the previous ID
+    mock_openfga_sdk_client.set_store_id.assert_any_call("new_store_id")
+    mock_openfga_sdk_client.set_store_id.assert_any_call("previous_store_id")
+
+
+@pytest.mark.asyncio
+async def test_write_relation_tuples_impl_invalid_tuple(mock_openfga_sdk_client):
+    """Test _write_relation_tuples_impl with invalid tuple format."""
+    # Create an invalid tuple missing required fields
+    tuples = [{"user": "user:anne", "relation": "viewer"}]  # Missing "object"
+
+    result = await server._write_relation_tuples_impl(mock_openfga_sdk_client, store_id="test_store_id", tuples=tuples)
+
+    # Verify the error message
+    assert "Error: Each tuple must have 'user', 'relation', and 'object' fields" in result
+
+
+@pytest.mark.asyncio
+async def test_write_relation_tuples_impl_api_error(mock_openfga_sdk_client):
+    """Test _write_relation_tuples_impl with API error response."""
+    tuples = [{"user": "user:anne", "relation": "viewer", "object": "document:readme"}]
+
+    # Mock httpx.AsyncClient with error response
+    mock_response = MagicMock()
+    mock_response.status_code = 400
+    mock_response.text = '{"code":"400","message":"Bad Request"}'
+
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await server._write_relation_tuples_impl(
+            mock_openfga_sdk_client, store_id="test_store_id", tuples=tuples
+        )
+
+    # Verify the error response
+    assert "Error writing relationship tuples: API error: 400" in result
+
+
+@pytest.mark.asyncio
+async def test_call_write_relation_tuples_success(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the write_relation_tuples tool successfully."""
+    # Create some sample tuples
+    tuples = [
+        {"user": "user:anne", "relation": "viewer", "object": "document:readme"},
+        {"user": "user:bob", "relation": "editor", "object": "document:report"},
+    ]
+
+    # Mock httpx.AsyncClient for direct HTTP calls
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = '{"success": true}'
+
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        # Call the API
+        payload = {"tool": "write_relation_tuples", "args": {"store_id": "test_store_id", "tuples": tuples}}
+        response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+    assert "Successfully wrote 2 relationship tuples to store test_store_id" in response.json()["result"]
+
+
+@pytest.mark.asyncio
+async def test_call_write_relation_tuples_missing_store_id(test_app: AsyncClient):
+    """Test POST /call for the write_relation_tuples tool with missing store_id argument."""
+    payload = {
+        "tool": "write_relation_tuples",
+        "args": {"tuples": [{"user": "user:anne", "relation": "viewer", "object": "document:readme"}]},
+    }
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'store_id' for write_relation_tuples" in response.text
+
+
+@pytest.mark.asyncio
+async def test_call_write_relation_tuples_missing_tuples(test_app: AsyncClient):
+    """Test POST /call for the write_relation_tuples tool with missing tuples argument."""
+    payload = {"tool": "write_relation_tuples", "args": {"store_id": "test_store_id"}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'tuples' for write_relation_tuples" in response.text

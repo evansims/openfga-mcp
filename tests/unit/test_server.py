@@ -18,6 +18,7 @@ from openfga_sdk.models import (
     ListUsersResponse,
     Store,
     User,
+    WriteAuthorizationModelResponse,
 )
 from starlette.applications import Starlette
 
@@ -48,6 +49,7 @@ async def mock_openfga_sdk_client():
     client.create_store = AsyncMock()
     client.get_store = AsyncMock()
     client.delete_store = AsyncMock()
+    client.write_authorization_model = AsyncMock()
     client.get_store_id = MagicMock(return_value=None)
     client.set_store_id = MagicMock()
     client.close = AsyncMock()  # For lifespan testing
@@ -595,6 +597,120 @@ async def test_delete_store_impl_exception(mock_openfga_sdk_client):
     assert f"Error deleting store: {str(exception)}" == result
 
 
+@pytest.mark.asyncio
+async def test_write_authorization_model_impl_success(mock_openfga_sdk_client):
+    """Test _write_authorization_model_impl with successful model creation."""
+    # Setup the mock response with a model ID
+    model_id = "01GXSA8YR785C4FYS3C0RTG7B1"
+    mock_response = WriteAuthorizationModelResponse(authorization_model_id=model_id)
+    mock_openfga_sdk_client.write_authorization_model.return_value = mock_response
+
+    # Example minimal model data
+    auth_model_data = {
+        "schema_version": "1.1",
+        "type_definitions": [
+            {"type": "user", "relations": {}},
+            {"type": "document", "relations": {"viewer": {"this": {}}}},
+        ],
+    }
+
+    result = await server._write_authorization_model_impl(
+        mock_openfga_sdk_client, store_id="01FQH7V8BEG3GPQW93KTRFR8JB", auth_model_data=auth_model_data
+    )
+
+    # Verify the result contains the model ID
+    assert f"Authorization model successfully created with ID: {model_id}" == result
+
+    # Verify the client was called with the right parameters
+    mock_openfga_sdk_client.set_store_id.assert_any_call("01FQH7V8BEG3GPQW93KTRFR8JB")
+    mock_openfga_sdk_client.write_authorization_model.assert_awaited_once()
+
+    # Verify model data was passed correctly
+    call_args = mock_openfga_sdk_client.write_authorization_model.await_args.kwargs["body"]
+    assert call_args.schema_version == "1.1"
+    assert len(call_args.type_definitions) == 2
+
+
+@pytest.mark.asyncio
+async def test_write_authorization_model_impl_success_dict_response(mock_openfga_sdk_client):
+    """Test _write_authorization_model_impl with successful model creation returning dict-like response."""
+    # Setup the mock response as a dictionary
+    model_id = "01GXSA8YR785C4FYS3C0RTG7B1"
+    mock_response = {"authorization_model_id": model_id}
+    mock_openfga_sdk_client.write_authorization_model.return_value = mock_response
+
+    # Example minimal model data
+    auth_model_data = {"schema_version": "1.1", "type_definitions": [{"type": "user", "relations": {}}]}
+
+    result = await server._write_authorization_model_impl(
+        mock_openfga_sdk_client, store_id="01FQH7V8BEG3GPQW93KTRFR8JB", auth_model_data=auth_model_data
+    )
+
+    # Verify the result contains the model ID
+    assert f"Authorization model successfully created with ID: {model_id}" == result
+    mock_openfga_sdk_client.write_authorization_model.assert_awaited_once()
+
+    # Also verify the body content
+    call_args = mock_openfga_sdk_client.write_authorization_model.await_args.kwargs["body"]
+    assert call_args.schema_version == "1.1"
+    assert len(call_args.type_definitions) == 1
+
+
+@pytest.mark.asyncio
+async def test_write_authorization_model_impl_with_previous_id(mock_openfga_sdk_client):
+    """Test _write_authorization_model_impl with a previous store ID set."""
+    # Set up the mock to return a previous store ID
+    mock_openfga_sdk_client.get_store_id.return_value = "previous_store_id"
+
+    mock_response = WriteAuthorizationModelResponse(authorization_model_id="01GXSA8YR785C4FYS3C0RTG7B1")
+    mock_openfga_sdk_client.write_authorization_model.return_value = mock_response
+
+    auth_model_data = {"schema_version": "1.1", "type_definitions": []}
+
+    await server._write_authorization_model_impl(
+        mock_openfga_sdk_client, store_id="new_store_id", auth_model_data=auth_model_data
+    )
+
+    # Verify the store ID was set to the new ID and then reset back to the previous ID
+    mock_openfga_sdk_client.set_store_id.assert_any_call("new_store_id")
+    mock_openfga_sdk_client.set_store_id.assert_any_call("previous_store_id")
+    assert mock_openfga_sdk_client.set_store_id.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_write_authorization_model_impl_no_id(mock_openfga_sdk_client):
+    """Test _write_authorization_model_impl when response doesn't include an ID."""
+    mock_response = MagicMock()
+    # Explicitly unset authorization_model_id attribute
+    if hasattr(mock_response, "authorization_model_id"):
+        delattr(mock_response, "authorization_model_id")
+    mock_openfga_sdk_client.write_authorization_model.return_value = mock_response
+
+    auth_model_data = {"schema_version": "1.1", "type_definitions": []}
+
+    result = await server._write_authorization_model_impl(
+        mock_openfga_sdk_client, store_id="01FQH7V8BEG3GPQW93KTRFR8JB", auth_model_data=auth_model_data
+    )
+
+    assert "Authorization model successfully created, but no ID was returned" == result
+    mock_openfga_sdk_client.write_authorization_model.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_write_authorization_model_impl_exception(mock_openfga_sdk_client):
+    """Test _write_authorization_model_impl handles exceptions."""
+    exception = ApiException("Invalid authorization model")
+    mock_openfga_sdk_client.write_authorization_model.side_effect = exception
+
+    auth_model_data = {"schema_version": "1.1", "type_definitions": []}
+
+    result = await server._write_authorization_model_impl(
+        mock_openfga_sdk_client, store_id="01FQH7V8BEG3GPQW93KTRFR8JB", auth_model_data=auth_model_data
+    )
+
+    assert f"Error creating authorization model: {str(exception)}" == result
+
+
 # --- Test /call POST Endpoint ---
 
 
@@ -757,6 +873,60 @@ async def test_call_delete_store_missing_id(test_app: AsyncClient):
 
     assert response.status_code == 400
     assert "Missing required arg 'store_id' for delete_store" in response.text
+
+
+@pytest.mark.asyncio
+async def test_call_write_authorization_model_success(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the write_authorization_model tool successfully."""
+    # Setup the mock response with a model ID
+    model_id = "01GXSA8YR785C4FYS3C0RTG7B1"
+    mock_response = WriteAuthorizationModelResponse(authorization_model_id=model_id)
+    mock_openfga_sdk_client.write_authorization_model.return_value = mock_response
+
+    # Example minimal model data
+    auth_model_data = {
+        "schema_version": "1.1",
+        "type_definitions": [
+            {"type": "user", "relations": {}},
+            {"type": "document", "relations": {"viewer": {"this": {}}}},
+        ],
+    }
+
+    payload = {
+        "tool": "write_authorization_model",
+        "args": {"store_id": "01FQH7V8BEG3GPQW93KTRFR8JB", "auth_model_data": auth_model_data},
+    }
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+    assert f"Authorization model successfully created with ID: {model_id}" in response.json()["result"]
+
+    # Verify the correct requests were made
+    mock_openfga_sdk_client.set_store_id.assert_any_call("01FQH7V8BEG3GPQW93KTRFR8JB")
+    mock_openfga_sdk_client.write_authorization_model.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_call_write_authorization_model_missing_store_id(test_app: AsyncClient):
+    """Test POST /call for the write_authorization_model tool with missing store_id argument."""
+    payload = {
+        "tool": "write_authorization_model",
+        "args": {"auth_model_data": {"schema_version": "1.1", "type_definitions": []}},
+    }
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'store_id' for write_authorization_model" in response.text
+
+
+@pytest.mark.asyncio
+async def test_call_write_authorization_model_missing_model_data(test_app: AsyncClient):
+    """Test POST /call for the write_authorization_model tool with missing auth_model_data argument."""
+    payload = {"tool": "write_authorization_model", "args": {"store_id": "01FQH7V8BEG3GPQW93KTRFR8JB"}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'auth_model_data' for write_authorization_model" in response.text
 
 
 @pytest.mark.asyncio

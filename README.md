@@ -13,11 +13,21 @@ An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP)
 
 ### Tools
 
+#### Store Management
+
 - `create_store`: Creates a new Store. ([create-store](https://openfga.dev/api/service#/Stores/CreateStore))
 - `list_stores`: List all stores. ([list-stores](https://openfga.dev/api/service#/Stores/ListStores))
 - `get_store`: Get a store details. ([get-store](https://openfga.dev/api/service#/Stores/GetStore))
 - `delete_store`: Delete a store. ([delete-store](https://openfga.dev/api/service#/Stores/DeleteStore))
 - `get_store_id_by_name`: Get the ID of a store by it's name.
+
+#### Authorization Model Management
+
+- `write_authorization_model`: Write an authorization model. ([write-authorization-model](https://openfga.dev/api/service#/Authorization%20Models/WriteAuthorizationModel))
+- `read_authorization_models`: List all authorization models. ([read-authorization-models](https://openfga.dev/api/service#/Authorization%20Models/ReadAuthorizationModels))
+- `get_authorization_model`: Get a particular version of an authorization model details. ([get-authorization-model](https://openfga.dev/api/service#/Authorization%20Models/ReadAuthorizationModel))
+
+#### Assertions
 
 - `check`: Check if a user has a relation to an object. ([check](https://openfga.dev/api/service#/Assertions/Check))
 - `list_objects`: List objects of a type that a user has a relation to. ([list-objects](https://openfga.dev/api/service#/Assertions/ListObjects))

@@ -391,3 +391,46 @@ async def test_delete_store(start_services: str):
     # List stores to verify the store is no longer in the list
     list_response = await call_mcp_tool(server_url, "list_stores", {})
     assert store_name not in list_response
+
+
+@pytest.mark.asyncio
+async def test_write_authorization_model(start_services: str):
+    """Test write_authorization_model functionality."""
+    server_url = start_services
+
+    # First, create a new store to add the model to
+    store_name = f"model_test_store_{uuid.uuid4().hex[:8]}"
+    create_response = await call_mcp_tool(server_url, "create_store", {"name": store_name})
+
+    # Extract the store ID from the creation response
+    import re
+
+    match = re.search(r"ID: ([a-zA-Z0-9-]+)", create_response)
+    assert match, "Could not find store ID in the create store response"
+
+    store_id = match.group(1)
+
+    # Create a simple authorization model
+    auth_model_data = {
+        "schema_version": "1.1",
+        "type_definitions": [
+            {"type": "user", "relations": {}},
+            {"type": "document", "relations": {"viewer": {"this": {}}, "owner": {"this": {}}}},
+        ],
+    }
+
+    # Write the authorization model to the store
+    model_response = await call_mcp_tool(
+        server_url, "write_authorization_model", {"store_id": store_id, "auth_model_data": auth_model_data}
+    )
+
+    # Verify the model was created successfully
+    assert "Authorization model successfully created with ID:" in model_response
+
+    # Extract the model ID for future reference (optional)
+    model_id_match = re.search(r"ID: ([a-zA-Z0-9-]+)", model_response)
+    if model_id_match:
+        print(f"Created authorization model with ID: {model_id_match.group(1)}")
+
+    # Clean up - delete the store
+    await call_mcp_tool(server_url, "delete_store", {"store_id": store_id})

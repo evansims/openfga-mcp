@@ -10,6 +10,7 @@ from openfga_sdk import FgaObject, OpenFgaClient
 from openfga_sdk.client.client import ClientListObjectsRequest, ClientListRelationsRequest, ClientListUsersRequest
 from openfga_sdk.client.models.check_request import ClientCheckRequest
 from openfga_sdk.models.create_store_request import CreateStoreRequest
+from openfga_sdk.models.write_authorization_model_request import WriteAuthorizationModelRequest
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse
@@ -167,6 +168,17 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
                 if "store_id" not in args:
                     return JSONResponse({"error": "Missing required arg 'store_id' for delete_store"}, status_code=400)
                 result = await _delete_store_impl(client, **args)
+            case "write_authorization_model":
+                if "store_id" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'store_id' for write_authorization_model"}, status_code=400
+                    )
+                if "auth_model_data" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'auth_model_data' for write_authorization_model"},
+                        status_code=400,
+                    )
+                result = await _write_authorization_model_impl(client, **args)
             case "create_store":
                 if "name" not in args:
                     return JSONResponse({"error": "Missing required arg 'name' for create_store"}, status_code=400)
@@ -398,29 +410,79 @@ async def _get_client(ctx: Context | None = None, app: Starlette | FastMCP | Non
 
 @mcp.tool()
 async def check(ctx: Context, user: str, relation: str, object: str) -> str:
+    """Checks if a user has a relation to an object.
+
+    Args:
+        ctx: The MCP context
+        user: The user to check
+        relation: The relationship to check
+        object: The object to check
+
+    Returns:
+        A string with the result of the operation
+    """
     return await _check_impl(await _get_client(ctx), user=user, relation=relation, object=object)
 
 
 @mcp.tool()
 async def list_objects(ctx: Context, user: str, relation: str, type: str) -> str:
+    """Lists all objects that have a given relationship with a given user.
+
+    Args:
+        ctx: The MCP context
+        user: The user to list objects for
+        relation: The relationship to list objects for
+        type: The type of the objects to list
+
+    Returns:
+        A string with the result of the operation
+    """
     return await _list_objects_impl(await _get_client(ctx), user=user, relation=relation, type=type)
 
 
 @mcp.tool()
 async def list_relations(ctx: Context, user: str, relations: str, object: str) -> str:
+    """Lists all relations for which a user has a relation to an object.
+
+    Args:
+        ctx: The MCP context
+        user: The user to list relations for
+        relations: The relations to list
+        object: The object to list relations for
+
+    Returns:
+        A string with the result of the operation
+    """
     return await _list_relations_impl(await _get_client(ctx), user=user, relations=relations, object=object)
 
 
 @mcp.tool()
 async def list_users(ctx: Context, object: str, type: str, relation: str) -> str:
+    """Lists all users that have a given relationship with a given object.
+
+    Args:
+        ctx: The MCP context
+        object: The object to list users for
+        type: The type of the object
+        relation: The relationship to list users for
+
+    Returns:
+        A string with the result of the operation
+    """
     return await _list_users_impl(await _get_client(ctx), object=object, type=type, relation=relation)
 
 
 @mcp.tool()
 async def get_store_id_by_name(ctx: Context, name: str) -> str:
-    _write_to_log("get_store_id_by_name")
-    _write_to_log(ctx)
+    """Get the ID of a store by it's name.
 
+    Args:
+        ctx: The MCP context
+        name: The name of the store to get the ID of
+
+    Returns:
+        A string with the result of the operation
+    """
     openfga = OpenFga()
     store_name = await openfga.get_store_by_name(openfga.get_config(), name)
 
@@ -432,6 +494,14 @@ async def get_store_id_by_name(ctx: Context, name: str) -> str:
 
 @mcp.tool()
 async def list_stores(ctx: Context) -> str:
+    """Lists all OpenFGA stores.
+
+    Args:
+        ctx: The MCP context
+
+    Returns:
+        A string with the result of the operation
+    """
     _write_to_log("list_stores")
     _write_to_log(ctx)
     return await _list_stores_impl(await _get_client(ctx))
@@ -572,6 +642,76 @@ async def delete_store(ctx: Context, store_id: str) -> str:
     _write_to_log(f"delete_store: {store_id}")
     _write_to_log(ctx)
     return await _delete_store_impl(await _get_client(ctx), store_id=store_id)
+
+
+async def _write_authorization_model_impl(client: OpenFgaClient, store_id: str, auth_model_data: dict) -> str:
+    """
+    Creates a new authorization model for a specific store.
+
+    Args:
+        client: The OpenFGA client
+        store_id: The ID of the store to add the authorization model to
+        auth_model_data: The authorization model data
+
+    Returns:
+        A string with the result of the operation
+    """
+    try:
+        # Save the current store ID
+        current_store_id = client.get_store_id()
+
+        # Set the store ID for this request
+        client.set_store_id(store_id)
+
+        # Convert auth_model_data dict to WriteAuthorizationModelRequest
+        model_request = WriteAuthorizationModelRequest(
+            schema_version=auth_model_data.get("schema_version", "1.1"),
+            type_definitions=auth_model_data.get("type_definitions", []),
+            conditions=auth_model_data.get("conditions", {}),
+        )
+
+        # Call the write_authorization_model API
+        response = await client.write_authorization_model(body=model_request)
+
+        # Restore the original store ID if it exists and is different
+        if current_store_id and current_store_id != store_id:
+            client.set_store_id(current_store_id)
+
+        # Extract the authorization model ID from the response
+        auth_model_id = None
+        if hasattr(response, "authorization_model_id"):
+            auth_model_id = response.authorization_model_id
+        elif isinstance(response, dict) and "authorization_model_id" in response:
+            auth_model_id = response["authorization_model_id"]
+
+        if auth_model_id:
+            return f"Authorization model successfully created with ID: {auth_model_id}"
+        else:
+            return "Authorization model successfully created, but no ID was returned"
+
+    except Exception as e:
+        _write_to_log(f"Error creating authorization model: {e!s}")
+        return f"Error creating authorization model: {e!s}"
+
+
+@mcp.tool()
+async def write_authorization_model(ctx: Context, store_id: str, auth_model_data: dict) -> str:
+    """
+    Creates a new authorization model for a specific store.
+
+    Args:
+        ctx: The MCP context
+        store_id: The ID of the store to add the authorization model to
+        model_data: The authorization model data (as a dict with schema_version, type_definitions, etc.)
+
+    Returns:
+        A string with the result of the operation
+    """
+    _write_to_log(f"write_authorization_model: {store_id}")
+    _write_to_log(ctx)
+    return await _write_authorization_model_impl(
+        await _get_client(ctx), store_id=store_id, auth_model_data=auth_model_data
+    )
 
 
 def run() -> None:

@@ -1,201 +1,252 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from typing import Any, cast
 
 import uvicorn
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.sse import SseServerTransport
 from openfga_sdk import FgaObject, OpenFgaClient
 from openfga_sdk.client.client import ClientListObjectsRequest, ClientListRelationsRequest, ClientListUsersRequest
 from openfga_sdk.client.models.check_request import ClientCheckRequest
+from openfga_sdk.models import CheckResponse, ListObjectsResponse, ListUsersResponse
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.routing import Mount, Route
 
 from openfga_mcp.openfga import OpenFga
-from openfga_mcp.sse import create_starlette_app
 
 
-@dataclass
+@dataclass(frozen=True)
 class ServerContext:
     openfga: OpenFga
 
 
-@asynccontextmanager
-async def openfga_mcp_lifespan(server: FastMCP) -> AsyncIterator[ServerContext]:  # noqa: ARG001
-    """Get OpenFga instance for use in the MCP server."""
-    openfga = OpenFga()
+# Type alias for improved readability
+type JsonDict = dict[str, Any]
 
+
+@asynccontextmanager
+async def openfga_mcp_lifespan(app: Starlette) -> AsyncIterator[JsonDict]:
+    """Get OpenFga instance and store it in app state."""
+    openfga = OpenFga()
+    server_context = ServerContext(openfga)
+    app.state.server_context = server_context
     try:
-        yield ServerContext(openfga)
+        yield {"server_context": server_context}
     finally:
         await openfga.close()
 
 
-mcp = FastMCP("openfga-mcp", lifespan=openfga_mcp_lifespan)
+mcp = FastMCP("openfga-mcp")
 
 
-@mcp.tool()
-async def check(
-    ctx: Context,
-    user: str,
-    relation: str,
-    object: str,
-) -> str:
-    """Check if a user is authorized to access an object.
+async def health_check(request: Request) -> PlainTextResponse:
+    return PlainTextResponse("OK")
 
-    Args:
-        user: User ID
-        relation: Relation
-        object: Object ID
 
-    Returns:
-        A formatted string containing the result of the authorization check.
-    """
-    client = await _get_client(ctx)
+mcp_server_instance = mcp._mcp_server
+starlette_app = Starlette(debug=True, lifespan=openfga_mcp_lifespan)
 
-    # Check if the user has the relation to the object
+
+async def handle_mcp_post(request: Request) -> JSONResponse:
+    """Handles direct POST requests for MCP tools."""
     try:
-        body = ClientCheckRequest(
-            user=user,
-            relation=relation,
-            object=object,
+        if not hasattr(request.app.state, "server_context"):
+            return JSONResponse({"error": "Server context not available"}, status_code=500)
+
+        body = await request.json()
+        # Extract tool_name and args from the body
+        if not isinstance(body, dict):
+            return JSONResponse({"error": "Request body must be a JSON object"}, status_code=400)
+
+        tool_name = body.get("tool")
+        if not tool_name:
+            return JSONResponse({"error": "Missing 'tool' in request body"}, status_code=400)
+
+        args = body.get("args", {})
+        if not args:
+            return JSONResponse({"error": f"Missing 'args' for tool {tool_name}"}, status_code=400)
+
+        try:
+            server_context = request.app.state.server_context
+            client = await server_context.openfga.client()
+        except Exception as client_error:
+            return JSONResponse({"error": f"Failed to obtain OpenFGA client: {str(client_error)}"}, status_code=500)
+
+        match tool_name:
+            case "check":
+                if not all(k in args for k in ["user", "relation", "object"]):
+                    return JSONResponse({"error": "Missing required args for check"}, status_code=400)
+                result = await _check_impl(client, **args)
+            case "list_objects":
+                if not all(k in args for k in ["user", "relation", "type"]):
+                    return JSONResponse({"error": "Missing required args for list_objects"}, status_code=400)
+                result = await _list_objects_impl(client, **args)
+            case "list_relations":
+                if not all(k in args for k in ["user", "relations", "object"]):
+                    return JSONResponse({"error": "Missing required args for list_relations"}, status_code=400)
+                result = await _list_relations_impl(client, **args)
+            case "list_users":
+                if not all(k in args for k in ["object", "type", "relation"]):
+                    return JSONResponse({"error": "Missing required args for list_users"}, status_code=400)
+                result = await _list_users_impl(client, **args)
+            case _:
+                return JSONResponse({"error": f"Unsupported tool: {tool_name}"}, status_code=400)
+
+        return JSONResponse({"result": result})
+
+    except Exception as e:
+        return JSONResponse({"error": f"Internal server error: {e!s}"}, status_code=500)
+
+
+sse = SseServerTransport("/messages/")
+
+
+async def handle_sse(request: Request) -> None:
+    async with sse.connect_sse(
+        request.scope,
+        request.receive,
+        request._send,
+    ) as (read_stream, write_stream):
+        await mcp_server_instance.run(
+            read_stream,
+            write_stream,
+            mcp_server_instance.create_initialization_options(),
         )
 
+
+starlette_app.routes.extend(
+    [
+        Route("/healthz", endpoint=health_check),
+        Route("/call", endpoint=handle_mcp_post, methods=["POST"]),
+        Route("/sse", endpoint=handle_sse),
+        Mount("/messages/", app=sse.handle_post_message),
+    ]
+)
+
+
+async def _check_impl(client: OpenFgaClient, user: str, relation: str, object: str) -> str:
+    try:
+        body = ClientCheckRequest(user=user, relation=relation, object=object)
         response = await client.check(body)
-
-        if response.allowed:
-            return f"{user} has the relation {relation} to {object}"
-        else:
-            return f"{user} does not have the relation {relation} to {object}"
-
+        check_response = cast(CheckResponse, response)
+        return (
+            f"{user} has the relation {relation} to {object}"
+            if check_response.allowed
+            else f"{user} does not have the relation {relation} to {object}"
+        )
     except Exception as e:
         return f"Error checking relation: {e!s}"
 
 
-@mcp.tool()
-async def list_objects(
-    ctx: Context,
-    user: str,
-    relation: str,
-    type: str,
-) -> str:
-    """Get all objects of the given type that the user has a relation with.
-
-    Args:
-        user: User ID
-        relation: Relation
-        type: Type
-
-    Returns:
-        A formatted string containing the result of the authorization check.
-    """
-    client = await _get_client(ctx)
-
-    # Get all objects of the given type that the user has a relation with
+async def _list_objects_impl(client: OpenFgaClient, user: str, relation: str, type: str) -> str:
     try:
-        body = ClientListObjectsRequest(
-            user=user,
-            relation=relation,
-            type=type,
-        )
-
+        body = ClientListObjectsRequest(user=user, relation=relation, type=type)
         response = await client.list_objects(body)
-        response = ", ".join(response.objects)
+        # Type cast to fix linter errors
+        list_objects_response = cast(ListObjectsResponse, response)
 
-        return f"{user} has a {relation} relationship with {response}"
+        # Handle case where objects might be None or not an iterable
+        objects = list_objects_response.objects or []
+        object_list_str = ", ".join(objects)
 
+        # Always use the same format to maintain test compatibility
+        return f"{user} has a {relation} relationship with {object_list_str}"
     except Exception as e:
         return f"Error listing related objects: {e!s}"
 
 
-@mcp.tool()
-async def list_relations(
-    ctx: Context,
-    user: str,
-    relations: str,
-    object: str,
-) -> str:
-    """Get all relations for which the user has a relationship with the object.
-
-    Args:
-        user: User ID
-        relations: Comma-separated list of relations
-        object: Object
-
-    Returns:
-        A list of relations for which the specifieduser has a relationship with the object.
-    """
-    client = await _get_client(ctx)
-
-    # Get all relations for which the user has a relationship with the object
+async def _list_relations_impl(client: OpenFgaClient, user: str, relations: str, object: str) -> str:
     try:
-        body = ClientListRelationsRequest(
-            user=user,
-            relations=relations.split(","),
-            object=object,
-        )
-
+        relations_list = relations.split(",")
+        body = ClientListRelationsRequest(user=user, relations=relations_list, object=object)
         response = await client.list_relations(body)
-        response = ", ".join(response)
 
-        return f"{user} has the {response} relationships with {object}"
+        # Handle response directly
+        if not response:
+            # Use empty string for relations to maintain compatibility with tests
+            relations_str = ""
+        else:
+            # Ensure response is a sequence before joining
+            relations_str = ", ".join(str(rel) for rel in response)
 
+        return f"{user} has the {relations_str} relationships with {object}"
     except Exception as e:
         return f"Error listing relations: {e!s}"
 
 
-@mcp.tool()
-async def list_users(
-    ctx: Context,
-    object: str,
-    type: str,
-    relation: str,
-) -> str:
-    """Get all users that have a given relationship with a given object.
-
-    Args:
-        object: Object
-        type: Object Type
-        relation: Relation
-
-    Returns:
-        A list of users that have the given relationship with the given object.
-    """
-    client = await _get_client(ctx)
-
-    # Get all relations for which the user has a relationship with the object
+async def _list_users_impl(client: OpenFgaClient, object: str, type: str, relation: str) -> str:
     try:
+        fga_obj = FgaObject(type=type, id=object)
+        from openfga_sdk.models.user_type_filter import UserTypeFilter
+
         body = ClientListUsersRequest(
-            object=FgaObject(type=type, id=object),
+            object=fga_obj,
             relation=relation,
+            user_filters=[UserTypeFilter(type="user")],
         )
-
         response = await client.list_users(body)
+        list_users_response = cast(ListUsersResponse, response)
 
-        if response is not None and response.users is not None:
-            response = [user["object"]["id"] for user in response.users]
-            response = ", ".join(response)
-
-            return f"{response} have the {relation} relationship with {object}"
+        if list_users_response and list_users_response.users:
+            user_ids = [u.object.id for u in list_users_response.users if u.object and u.object.id]
+            users_str = ", ".join(user_ids)
+            return f"{users_str} have the {relation} relationship with {object}"
         else:
             return f"No users found with the {relation} relationship with {object}"
-
     except Exception as e:
-        return f"Error listing relations: {e!s}"
+        return f"Error listing users: {e!s}"
 
 
-async def _get_client(ctx: Context) -> OpenFgaClient:
-    context: ServerContext = ctx.request_context.lifespan_context
-    openfga: OpenFga = context.openfga
-    return await openfga.client()
+async def _get_client(ctx: Context | None = None, app: Starlette | None = None) -> OpenFgaClient:
+    """Retrieves the OpenFgaClient from context or app state."""
+    server_ctx: ServerContext | None = None
+
+    match (ctx, app):
+        case (Context() as c, _) if (
+            hasattr(c.request_context, "lifespan_context") and c.request_context.lifespan_context
+        ):
+            server_ctx = c.request_context.lifespan_context.get("server_context")
+        case (_, Starlette() as a) if hasattr(a.state, "server_context"):
+            server_ctx = a.state.server_context
+        case _:
+            # No valid context found, server_ctx remains None
+            server_ctx = None
+
+    if isinstance(server_ctx, ServerContext):
+        return await server_ctx.openfga.client()
+
+    raise RuntimeError("Could not retrieve OpenFGA client: ServerContext not found.")
+
+
+@mcp.tool()
+async def check(ctx: Context, user: str, relation: str, object: str) -> str:
+    return await _check_impl(await _get_client(ctx), user=user, relation=relation, object=object)
+
+
+@mcp.tool()
+async def list_objects(ctx: Context, user: str, relation: str, type: str) -> str:
+    return await _list_objects_impl(await _get_client(ctx), user=user, relation=relation, type=type)
+
+
+@mcp.tool()
+async def list_relations(ctx: Context, user: str, relations: str, object: str) -> str:
+    return await _list_relations_impl(await _get_client(ctx), user=user, relations=relations, object=object)
+
+
+@mcp.tool()
+async def list_users(ctx: Context, object: str, type: str, relation: str) -> str:
+    return await _list_users_impl(await _get_client(ctx), object=object, type=type, relation=relation)
 
 
 def run() -> None:
     """Run the OpenFga MCP server."""
     args = OpenFga().args()
 
-    if args.transport == "stdio":
-        mcp.run(transport="stdio")
-
-    else:
-        mcp_server = mcp._mcp_server
-
-        starlette_app = create_starlette_app(mcp_server, debug=True)
-        uvicorn.run(starlette_app, host=args.host, port=args.port)
+    match args.transport:
+        case "stdio":
+            mcp.run(transport="stdio")
+        case _:
+            uvicorn.run(starlette_app, host=args.host, port=args.port)

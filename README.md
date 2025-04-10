@@ -107,6 +107,12 @@ make run \
   --openfga_model="your-model-id"
 ```
 
+To run the development server with the MCP Inspector:
+
+```bash
+make dev
+```
+
 ## License
 
 Apache 2.0

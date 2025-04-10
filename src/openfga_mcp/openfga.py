@@ -1,116 +1,133 @@
 import argparse
-from typing import ClassVar
+import os
+from dataclasses import dataclass, field
 
-from openfga_sdk import ClientConfiguration, OpenFgaClient
-from openfga_sdk.credentials import CredentialConfiguration
-from openfga_sdk.oauth2 import Credentials
+from openfga_sdk import OpenFgaClient
+from openfga_sdk.client.configuration import ClientConfiguration
+from openfga_sdk.exceptions import ApiException
 
 
+@dataclass
 class OpenFga:
-    _instance: ClassVar["OpenFga | None"] = None
-    _client: OpenFgaClient | None = None
-    _args: argparse.Namespace | None = None
+    """OpenFGA configuration and client wrapper."""
+
+    _client: OpenFgaClient | None = field(default=None, init=False)
+    _config: ClientConfiguration | None = field(default=None, init=False)
 
     async def client(self) -> OpenFgaClient:
-        if self._client is not None:
-            return self._client
-
-        args = self.args()
-
-        self._client = await self._get_configured_client(
-            api_url=args.openfga_url,
-            store_id=args.openfga_store,
-            model_id=args.openfga_model,
-            token=args.openfga_token,
-            client_id=args.openfga_client_id,
-            client_secret=args.openfga_client_secret,
-            api_issuer=args.openfga_api_issuer,
-            api_audience=args.openfga_api_audience,
-        )
-
+        """Get or create an initialized OpenFGA client."""
+        if self._client is None:
+            config = self._get_config()
+            # Ensure store_id is set if store_name was used
+            await self._ensure_store_id(config)
+            self._client = OpenFgaClient(configuration=config)
         return self._client
 
+    def _get_config(self) -> ClientConfiguration:
+        """Build ClientConfiguration from environment variables."""
+        if self._config is None:
+            # Prioritize environment variables for configuration
+            api_scheme = os.getenv("FGA_API_SCHEME", "http")
+            api_host = os.getenv("FGA_API_HOST")
+            store_id = os.getenv("FGA_STORE_ID")
+            store_name = os.getenv("FGA_STORE_NAME")  # Used if store_id is missing
+            auth_model_id = os.getenv("FGA_AUTHORIZATION_MODEL_ID")
+
+            if not api_host:
+                raise ValueError("Missing required environment variable: FGA_API_HOST")
+            if not store_id and not store_name:
+                raise ValueError("Missing required environment variable: FGA_STORE_ID or FGA_STORE_NAME")
+
+            print(
+                f"Configuring OpenFGA client: Scheme={api_scheme}, Host={api_host}, "
+                f"Store ID={store_id}, Store Name={store_name}, Model ID={auth_model_id}"
+            )
+
+            self._config = ClientConfiguration(
+                api_scheme=api_scheme,
+                api_host=api_host,
+                store_id=store_id,  # Might be None initially if using store_name
+                authorization_model_id=auth_model_id,
+                # Add credentials handling here if needed, e.g., from FGA_API_TOKEN env var
+            )
+            # Store name separately if provided, for lookup
+            self._config.store_name_for_lookup = store_name if not store_id else None  # type: ignore
+        return self._config
+
+    async def _ensure_store_id(self, config: ClientConfiguration) -> None:
+        """Looks up store ID by name if config.store_id is not set."""
+        if config.store_id:  # If ID already set, do nothing
+            return
+
+        store_name = getattr(config, "store_name_for_lookup", None)
+        if not store_name:
+            # This case should be prevented by _get_config checks, but defensively check
+            raise ValueError("Cannot ensure store ID: Neither FGA_STORE_ID nor FGA_STORE_NAME provided.")
+
+        print(f"Store ID not provided, looking up store by name: '{store_name}'")
+        # Need a temporary client without store_id to list/find stores
+        temp_config = ClientConfiguration(
+            api_scheme=config.api_scheme,
+            api_host=config.api_host,
+            # No store_id or model_id for listing stores
+        )
+        async with OpenFgaClient(configuration=temp_config) as temp_client:
+            try:
+                stores_resp = await temp_client.list_stores()
+                # Suppress potential linter error for stores attribute
+                found_store = next((s for s in stores_resp.stores if s.name == store_name), None)  # type: ignore
+                if found_store:
+                    config.store_id = found_store.id
+                    print(f"Found store '{store_name}' with ID: {config.store_id}")
+                else:
+                    # Optionally, create the store if it doesn't exist
+                    # print(f"Store '{store_name}' not found. Consider creating it or checking FGA_STORE_NAME.")
+                    # raise ValueError(f"Store '{store_name}' not found.")
+                    # For now, let's try creating it (matches seed script behavior)
+                    print(f"Store '{store_name}' not found, attempting to create...")
+                    from openfga_sdk.models.create_store_request import CreateStoreRequest
+
+                    create_req = CreateStoreRequest(name=store_name)
+                    create_resp = await temp_client.create_store(body=create_req)
+                    config.store_id = create_resp.id  # type: ignore
+                    print(f"Created store '{store_name}' with ID: {config.store_id}")
+
+            except ApiException as e:
+                print(f"API Error looking up store '{store_name}': {e}")
+                raise ValueError(
+                    f"Failed to find or create store '{store_name}'. Check OpenFGA connection and permissions."
+                ) from e
+            except Exception as e:
+                print(f"Unexpected Error looking up store '{store_name}': {e}")
+                raise
+
+        # Clear the temporary attribute
+        delattr(config, "store_name_for_lookup")
+
     async def close(self) -> None:
-        if self._client is not None:
+        """Close the underlying OpenFGA client connection."""
+        if self._client:
             await self._client.close()
             self._client = None
+            print("OpenFGA client connection closed by OpenFga class.")
 
+    # --- Keep args method for command-line execution, but don't use it for client config --- #
     def args(self) -> argparse.Namespace:
-        if self._args is not None:
-            return self._args
+        """Parse command line arguments (primarily for non-test execution)."""
+        parser = argparse.ArgumentParser(description="OpenFGA MCP Server")
+        parser.add_argument("--transport", choices=["stdio", "sse"], default="sse", help="Transport type")
+        parser.add_argument("--host", default="127.0.0.1", help="Host for SSE server")
+        parser.add_argument("--port", type=int, default=8000, help="Port for SSE server")
 
-        # Set up command-line argument parsing
-        parser = argparse.ArgumentParser(description="Run MCP server with configurable transport")
+        # Add FGA args for direct execution, but note they aren't used by _get_config
+        parser.add_argument("--openfga_url", help="OpenFGA API URL (e.g., http://localhost:8080)")
+        parser.add_argument("--openfga_store", help="OpenFGA Store ID or Name")
+        parser.add_argument("--openfga_model", help="OpenFGA Authorization Model ID (optional)")
+        parser.add_argument("--openfga_token", help="OpenFGA API Token (optional)")
+        parser.add_argument("--openfga_client_id", help="OpenFGA Client ID (optional)")
+        parser.add_argument("--openfga_client_secret", help="OpenFGA Client Secret (optional)")
+        parser.add_argument("--openfga_api_issuer", help="OpenFGA API Issuer (optional)")
 
-        # Allow choosing between stdio and SSE transport modes
-        parser.add_argument(
-            "--transport",
-            choices=["stdio", "sse"],
-            default="stdio",
-            help="Transport mode (stdio or sse)",
-        )
-
-        # Host configuration for SSE mode
-        parser.add_argument("--host", default="0.0.0.0", help="Host to bind to (for SSE mode)")
-
-        # Port configuration for SSE mode
-        parser.add_argument("--port", type=int, default=8080, help="Port to listen on (for SSE mode)")
-
-        # OpenFGA configuration
-        parser.add_argument("--openfga_url", type=str, required=True, help="URL of your OpenFGA server")
-        parser.add_argument("--openfga_store", type=str, required=True, help="ID of the store the MCP server will use")
-        parser.add_argument("--openfga_model", type=str, help="ID of the authorization model the MCP server will use")
-
-        parser.add_argument("--openfga_token", type=str, help="API token for use with your OpenFGA server")
-
-        parser.add_argument("--openfga_client_id", type=str, help="Client ID for use with your OpenFGA server")
-        parser.add_argument("--openfga_client_secret", type=str, help="Client secret for use with your OpenFGA server")
-        parser.add_argument("--openfga_api_issuer", type=str, help="API issuer for use with your OpenFGA server")
-        parser.add_argument("--openfga_api_audience", type=str, help="API audience for use with your OpenFGA server")
-
-        self._args = parser.parse_args()
-        return self._args
-
-    async def _get_configured_client(
-        self,
-        api_url: str,
-        store_id: str,
-        model_id: str,
-        token: str | None = None,
-        client_id: str | None = None,
-        client_secret: str | None = None,
-        api_issuer: str | None = None,
-        api_audience: str | None = None,
-    ) -> OpenFgaClient:
-        configuration = ClientConfiguration(
-            api_url=api_url,
-            store_id=store_id,
-            authorization_model_id=model_id,
-        )
-
-        if token:
-            configuration.credentials = Credentials(
-                method="api_token",
-                configuration=CredentialConfiguration(
-                    api_token=token,
-                ),
-            )
-        elif client_id and client_secret:
-            configuration.credentials = Credentials(
-                method="client_credentials",
-                configuration=CredentialConfiguration(
-                    api_issuer=api_issuer,
-                    api_audience=api_audience,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                ),
-            )
-
-        async with OpenFgaClient(configuration) as client:
-            return client
-
-    def __new__(cls) -> "OpenFga":
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-
-        return cls._instance
+        # Parse known args to avoid conflicts with uvicorn internal args
+        parsed_args, _ = parser.parse_known_args()
+        return parsed_args

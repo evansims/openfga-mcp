@@ -70,6 +70,13 @@ jobs:
           echo "Coverage Summary:"
           grep -A 5 "TOTAL" coverage.xml || true
 
+      # Run integration tests
+      - name: Run integration tests
+        run: |
+          echo "Running integration tests..."
+          make test-integration
+          echo "Integration tests completed successfully!"
+
       # Upload coverage report if coverage is enabled
       - name: Upload coverage report
         if: inputs.coverage

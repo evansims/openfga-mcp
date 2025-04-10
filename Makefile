@@ -47,7 +47,8 @@ RESET := $(shell tput sgr0)
 
 # ===== PHONY Targets =====
 .PHONY: help setup dev test test-cov lint type-check format clean build publish docs docs-serve \
-        release release-ci update run security check all venv in-venv shell repl ipython version
+        release release-ci update run security check all venv in-venv shell repl ipython version \
+        test-integration
 
 # ===== Default Target =====
 help:
@@ -55,6 +56,7 @@ help:
 	$(SILENT_FLAG)echo "================================="
 	$(SILENT_FLAG)echo "$(BOLD)Development:$(RESET)"
 	$(SILENT_FLAG)echo "  $(GREEN)setup$(RESET)               - Set up development environment"
+	$(SILENT_FLAG)echo "  $(GREEN)dev$(RESET)                 - Set up and run the development server with MCP Inspector"
 	$(SILENT_FLAG)echo "  $(GREEN)venv$(RESET)                - Show virtual environment instructions"
 	$(SILENT_FLAG)echo "  $(GREEN)in-venv$(RESET)             - Run command in virtual environment (CMD=\"command\")"
 	$(SILENT_FLAG)echo "  $(GREEN)shell$(RESET)               - Start shell in virtual environment"
@@ -64,6 +66,7 @@ help:
 	$(SILENT_FLAG)echo "$(BOLD)Quality:$(RESET)"
 	$(SILENT_FLAG)echo "  $(GREEN)test$(RESET)                - Run tests"
 	$(SILENT_FLAG)echo "  $(GREEN)test-cov$(RESET)            - Run tests with coverage"
+	$(SILENT_FLAG)echo "  $(GREEN)test-integration$(RESET)    - Run integration tests"
 	$(SILENT_FLAG)echo "  $(GREEN)lint$(RESET)                - Run linting"
 	$(SILENT_FLAG)echo "  $(GREEN)type-check$(RESET)          - Run type checking"
 	$(SILENT_FLAG)echo "  $(GREEN)format$(RESET)              - Format code"
@@ -94,6 +97,10 @@ setup: $(VENV_DIR)
 	$(SILENT_FLAG)echo "$(GREEN)Setup complete!$(RESET) Activate with: $(GREEN)source activate_venv.sh$(RESET)"
 	$(SILENT_FLAG)$(MAKE) -s venv
 
+dev: setup
+	$(SILENT_FLAG)echo "$(BOLD)Starting development server...$(RESET)"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="uv run mcp dev src/openfga_mcp/server.py"
+
 venv: $(VENV_DIR)
 	$(SILENT_FLAG)echo "$(BOLD)Virtual Environment:$(RESET)"
 	$(SILENT_FLAG)echo "  $(GREEN)source activate_venv.sh$(RESET)  - Activate"
@@ -101,14 +108,21 @@ venv: $(VENV_DIR)
 
 # ===== Testing & Quality =====
 test:
-	$(SILENT_FLAG)echo "$(BOLD)Running tests...$(RESET)"
-	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="uv run $(PYTEST) $(TESTS_DIR) $(PYTEST_PARALLEL_FLAG)"
-	$(SILENT_FLAG)echo "$(GREEN)Tests passed!$(RESET)"
+	$(SILENT_FLAG)echo "$(BOLD)Running unit tests...$(RESET)"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="uv run $(PYTEST) $(TESTS_DIR)/unit $(PYTEST_PARALLEL_FLAG)"
+	$(SILENT_FLAG)echo "$(GREEN)Unit tests passed!$(RESET)"
 
 test-cov:
 	$(SILENT_FLAG)echo "$(BOLD)Running tests with coverage...$(RESET)"
 	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="uv run $(PYTEST) --cov=$(PACKAGE_DIR) --cov-report=xml --cov-report=term $(PYTEST_PARALLEL_FLAG)"
 	$(SILENT_FLAG)echo "$(GREEN)Tests with coverage completed!$(RESET)"
+
+test-integration:
+	$(SILENT_FLAG)echo "$(BOLD)Running integration tests...$(RESET)"
+	$(VERBOSE_FLAG)# Note: Integration tests might require specific setup/teardown managed by pytest fixtures
+	$(VERBOSE_FLAG)# Ensure Docker is running and required ports are available.
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="uv run $(PYTEST) $(TESTS_DIR)/integration"
+	$(SILENT_FLAG)echo "$(GREEN)Integration tests passed!$(RESET)"
 
 lint:
 	$(SILENT_FLAG)echo "$(BOLD)Running linting checks...$(RESET)"

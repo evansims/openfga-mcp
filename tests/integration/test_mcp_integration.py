@@ -2,6 +2,7 @@ import os
 import signal
 import subprocess
 import time
+import uuid
 from collections.abc import Generator
 from urllib.parse import urljoin
 
@@ -317,3 +318,48 @@ async def test_list_stores(start_services: str):
     assert "Found stores:" in response
     assert "ID:" in response
     assert "Name: test_store" in response  # From seed_fga.py that creates 'test_store'
+
+
+@pytest.mark.asyncio
+async def test_create_store(start_services: str):
+    """Test create_store functionality."""
+    server_url = start_services
+
+    # Generate a unique store name to avoid conflicts with existing stores
+    store_name = f"test_store_{uuid.uuid4().hex[:8]}"
+
+    # Create a new store with the unique name
+    response = await call_mcp_tool(server_url, "create_store", {"name": store_name})
+
+    # Verify the store was created successfully
+    assert f"Store '{store_name}' created successfully with ID:" in response
+
+    # List stores to verify the new store appears in the list
+    list_response = await call_mcp_tool(server_url, "list_stores", {})
+    assert store_name in list_response
+
+
+@pytest.mark.asyncio
+async def test_get_store(start_services: str):
+    """Test get_store functionality."""
+    server_url = start_services
+
+    # First, list stores to get a valid store ID
+    list_response = await call_mcp_tool(server_url, "list_stores", {})
+
+    # Parse the list_response to extract an existing store ID
+    # Example format: "Found stores:\nID: some-id, Name: test_store, Created: some-date"
+    import re
+
+    match = re.search(r"ID: ([a-zA-Z0-9-]+)", list_response)
+    assert match, "Could not find store ID in the list stores response"
+
+    store_id = match.group(1)
+
+    # Get details for the specific store
+    response = await call_mcp_tool(server_url, "get_store", {"store_id": store_id})
+
+    # Verify the response contains expected information
+    assert "Store details:" in response
+    assert f"ID: {store_id}" in response
+    assert "Name:" in response

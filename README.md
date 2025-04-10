@@ -13,10 +13,14 @@ An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP)
 
 ### Tools
 
-- `check`: Check if a user has a relation to an object
-- `list_objects`: List objects of a type that a user has a relation to
-- `list_relations`: List relations for which a user has a relation to an object
-- `list_users`: List users that have a given relationship with a given object
+- `create_store`: Creates a new Store. ([create-store](https://openfga.dev/api/service#/Stores/CreateStore))
+- `list_stores`: List all stores. ([list-stores](https://openfga.dev/api/service#/Stores/ListStores))
+- `get_store_id_by_name`: Get the ID of a store by it's name.
+
+- `check`: Check if a user has a relation to an object. ([check](https://openfga.dev/api/service#/Assertions/Check))
+- `list_objects`: List objects of a type that a user has a relation to. ([list-objects](https://openfga.dev/api/service#/Assertions/ListObjects))
+- `list_relations`: List relations for which a user has a relation to an object. ([list-relations](https://openfga.dev/api/service#/Assertions/ListRelations))
+- `list_users`: List users that have a given relationship with a given object. ([list-users](https://openfga.dev/api/service#/Assertions/ListUsers))
 
 ### Resources
 

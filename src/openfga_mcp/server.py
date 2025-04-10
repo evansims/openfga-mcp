@@ -9,6 +9,7 @@ from mcp.server.sse import SseServerTransport
 from openfga_sdk import FgaObject, OpenFgaClient
 from openfga_sdk.client.client import ClientListObjectsRequest, ClientListRelationsRequest, ClientListUsersRequest
 from openfga_sdk.client.models.check_request import ClientCheckRequest
+from openfga_sdk.models.create_store_request import CreateStoreRequest
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse
@@ -152,6 +153,20 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
                 result = await _list_users_impl(client, **args)
             case "list_stores":
                 result = await _list_stores_impl(client)
+            case "get_store_id_by_name":
+                if "name" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'name' for get_store_id_by_name"}, status_code=400
+                    )
+                result = await get_store_id_by_name(client, **args)
+            case "get_store":
+                if "store_id" not in args:
+                    return JSONResponse({"error": "Missing required arg 'store_id' for get_store"}, status_code=400)
+                result = await _get_store_impl(client, **args)
+            case "create_store":
+                if "name" not in args:
+                    return JSONResponse({"error": "Missing required arg 'name' for create_store"}, status_code=400)
+                result = await _create_store_impl(client, **args)
             case _:
                 return JSONResponse({"error": f"Unsupported tool: {tool_name}"}, status_code=400)
 
@@ -318,6 +333,40 @@ async def _list_stores_impl(client: OpenFgaClient) -> str:
         return f"Error listing stores: {e!s}"
 
 
+async def _create_store_impl(client: OpenFgaClient, name: str) -> str:
+    """Creates a new OpenFGA store with the given name.
+
+    Args:
+        client: The OpenFGA client
+        name: The name of the store to create
+
+    Returns:
+        A string with the result of the operation
+    """
+    try:
+        # Create the store request body
+        body = CreateStoreRequest(name=name)
+
+        # Call the create_store API
+        response = await client.create_store(body)
+
+        # Extract store ID from the response
+        store_id = None
+        if hasattr(response, "id"):
+            store_id = response.id
+        elif isinstance(response, dict) and "id" in response:
+            store_id = response["id"]
+
+        if store_id:
+            return f"Store '{name}' created successfully with ID: {store_id}"
+        else:
+            return f"Store '{name}' created successfully, but no ID was returned"
+
+    except Exception as e:
+        _write_to_log(f"Error creating store: {e!s}")
+        return f"Error creating store: {e!s}"
+
+
 async def _get_client(ctx: Context | None = None, app: Starlette | FastMCP | None = None) -> OpenFgaClient:
     """Retrieves the OpenFgaClient from context or app state."""
     server_ctx: ServerContext | None = None
@@ -364,10 +413,112 @@ async def list_users(ctx: Context, object: str, type: str, relation: str) -> str
 
 
 @mcp.tool()
+async def get_store_id_by_name(ctx: Context, name: str) -> str:
+    _write_to_log("get_store_id_by_name")
+    _write_to_log(ctx)
+
+    openfga = OpenFga()
+    store_name = await openfga.get_store_by_name(openfga.get_config(), name)
+
+    if store_name:
+        return f"Store '{name}' found with ID: {store_name}"
+    else:
+        return f"Store '{name}' not found"
+
+
+@mcp.tool()
 async def list_stores(ctx: Context) -> str:
     _write_to_log("list_stores")
     _write_to_log(ctx)
     return await _list_stores_impl(await _get_client(ctx))
+
+
+@mcp.tool()
+async def create_store(ctx: Context, name: str) -> str:
+    """Creates a new OpenFGA store with the given name.
+
+    Args:
+        ctx: The MCP context
+        name: The name for the new store
+
+    Returns:
+        A string with the result of the operation
+    """
+    _write_to_log(f"create_store: {name}")
+    _write_to_log(ctx)
+    return await _create_store_impl(await _get_client(ctx), name=name)
+
+
+async def _get_store_impl(client: OpenFgaClient, store_id: str) -> str:
+    """
+    Gets information about a specific store by its ID.
+
+    Args:
+        client: The OpenFGA client
+        store_id: The ID of the store to retrieve
+
+    Returns:
+        A string with the store information
+    """
+    try:
+        # Save the current store ID
+        current_store_id = client.get_store_id()
+
+        # Set the store ID for this request
+        client.set_store_id(store_id)
+
+        # Call the get_store API
+        response = await client.get_store()
+
+        # Restore the original store ID
+        if current_store_id:
+            client.set_store_id(current_store_id)
+
+        # Extract store information from the response
+        store_info = []
+
+        # Handle different response formats
+        if hasattr(response, "id") and hasattr(response, "name"):
+            store_info.append(f"ID: {response.id}")
+            store_info.append(f"Name: {response.name}")
+            if hasattr(response, "created_at"):
+                store_info.append(f"Created: {response.created_at}")
+            if hasattr(response, "updated_at"):
+                store_info.append(f"Updated: {response.updated_at}")
+        elif isinstance(response, dict):
+            if "id" in response:
+                store_info.append(f"ID: {response['id']}")
+            if "name" in response:
+                store_info.append(f"Name: {response['name']}")
+            if "created_at" in response:
+                store_info.append(f"Created: {response['created_at']}")
+            if "updated_at" in response:
+                store_info.append(f"Updated: {response['updated_at']}")
+
+        if store_info:
+            return f"Store details:\n{', '.join(store_info)}"
+        else:
+            return f"Store with ID '{store_id}' found, but no details were returned"
+
+    except Exception as e:
+        return f"Error retrieving store: {e!s}"
+
+
+@mcp.tool()
+async def get_store(ctx: Context, store_id: str) -> str:
+    """
+    Gets information about a specific store by its ID.
+
+    Args:
+        ctx: The MCP context
+        store_id: The ID of the store to retrieve
+
+    Returns:
+        A string with the store information
+    """
+    _write_to_log(f"get_store: {store_id}")
+    _write_to_log(ctx)
+    return await _get_store_impl(await _get_client(ctx), store_id=store_id)
 
 
 def run() -> None:

@@ -18,13 +18,13 @@ class OpenFga:
     async def client(self) -> OpenFgaClient:
         """Get or create an initialized OpenFGA client."""
         if self._client is None:
-            config = self._get_config()
+            config = self.get_config()
             # Ensure store_id is set if store_name was used
             await self._ensure_store_id(config)
             self._client = OpenFgaClient(configuration=config)
         return self._client
 
-    def _get_config(self) -> ClientConfiguration:
+    def get_config(self) -> ClientConfiguration:
         """Build ClientConfiguration from environment variables."""
         if self._config is None:
             api_scheme = os.getenv("FGA_API_SCHEME", "http")
@@ -48,10 +48,12 @@ class OpenFga:
                     auth_model_id = args.openfga_model
 
             if not api_host:
-                raise ValueError("Missing required environment variable: FGA_API_HOST")
+                raise ValueError(
+                    "OpenFGA API URL must be provided via FGA_API_HOST environment variable or --openfga_url"
+                )
 
-            if not store_id and not store_name:
-                raise ValueError("Missing required environment variable: FGA_STORE_ID or FGA_STORE_NAME")
+            # if not store_id and not store_name:
+            #     raise ValueError("Missing required environment variable: FGA_STORE_ID or FGA_STORE_NAME")
 
             print(
                 f"Configuring OpenFGA client: Scheme={api_scheme}, Host={api_host}, "
@@ -61,45 +63,31 @@ class OpenFga:
             self._config = ClientConfiguration(
                 api_scheme=api_scheme,
                 api_host=api_host,
-                store_id=store_id,  # Might be None initially if using store_name
+                store_id=store_id,
                 authorization_model_id=auth_model_id,
                 # Add credentials handling here if needed, e.g., from FGA_API_TOKEN env var
             )
-            # Store name separately if provided, for lookup
+
             self._config.store_name_for_lookup = store_name if not store_id else None  # type: ignore
         return self._config
 
-    async def _ensure_store_id(self, config: ClientConfiguration) -> None:
-        """Looks up store ID by name if config.store_id is not set."""
-        if config.store_id:  # If ID already set, do nothing
-            return
-
-        store_name = getattr(config, "store_name_for_lookup", None)
-        if not store_name:
-            # This case should be prevented by _get_config checks, but defensively check
-            raise ValueError("Cannot ensure store ID: Neither FGA_STORE_ID nor FGA_STORE_NAME provided.")
-
-        print(f"Store ID not provided, looking up store by name: '{store_name}'")
-        # Need a temporary client without store_id to list/find stores
+    async def get_store_by_name(self, config: ClientConfiguration, store_name: str) -> str | None:
+        """Looks up store ID by name."""
         temp_config = ClientConfiguration(
             api_scheme=config.api_scheme,
             api_host=config.api_host,
-            # No store_id or model_id for listing stores
         )
+
         async with OpenFgaClient(configuration=temp_config) as temp_client:
             try:
-                # Get the raw stores response, this avoids the 'data' attribute issue
                 stores_resp = await temp_client.list_stores()
 
-                # Extract stores safely
                 stores = []
                 found_store = None
 
                 if hasattr(stores_resp, "stores"):
-                    # Direct access works
                     stores = stores_resp.stores or []
                 elif isinstance(stores_resp, dict) and "stores" in stores_resp:
-                    # Dictionary access
                     stores = stores_resp["stores"] or []
 
                 # Try to find the store by name
@@ -113,28 +101,9 @@ class OpenFga:
 
                 if found_store:
                     if isinstance(found_store, dict) and "id" in found_store:
-                        config.store_id = found_store["id"]
+                        return found_store["id"]
                     elif hasattr(found_store, "id"):
-                        config.store_id = found_store.id
-
-                    print(f"Found store '{store_name}' with ID: {config.store_id}")
-                else:
-                    # Store not found, create it
-                    print(f"Store '{store_name}' not found, attempting to create...")
-                    from openfga_sdk.models.create_store_request import CreateStoreRequest
-
-                    create_req = CreateStoreRequest(name=store_name)
-                    create_resp = await temp_client.create_store(body=create_req)
-
-                    # Try to extract ID from various possible response formats
-                    if hasattr(create_resp, "id"):
-                        config.store_id = create_resp.id
-                    elif isinstance(create_resp, dict) and "id" in create_resp:
-                        config.store_id = create_resp["id"]
-                    else:
-                        raise ValueError(f"Couldn't extract store ID from response: {create_resp}")
-
-                    print(f"Created store '{store_name}' with ID: {config.store_id}")
+                        return found_store.id
 
             except ApiException as e:
                 print(f"API Error looking up store '{store_name}': {e}")
@@ -145,7 +114,28 @@ class OpenFga:
                 print(f"Unexpected Error looking up store '{store_name}': {e}")
                 raise
 
-        # Clear the temporary attribute
+            return None
+
+    async def _ensure_store_id(self, config: ClientConfiguration) -> None:
+        """Looks up store ID by name if config.store_id is not set."""
+        if config.store_id:
+            return
+
+        store_name = getattr(config, "store_name_for_lookup", None)
+
+        if not store_name:
+            return
+
+        print(f"Store ID not provided, looking up store by name: '{store_name}'")
+
+        store_id = await self.get_store_by_name(config, store_name)
+
+        if store_id:
+            config.store_id = store_id
+            print(f"Found store '{store_name}' with ID: {store_id}")
+        else:
+            raise ValueError(f"Store '{store_name}' not found")
+
         if hasattr(config, "store_name_for_lookup"):
             delattr(config, "store_name_for_lookup")
 
@@ -164,7 +154,6 @@ class OpenFga:
         parser.add_argument("--host", default="127.0.0.1", help="Host for SSE server")
         parser.add_argument("--port", type=int, default=8000, help="Port for SSE server")
 
-        # Add FGA args for direct execution, but note they aren't used by _get_config
         parser.add_argument("--openfga_url", help="OpenFGA API URL (e.g., http://127.0.0.1:8080)")
         parser.add_argument("--openfga_store", help="OpenFGA Store ID or Name")
         parser.add_argument("--openfga_model", help="OpenFGA Authorization Model ID (optional)")

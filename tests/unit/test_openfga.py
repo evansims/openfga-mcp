@@ -6,7 +6,7 @@ import pytest_asyncio
 from openfga_sdk import OpenFgaClient
 from openfga_sdk.client.configuration import ClientConfiguration
 from openfga_sdk.exceptions import ApiException
-from openfga_sdk.models import CreateStoreRequest, CreateStoreResponse, Store
+from openfga_sdk.models import CreateStoreResponse, Store
 
 from src.openfga_mcp.openfga import OpenFga
 
@@ -52,7 +52,7 @@ def openfga_instance():
 
 def test_get_config_success(mock_env_vars, openfga_instance):
     """Tests successful configuration loading from environment variables."""
-    config = openfga_instance._get_config()
+    config = openfga_instance.get_config()
     assert isinstance(config, ClientConfiguration)
     assert config.api_scheme == "http"
     assert config.api_host == "testhost:8080"
@@ -62,7 +62,7 @@ def test_get_config_success(mock_env_vars, openfga_instance):
 
 def test_get_config_success_with_name(mock_env_vars_name, openfga_instance):
     """Tests successful configuration loading using FGA_STORE_NAME."""
-    config = openfga_instance._get_config()
+    config = openfga_instance.get_config()
     assert isinstance(config, ClientConfiguration)
     assert config.api_scheme == "https"
     assert config.api_host == "testhost.name:8081"
@@ -75,16 +75,10 @@ def test_get_config_missing_host(monkeypatch, openfga_instance):
     """Tests ValueError when FGA_API_HOST is missing."""
     monkeypatch.delenv("FGA_API_HOST", raising=False)
     monkeypatch.setenv("FGA_STORE_ID", "some_id")
-    with pytest.raises(ValueError, match="Missing required environment variable: FGA_API_HOST"):
-        openfga_instance._get_config()
-
-
-def test_get_config_missing_store_id_and_name(mock_env_vars, monkeypatch, openfga_instance):
-    """Tests ValueError when both FGA_STORE_ID and FGA_STORE_NAME are missing."""
-    monkeypatch.delenv("FGA_STORE_ID", raising=False)
-    monkeypatch.delenv("FGA_STORE_NAME", raising=False)
-    with pytest.raises(ValueError, match="Missing required environment variable: FGA_STORE_ID or FGA_STORE_NAME"):
-        openfga_instance._get_config()
+    with pytest.raises(
+        ValueError, match="OpenFGA API URL must be provided via FGA_API_HOST environment variable or --openfga_url"
+    ):
+        openfga_instance.get_config()
 
 
 @pytest.mark.asyncio
@@ -118,42 +112,6 @@ async def test_ensure_store_id_lookup_success(openfga_instance, mock_openfga_cli
     assert not hasattr(config, "store_name_for_lookup")
     mock_openfga_client.list_stores.assert_awaited_once()
     mock_openfga_client.create_store.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_ensure_store_id_create_success(openfga_instance, mock_openfga_client):
-    """Tests successful store creation when lookup fails."""
-    store_name = "create_me"
-    created_store_id = "created_store_456"
-    config = ClientConfiguration(api_scheme="http", api_host="host")
-    setattr(config, "store_name_for_lookup", store_name)
-
-    mock_list_response = MagicMock()
-    mock_list_response.stores = [
-        Store(
-            id="other_id",
-            name="other_name",
-            created_at=datetime.datetime.now(datetime.UTC),
-            updated_at=datetime.datetime.now(datetime.UTC),
-            deleted_at=None,
-        )
-    ]
-    mock_openfga_client.list_stores.return_value = mock_list_response
-
-    now = datetime.datetime.now(datetime.UTC)
-    mock_create_response = CreateStoreResponse(id=created_store_id, name=store_name, created_at=now, updated_at=now)
-    mock_openfga_client.create_store.return_value = mock_create_response
-
-    with patch("src.openfga_mcp.openfga.OpenFgaClient", return_value=mock_openfga_client):
-        await openfga_instance._ensure_store_id(config)
-
-    assert config.store_id == created_store_id
-    assert not hasattr(config, "store_name_for_lookup")
-    mock_openfga_client.list_stores.assert_awaited_once()
-    mock_openfga_client.create_store.assert_awaited_once()
-    call_args, call_kwargs = mock_openfga_client.create_store.await_args
-    create_request: CreateStoreRequest = call_kwargs["body"]
-    assert create_request.name == store_name
 
 
 @pytest.mark.asyncio
@@ -192,24 +150,12 @@ async def test_ensure_store_id_api_error_create(openfga_instance, mock_openfga_c
     mock_openfga_client.create_store.side_effect = ApiException("Creation failed")
 
     with patch("src.openfga_mcp.openfga.OpenFgaClient", return_value=mock_openfga_client):
-        with pytest.raises(ValueError, match=f"Failed to find or create store '{store_name}'"):
+        with pytest.raises(ValueError, match=f"Store '{store_name}' not found"):
             await openfga_instance._ensure_store_id(config)
 
     assert config.store_id is None
     mock_openfga_client.list_stores.assert_awaited_once()
-    mock_openfga_client.create_store.assert_awaited_once()
     assert hasattr(config, "store_name_for_lookup")
-
-
-@pytest.mark.asyncio
-async def test_ensure_store_id_no_name_or_id(openfga_instance):
-    """Tests ValueError if somehow called without ID or name attribute (defensive check)."""
-    config = ClientConfiguration(api_scheme="http", api_host="host")
-    if hasattr(config, "store_name_for_lookup"):
-        delattr(config, "store_name_for_lookup")
-
-    with pytest.raises(ValueError, match="Cannot ensure store ID: Neither FGA_STORE_ID nor FGA_STORE_NAME provided."):
-        await openfga_instance._ensure_store_id(config)
 
 
 @pytest.mark.asyncio

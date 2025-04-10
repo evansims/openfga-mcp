@@ -44,6 +44,11 @@ async def mock_openfga_sdk_client():
     client.list_objects = AsyncMock()
     client.list_relations = AsyncMock()  # Assuming this method exists and returns list[str]
     client.list_users = AsyncMock()
+    client.list_stores = AsyncMock()
+    client.create_store = AsyncMock()
+    client.get_store = AsyncMock()
+    client.get_store_id = MagicMock(return_value=None)
+    client.set_store_id = MagicMock()
     client.close = AsyncMock()  # For lifespan testing
     return client
 
@@ -378,6 +383,145 @@ async def test_list_stores_impl_exception(mock_openfga_sdk_client):
     assert f"Error listing stores: {str(exception)}" == result
 
 
+@pytest.mark.asyncio
+async def test_create_store_impl_success(mock_openfga_sdk_client):
+    """Test _create_store_impl with successful store creation."""
+    mock_response = MagicMock()
+    mock_response.id = "01FQH7V8BEG3GPQW93KTRFR8JB"
+    mock_openfga_sdk_client.create_store.return_value = mock_response
+
+    result = await server._create_store_impl(mock_openfga_sdk_client, name="Test Store")
+    assert result == "Store 'Test Store' created successfully with ID: 01FQH7V8BEG3GPQW93KTRFR8JB"
+    mock_openfga_sdk_client.create_store.assert_awaited_once()
+    call_args = mock_openfga_sdk_client.create_store.await_args[0][0]
+    assert call_args.name == "Test Store"
+
+
+@pytest.mark.asyncio
+async def test_create_store_impl_success_dict_response(mock_openfga_sdk_client):
+    """Test _create_store_impl with successful store creation returning dict-like response."""
+    mock_response = {"id": "01FQH7V8BEG3GPQW93KTRFR8JB"}
+    mock_openfga_sdk_client.create_store.return_value = mock_response
+
+    result = await server._create_store_impl(mock_openfga_sdk_client, name="Test Store")
+    assert result == "Store 'Test Store' created successfully with ID: 01FQH7V8BEG3GPQW93KTRFR8JB"
+    mock_openfga_sdk_client.create_store.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_create_store_impl_no_id(mock_openfga_sdk_client):
+    """Test _create_store_impl when response doesn't include an ID."""
+    mock_response = MagicMock()
+    # Explicitly unset id attribute
+    if hasattr(mock_response, "id"):
+        delattr(mock_response, "id")
+    mock_openfga_sdk_client.create_store.return_value = mock_response
+
+    result = await server._create_store_impl(mock_openfga_sdk_client, name="Test Store")
+    assert result == "Store 'Test Store' created successfully, but no ID was returned"
+    mock_openfga_sdk_client.create_store.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_create_store_impl_exception(mock_openfga_sdk_client):
+    """Test _create_store_impl handles exceptions."""
+    exception = ApiException("Unauthorized")
+    mock_openfga_sdk_client.create_store.side_effect = exception
+    result = await server._create_store_impl(mock_openfga_sdk_client, name="Test Store")
+    assert f"Error creating store: {str(exception)}" == result
+
+
+@pytest.mark.asyncio
+async def test_get_store_impl_success(mock_openfga_sdk_client):
+    """Test _get_store_impl with successful store retrieval."""
+    # Create a mock store response
+    now = datetime.datetime.now(datetime.UTC)
+    mock_response = Store(id="01FQH7V8BEG3GPQW93KTRFR8JB", name="FGA Demo Store", created_at=now, updated_at=now)
+    mock_openfga_sdk_client.get_store.return_value = mock_response
+
+    result = await server._get_store_impl(mock_openfga_sdk_client, store_id="01FQH7V8BEG3GPQW93KTRFR8JB")
+
+    # Verify result contains all store information
+    assert "Store details:" in result
+    assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB" in result
+    assert "Name: FGA Demo Store" in result
+    assert "Created:" in result
+    assert "Updated:" in result
+
+    # Verify the store ID was properly set and reset
+    mock_openfga_sdk_client.set_store_id.assert_any_call("01FQH7V8BEG3GPQW93KTRFR8JB")
+    mock_openfga_sdk_client.get_store.assert_awaited_once()
+
+    # With our setup, get_store_id returns None so we never reset to a previous ID
+    assert mock_openfga_sdk_client.set_store_id.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_store_impl_success_with_previous_id(mock_openfga_sdk_client):
+    """Test _get_store_impl with a previous store ID set."""
+    # Set up the mock to return a previous store ID
+    mock_openfga_sdk_client.get_store_id.return_value = "previous_store_id"
+
+    mock_response = MagicMock()
+    mock_response.id = "01FQH7V8BEG3GPQW93KTRFR8JB"
+    mock_response.name = "Test Store"
+    mock_openfga_sdk_client.get_store.return_value = mock_response
+
+    result = await server._get_store_impl(mock_openfga_sdk_client, store_id="new_store_id")
+
+    # Verify result contains basic store information
+    assert "Store details:" in result
+    assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB" in result
+    assert "Name: Test Store" in result
+
+    # Verify the store ID was set to the new ID and then reset back to the previous ID
+    mock_openfga_sdk_client.set_store_id.assert_any_call("new_store_id")
+    mock_openfga_sdk_client.set_store_id.assert_any_call("previous_store_id")
+    assert mock_openfga_sdk_client.set_store_id.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_get_store_impl_success_dict_response(mock_openfga_sdk_client):
+    """Test _get_store_impl with store info returned as a dictionary."""
+    # Create a mock store response as a dictionary
+    now = datetime.datetime.now(datetime.UTC).isoformat()
+    mock_response = {"id": "01FQH7V8BEG3GPQW93KTRFR8JB", "name": "FGA Demo Store", "created_at": now, "updated_at": now}
+    mock_openfga_sdk_client.get_store.return_value = mock_response
+
+    result = await server._get_store_impl(mock_openfga_sdk_client, store_id="01FQH7V8BEG3GPQW93KTRFR8JB")
+
+    # Verify result contains all store information
+    assert "Store details:" in result
+    assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB" in result
+    assert "Name: FGA Demo Store" in result
+    assert "Created:" in result
+    assert "Updated:" in result
+
+
+@pytest.mark.asyncio
+async def test_get_store_impl_empty_response(mock_openfga_sdk_client):
+    """Test _get_store_impl when the response doesn't include expected fields."""
+    # Return a response with no useful information
+    mock_response = MagicMock()
+    if hasattr(mock_response, "id"):
+        delattr(mock_response, "id")
+    if hasattr(mock_response, "name"):
+        delattr(mock_response, "name")
+    mock_openfga_sdk_client.get_store.return_value = mock_response
+
+    result = await server._get_store_impl(mock_openfga_sdk_client, store_id="01FQH7V8BEG3GPQW93KTRFR8JB")
+    assert "Store with ID '01FQH7V8BEG3GPQW93KTRFR8JB' found, but no details were returned" == result
+
+
+@pytest.mark.asyncio
+async def test_get_store_impl_exception(mock_openfga_sdk_client):
+    """Test _get_store_impl handles exceptions."""
+    exception = ApiException("Store not found")
+    mock_openfga_sdk_client.get_store.side_effect = exception
+    result = await server._get_store_impl(mock_openfga_sdk_client, store_id="nonexistent_id")
+    assert f"Error retrieving store: {str(exception)}" == result
+
+
 # --- Test /call POST Endpoint ---
 
 
@@ -453,6 +597,66 @@ async def test_call_list_stores_success(test_app: AsyncClient, mock_openfga_sdk_
     assert "Found stores:" in response.json()["result"]
     assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB" in response.json()["result"]
     mock_openfga_sdk_client.list_stores.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_call_create_store_success(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the create_store tool successfully."""
+    mock_response = MagicMock()
+    mock_response.id = "01GXSA8YR785C4FYS3C0RTG7B1"
+    mock_openfga_sdk_client.create_store.return_value = mock_response
+
+    payload = {"tool": "create_store", "args": {"name": "My New Store"}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+    assert "Store 'My New Store' created successfully with ID: 01GXSA8YR785C4FYS3C0RTG7B1" in response.json()["result"]
+    mock_openfga_sdk_client.create_store.assert_awaited_once()
+
+    # Verify the correct request was made
+    call_args = mock_openfga_sdk_client.create_store.await_args[0][0]
+    assert call_args.name == "My New Store"
+
+
+@pytest.mark.asyncio
+async def test_call_create_store_missing_name(test_app: AsyncClient):
+    """Test POST /call for the create_store tool with missing name argument."""
+    payload = {"tool": "create_store", "args": {}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'name' for create_store" in response.text
+
+
+@pytest.mark.asyncio
+async def test_call_get_store_success(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the get_store tool successfully."""
+    # Create a mock store response
+    now = datetime.datetime.now(datetime.UTC)
+    mock_response = Store(id="01FQH7V8BEG3GPQW93KTRFR8JB", name="FGA Demo Store", created_at=now, updated_at=now)
+    mock_openfga_sdk_client.get_store.return_value = mock_response
+
+    payload = {"tool": "get_store", "args": {"store_id": "01FQH7V8BEG3GPQW93KTRFR8JB"}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+    assert "Store details:" in response.json()["result"]
+    assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB" in response.json()["result"]
+    assert "Name: FGA Demo Store" in response.json()["result"]
+
+    # Verify the correct request was made
+    mock_openfga_sdk_client.set_store_id.assert_any_call("01FQH7V8BEG3GPQW93KTRFR8JB")
+    mock_openfga_sdk_client.get_store.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_call_get_store_missing_id(test_app: AsyncClient):
+    """Test POST /call for the get_store tool with missing store_id argument."""
+    payload = {"tool": "get_store", "args": {}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 400
+    assert "Missing required arg 'store_id' for get_store" in response.text
 
 
 @pytest.mark.asyncio

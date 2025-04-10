@@ -26,7 +26,7 @@ from openfga_sdk.models.write_authorization_model_request import WriteAuthorizat
 async def main():
     """Seeds the OpenFGA instance with mock data."""
     fga_api_scheme = os.getenv("FGA_API_SCHEME", "http")
-    fga_api_host = os.getenv("FGA_API_HOST", "localhost:8080")
+    fga_api_host = os.getenv("FGA_API_HOST", "127.0.0.1:8080")
     fga_store_name = "test_store"
 
     config = ClientConfiguration(

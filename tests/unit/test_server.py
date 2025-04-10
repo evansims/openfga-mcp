@@ -1,3 +1,4 @@
+import datetime
 from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -9,7 +10,15 @@ from mcp.server.fastmcp import Context
 # Assuming openfga_sdk types might be needed for mocking returns
 from openfga_sdk import OpenFgaClient
 from openfga_sdk.exceptions import ApiException
-from openfga_sdk.models import CheckResponse, FgaObject, ListObjectsResponse, ListUsersResponse, User
+from openfga_sdk.models import (
+    CheckResponse,
+    FgaObject,
+    ListObjectsResponse,
+    ListStoresResponse,
+    ListUsersResponse,
+    Store,
+    User,
+)
 from starlette.applications import Starlette
 
 # Modules under test
@@ -101,7 +110,7 @@ async def test_lifespan_startup_shutdown(mock_env_vars_for_server):
     app = Starlette()
 
     # Directly test the lifespan context manager
-    async with server.openfga_mcp_lifespan(app) as context:
+    async with server.openfga_sse_lifespan(app) as context:
         # Check that context is set up correctly
         assert "server_context" in context
         assert hasattr(app.state, "server_context")
@@ -111,7 +120,7 @@ async def test_lifespan_startup_shutdown(mock_env_vars_for_server):
     # Patch the OpenFga class to return our mock for the check
     with patch("src.openfga_mcp.server.OpenFga", return_value=mock_fga_instance):
         # Run the lifespan again with our mock
-        async with server.openfga_mcp_lifespan(app) as context:
+        async with server.openfga_sse_lifespan(app) as context:
             assert "server_context" in context
         # Verify close was called
         mock_fga_instance.close.assert_awaited_once()
@@ -326,6 +335,49 @@ async def test_list_users_impl_exception(mock_openfga_sdk_client):
     assert f"Error listing users: {str(exception)}" == result
 
 
+@pytest.mark.asyncio
+async def test_list_stores_impl_success(mock_openfga_sdk_client):
+    """Test _list_stores_impl with results."""
+    now = datetime.datetime.now(datetime.UTC)
+
+    # Create mock stores
+    stores = [
+        Store(id="01FQH7V8BEG3GPQW93KTRFR8JB", name="FGA Demo Store", created_at=now, updated_at=now),
+        Store(id="01GXSA8YR785C4FYS3C0RTG7B1", name="Test Store", created_at=now, updated_at=now),
+    ]
+
+    mock_response = ListStoresResponse(stores=stores, continuation_token="next_token_123")
+    mock_openfga_sdk_client.list_stores.return_value = mock_response
+
+    result = await server._list_stores_impl(mock_openfga_sdk_client)
+
+    assert "Found stores:" in result
+    assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB, Name: FGA Demo Store" in result
+    assert "ID: 01GXSA8YR785C4FYS3C0RTG7B1, Name: Test Store" in result
+
+    mock_openfga_sdk_client.list_stores.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_list_stores_impl_empty(mock_openfga_sdk_client):
+    """Test _list_stores_impl with no results."""
+    mock_response = ListStoresResponse(stores=[], continuation_token="")
+    mock_openfga_sdk_client.list_stores.return_value = mock_response
+
+    result = await server._list_stores_impl(mock_openfga_sdk_client)
+    assert result == "No stores found"
+    mock_openfga_sdk_client.list_stores.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_list_stores_impl_exception(mock_openfga_sdk_client):
+    """Test _list_stores_impl handles exceptions."""
+    exception = ApiException("Connection error")
+    mock_openfga_sdk_client.list_stores.side_effect = exception
+    result = await server._list_stores_impl(mock_openfga_sdk_client)
+    assert f"Error listing stores: {str(exception)}" == result
+
+
 # --- Test /call POST Endpoint ---
 
 
@@ -387,6 +439,23 @@ async def test_call_list_users_success(test_app: AsyncClient, mock_openfga_sdk_c
 
 
 @pytest.mark.asyncio
+async def test_call_list_stores_success(test_app: AsyncClient, mock_openfga_sdk_client):
+    """Test POST /call for the list_stores tool successfully."""
+    now = datetime.datetime.now(datetime.UTC)
+    stores = [Store(id="01FQH7V8BEG3GPQW93KTRFR8JB", name="FGA Demo Store", created_at=now, updated_at=now)]
+    mock_response = ListStoresResponse(stores=stores, continuation_token="")
+    mock_openfga_sdk_client.list_stores.return_value = mock_response
+
+    payload = {"tool": "list_stores", "args": {}}
+    response = await test_app.post("/call", json=payload)
+
+    assert response.status_code == 200
+    assert "Found stores:" in response.json()["result"]
+    assert "ID: 01FQH7V8BEG3GPQW93KTRFR8JB" in response.json()["result"]
+    mock_openfga_sdk_client.list_stores.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_call_missing_tool(test_app: AsyncClient):
     """Test POST /call with missing 'tool' field."""
     payload = {"args": {"user": "u1"}}
@@ -412,7 +481,7 @@ async def test_call_unsupported_tool(test_app: AsyncClient):
     response = await test_app.post("/call", json=payload)
     assert response.status_code == 400
     # Update expected error message
-    assert "Missing 'args' for tool unknown_tool" in response.text
+    assert "Unsupported tool: unknown_tool" in response.text
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 from dataclasses import dataclass, field
 
 from openfga_sdk import OpenFgaClient
@@ -26,15 +27,29 @@ class OpenFga:
     def _get_config(self) -> ClientConfiguration:
         """Build ClientConfiguration from environment variables."""
         if self._config is None:
-            # Prioritize environment variables for configuration
             api_scheme = os.getenv("FGA_API_SCHEME", "http")
             api_host = os.getenv("FGA_API_HOST")
             store_id = os.getenv("FGA_STORE_ID")
-            store_name = os.getenv("FGA_STORE_NAME")  # Used if store_id is missing
+            store_name = os.getenv("FGA_STORE_NAME")
             auth_model_id = os.getenv("FGA_AUTHORIZATION_MODEL_ID")
+
+            if "unittest" not in sys.modules.keys():
+                args = self.args()
+
+                if args.openfga_url:
+                    api_scheme = args.openfga_url.split("://")[0]
+                    api_host = args.openfga_url.split("://")[1]
+
+                if args.openfga_store:
+                    store_id = args.openfga_store
+                    store_name = args.openfga_store
+
+                if args.openfga_model:
+                    auth_model_id = args.openfga_model
 
             if not api_host:
                 raise ValueError("Missing required environment variable: FGA_API_HOST")
+
             if not store_id and not store_name:
                 raise ValueError("Missing required environment variable: FGA_STORE_ID or FGA_STORE_NAME")
 
@@ -150,7 +165,7 @@ class OpenFga:
         parser.add_argument("--port", type=int, default=8000, help="Port for SSE server")
 
         # Add FGA args for direct execution, but note they aren't used by _get_config
-        parser.add_argument("--openfga_url", help="OpenFGA API URL (e.g., http://localhost:8080)")
+        parser.add_argument("--openfga_url", help="OpenFGA API URL (e.g., http://127.0.0.1:8080)")
         parser.add_argument("--openfga_store", help="OpenFGA Store ID or Name")
         parser.add_argument("--openfga_model", help="OpenFGA Authorization Model ID (optional)")
         parser.add_argument("--openfga_token", help="OpenFGA API Token (optional)")

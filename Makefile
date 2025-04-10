@@ -96,9 +96,17 @@ setup: $(VENV_DIR)
 	$(VERBOSE_FLAG)source $(VENV_ACTIVATE) && pre-commit install && pre-commit install --hook-type commit-msg
 	$(SILENT_FLAG)echo "$(GREEN)Setup complete!$(RESET) Activate with: $(GREEN)source activate_venv.sh$(RESET)"
 
-dev: setup
-	$(SILENT_FLAG)echo "$(BOLD)Starting development server...$(RESET)"
+mcp-dev: setup
+	$(SILENT_FLAG)echo "$(BOLD)Starting MCP Inspector...$(RESET)"
 	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="uv run mcp dev src/openfga_mcp/server.py"
+
+mcp-sse: setup
+	$(SILENT_FLAG)echo "$(BOLD)Starting server in SSE mode...$(RESET)"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="uv run -m openfga_mcp --openfga_url http://127.0.0.1:8080 --openfga_store test_store"
+
+mcp-stdio: setup
+	$(SILENT_FLAG)echo "$(BOLD)Starting server in STDIO mode...$(RESET)"
+	$(VERBOSE_FLAG)$(MAKE) in-venv CMD="uv run -m openfga_mcp --transport stdio --openfga_url http://127.0.0.1:8080 --openfga_store test_store"
 
 venv: $(VENV_DIR)
 	$(SILENT_FLAG)echo "$(BOLD)Virtual Environment:$(RESET)"

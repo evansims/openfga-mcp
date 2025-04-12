@@ -1,3 +1,5 @@
+import sys
+import traceback
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -9,14 +11,66 @@ from mcp.server.sse import SseServerTransport
 from openfga_sdk import FgaObject, OpenFgaClient
 from openfga_sdk.client.client import ClientListObjectsRequest, ClientListRelationsRequest, ClientListUsersRequest
 from openfga_sdk.client.models.check_request import ClientCheckRequest
+from openfga_sdk.client.models.tuple import ClientTuple
+from openfga_sdk.models.check_response import CheckResponse
 from openfga_sdk.models.create_store_request import CreateStoreRequest
+from openfga_sdk.models.create_store_response import CreateStoreResponse
+from openfga_sdk.models.get_store_response import GetStoreResponse
+from openfga_sdk.models.list_objects_response import ListObjectsResponse
+from openfga_sdk.models.list_stores_response import ListStoresResponse
+from openfga_sdk.models.list_users_response import ListUsersResponse
 from openfga_sdk.models.write_authorization_model_request import WriteAuthorizationModelRequest
+from openfga_sdk.models.write_authorization_model_response import WriteAuthorizationModelResponse
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Mount, Route
 
 from openfga_mcp.openfga import OpenFga
+
+
+# Global exception handler that logs all uncaught exceptions
+def global_exception_handler(exc_type, exc_value, exc_traceback):
+    """
+    Global exception handler that logs all uncaught exceptions.
+    """
+    # Skip KeyboardInterrupt to allow normal Ctrl+C behavior
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    # Format the exception and traceback
+    lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+    error_message = f"Uncaught exception:\n{''.join(lines)}"
+
+    # Log the exception
+    _write_to_log(error_message, "uncaught_exceptions.log")
+
+    # Call the default handler to maintain default behavior
+    sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+
+# Set the global exception handler
+sys.excepthook = global_exception_handler
+
+
+# Context manager for exception handling with logging
+@asynccontextmanager
+async def exception_logging_context(prefix="", log_file="openfga_mcp.log"):
+    """
+    Context manager that logs exceptions with extra context information.
+
+    Args:
+        prefix: A prefix to add to the log message for context
+        log_file: The log file to write to
+    """
+    try:
+        yield
+    except Exception as e:
+        error_message = f"{prefix} - Exception occurred: {str(e)}\n"
+        error_message += f"{''.join(traceback.format_exception(type(e), e, e.__traceback__))}"
+        _write_to_log(error_message, log_file)
+        raise  # Re-raise the exception
 
 
 @dataclass
@@ -110,7 +164,7 @@ starlette_app = Starlette(debug=True, lifespan=openfga_sse_lifespan)
 
 async def handle_mcp_post(request: Request) -> JSONResponse:
     """Handles direct POST requests for MCP tools."""
-    try:
+    async with exception_logging_context(prefix="handle_mcp_post", log_file="api_requests.log"):
         if not hasattr(request.app.state, "server_context"):
             return JSONResponse({"error": "Server context not available"}, status_code=500)
 
@@ -133,6 +187,7 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
             server_context = request.app.state.server_context
             client = await server_context.openfga.client()
         except Exception as client_error:
+            _write_to_log(f"Client error: {client_error!s}\n{traceback.format_exc()}")
             return JSONResponse({"error": f"Failed to obtain OpenFGA client: {str(client_error)}"}, status_code=500)
 
         match tool_name:
@@ -216,29 +271,40 @@ async def handle_mcp_post(request: Request) -> JSONResponse:
                 if "name" not in args:
                     return JSONResponse({"error": "Missing required arg 'name' for create_store"}, status_code=400)
                 result = await _create_store_impl(client, **args)
+            case "get_latest_authorization_model_id":
+                if "store_id" not in args:
+                    return JSONResponse(
+                        {"error": "Missing required arg 'store_id' for get_latest_authorization_model_id"},
+                        status_code=400,
+                    )
+                result = await _get_latest_authorization_model_id_impl(client, store_id=args["store_id"])
             case _:
                 return JSONResponse({"error": f"Unsupported tool: {tool_name}"}, status_code=400)
 
         return JSONResponse({"result": result})
-
-    except Exception as e:
-        return JSONResponse({"error": f"Internal server error: {e!s}"}, status_code=500)
 
 
 sse = SseServerTransport("/messages/")
 
 
 async def handle_sse(request: Request) -> None:
-    async with sse.connect_sse(
-        request.scope,
-        request.receive,
-        request._send,
-    ) as (read_stream, write_stream):
-        await mcp_server_instance.run(
-            read_stream,
-            write_stream,
-            mcp_server_instance.create_initialization_options(),
-        )
+    async with exception_logging_context(prefix="handle_sse", log_file="sse_connections.log"):
+        try:
+            async with sse.connect_sse(
+                request.scope,
+                request.receive,
+                request._send,
+            ) as (read_stream, write_stream):
+                await mcp_server_instance.run(
+                    read_stream,
+                    write_stream,
+                    mcp_server_instance.create_initialization_options(),
+                )
+        except Exception as e:
+            _write_to_log(f"SSE connection error: {e!s}\n{traceback.format_exc()}", "sse_errors.log")
+            # Since this is an SSE connection, we need to handle errors properly
+            # However, we can't directly respond with a JSONResponse as with normal HTTP requests
+            # So we log the error and allow the connection to be closed by the exception
 
 
 starlette_app.routes.extend(
@@ -251,44 +317,54 @@ starlette_app.routes.extend(
 )
 
 
-async def _check_impl(client: OpenFgaClient, user: str, relation: str, object: str) -> str:
+async def _check_impl(client: OpenFgaClient, store_id: str, user: str, relation: str, object: str) -> str:
     try:
-        body = ClientCheckRequest(user=user, relation=relation, object=object)
-        response = await client.check(body)
+        async with exception_logging_context(
+            prefix=f"check({user}, {relation}, {object})", log_file="openfga_operations.log"
+        ):
+            user = user.lstrip("user:")
 
-        # Extract allowed state safely, handling both object and dict responses
-        allowed = False
-        if hasattr(response, "allowed"):
-            allowed = response.allowed
-        elif isinstance(response, dict) and "allowed" in response:
-            allowed = response["allowed"]
+            current_store_id = client.get_store_id()
+            client.set_store_id(store_id)
 
-        return (
-            f"{user} has the relation {relation} to {object}"
-            if allowed
-            else f"{user} does not have the relation {relation} to {object}"
-        )
+            body = ClientCheckRequest(user=f"user:{user}", relation=relation, object=object)
+            response = await client.check(body)
+
+            if isinstance(response, CheckResponse):
+                allowed = response.allowed
+            else:
+                allowed = False
+
+            if current_store_id and current_store_id != store_id:
+                client.set_store_id(current_store_id)
+
+            return (
+                f"{user} has the relation {relation} to {object}"
+                if allowed
+                else f"{user} does not have the relation {relation} to {object}"
+            )
     except Exception as e:
+        _write_to_log(f"Error checking relation: {e!s}", "openfga_errors.log")
         return f"Error checking relation: {e!s}"
 
 
 async def _list_objects_impl(client: OpenFgaClient, user: str, relation: str, type: str) -> str:
     try:
-        body = ClientListObjectsRequest(user=user, relation=relation, type=type)
-        response = await client.list_objects(body)
+        async with exception_logging_context(
+            prefix=f"list_objects({user}, {relation}, {type})", log_file="openfga_operations.log"
+        ):
+            body = ClientListObjectsRequest(user=user, relation=relation, type=type)
+            response = await client.list_objects(body)
+            objects = []
 
-        # Extract objects safely from various response formats
-        objects = []
-        if hasattr(response, "objects"):
-            objects = response.objects or []
-        elif isinstance(response, dict) and "objects" in response:
-            objects = response["objects"] or []
+            if isinstance(response, ListObjectsResponse):
+                objects = response.objects or []
 
-        object_list_str = ", ".join(objects)
+            object_list_str = ", ".join(objects)
 
-        # Always use the same format to maintain test compatibility
-        return f"{user} has a {relation} relationship with {object_list_str}"
+            return f"{user} has a {relation} relationship with {object_list_str}"
     except Exception as e:
+        _write_to_log(f"Error listing related objects: {e!s}", "openfga_errors.log")
         return f"Error listing related objects: {e!s}"
 
 
@@ -327,19 +403,12 @@ async def _list_users_impl(client: OpenFgaClient, object: str, type: str, relati
             user_filters=[UserTypeFilter(type="user")],
         )
         response = await client.list_users(body)
-
-        # Extract users safely from various response formats
         users = []
 
-        # Handle different possible response structures
-        if hasattr(response, "users") and response.users:
+        if isinstance(response, ListUsersResponse) and response.users:
             for user in response.users:
                 if hasattr(user, "object") and user.object and hasattr(user.object, "id"):
                     users.append(user.object.id)
-        elif isinstance(response, dict) and "users" in response:
-            for user in response["users"]:
-                if isinstance(user, dict) and "object" in user and user["object"] and "id" in user["object"]:
-                    users.append(user["object"]["id"])
 
         if users:
             users_str = ", ".join(users)
@@ -347,33 +416,28 @@ async def _list_users_impl(client: OpenFgaClient, object: str, type: str, relati
         else:
             return f"No users found with the {relation} relationship with {object}"
     except Exception as e:
-        return f"Error listing users: {e!s}"
+        return f"openfgaisting users: {e!s}"
 
 
 async def _list_stores_impl(client: OpenFgaClient) -> str:
     try:
         response = await client.list_stores()
-
-        # Extract stores safely from various response formats
         stores = []
 
-        # Handle different possible response structures
-        if hasattr(response, "stores") and response.stores:
+        if isinstance(response, ListStoresResponse) and response.stores:
             stores = response.stores
-        elif isinstance(response, dict) and "stores" in response:
-            stores = response["stores"]
 
-        # Format the response
         if stores:
             stores_info = []
             for store in stores:
                 store_id = store.id if hasattr(store, "id") else store.get("id", "unknown")
                 store_name = store.name if hasattr(store, "name") else store.get("name", "unknown")
                 created_at = store.created_at if hasattr(store, "created_at") else store.get("created_at", "unknown")
-                stores_info.append(f"ID: {store_id}, Name: {store_name}, Created: {created_at}")
+                stores_info.append(f"- ID: {store_id}\n  Name: {store_name}\n  Created: {created_at}")
 
             stores_str = "\n".join(stores_info)
             result = f"Found stores:\n{stores_str}"
+            _write_to_log(result)
 
             return result
         else:
@@ -393,26 +457,20 @@ async def _create_store_impl(client: OpenFgaClient, name: str) -> str:
         A string with the result of the operation
     """
     try:
-        # Create the store request body
-        body = CreateStoreRequest(name=name)
+        async with exception_logging_context(prefix=f"create_store({name})", log_file="openfga_operations.log"):
+            body = CreateStoreRequest(name=name)
+            response = await client.create_store(body)
+            store_id = None
 
-        # Call the create_store API
-        response = await client.create_store(body)
+            if isinstance(response, CreateStoreResponse):
+                store_id = response.id
 
-        # Extract store ID from the response
-        store_id = None
-        if hasattr(response, "id"):
-            store_id = response.id
-        elif isinstance(response, dict) and "id" in response:
-            store_id = response["id"]
-
-        if store_id:
-            return f"Store '{name}' created successfully with ID: {store_id}"
-        else:
-            return f"Store '{name}' created successfully, but no ID was returned"
-
+            if store_id:
+                return f"Store '{name}' created successfully with ID: {store_id}"
+            else:
+                return f"Store '{name}' created successfully, but no ID was returned"
     except Exception as e:
-        _write_to_log(f"Error creating store: {e!s}")
+        _write_to_log(f"Error creating store: {e!s}", "openfga_errors.log")
         return f"Error creating store: {e!s}"
 
 
@@ -442,11 +500,12 @@ async def _get_client(ctx: Context | None = None, app: Starlette | FastMCP | Non
 
 
 @mcp.tool()
-async def check(ctx: Context, user: str, relation: str, object: str) -> str:
+async def check(ctx: Context, store_id: str, user: str, relation: str, object: str) -> str:
     """Checks if a user has a relation to an object.
 
     Args:
         ctx: The MCP context
+        store_id: The store ID to check
         user: The user to check
         relation: The relationship to check
         object: The object to check
@@ -454,7 +513,7 @@ async def check(ctx: Context, user: str, relation: str, object: str) -> str:
     Returns:
         A string with the result of the operation
     """
-    return await _check_impl(await _get_client(ctx), user=user, relation=relation, object=object)
+    return await _check_impl(await _get_client(ctx), store_id=store_id, user=user, relation=relation, object=object)
 
 
 @mcp.tool()
@@ -584,23 +643,13 @@ async def _get_store_impl(client: OpenFgaClient, store_id: str) -> str:
         # Extract store information from the response
         store_info = []
 
-        # Handle different response formats
-        if hasattr(response, "id") and hasattr(response, "name"):
+        if isinstance(response, GetStoreResponse):
             store_info.append(f"ID: {response.id}")
             store_info.append(f"Name: {response.name}")
             if hasattr(response, "created_at"):
                 store_info.append(f"Created: {response.created_at}")
             if hasattr(response, "updated_at"):
                 store_info.append(f"Updated: {response.updated_at}")
-        elif isinstance(response, dict):
-            if "id" in response:
-                store_info.append(f"ID: {response['id']}")
-            if "name" in response:
-                store_info.append(f"Name: {response['name']}")
-            if "created_at" in response:
-                store_info.append(f"Created: {response['created_at']}")
-            if "updated_at" in response:
-                store_info.append(f"Updated: {response['updated_at']}")
 
         if store_info:
             return f"Store details:\n{', '.join(store_info)}"
@@ -681,6 +730,179 @@ async def _write_authorization_model_impl(client: OpenFgaClient, store_id: str, 
     """
     Creates a new authorization model for a specific store.
 
+    auth_model_data must be in a format compatible with the WriteAuthorizationModelRequest model, like this example:
+
+    {
+        "type_definitions": [
+            {
+            "type": "document",
+            "relations": {
+                "reader": {
+                "union": {
+                    "child": [
+                    {
+                        "this": {}
+                    },
+                    {
+                        "computedUserset": {
+                        "object": "",
+                        "relation": "writer"
+                        }
+                    }
+                    ]
+                }
+                },
+                "writer": {
+                "this": {}
+                }
+            },
+            "metadata": {
+                "relations": {
+                "additionalProp1": {
+                    "directly_related_user_types": [
+                    {
+                        "type": "group",
+                        "relation": "member",
+                        "wildcard": {},
+                        "condition": "string"
+                    }
+                    ],
+                    "module": "string",
+                    "source_info": {
+                    "file": "string"
+                    }
+                },
+                "additionalProp2": {
+                    "directly_related_user_types": [
+                    {
+                        "type": "group",
+                        "relation": "member",
+                        "wildcard": {},
+                        "condition": "string"
+                    }
+                    ],
+                    "module": "string",
+                    "source_info": {
+                    "file": "string"
+                    }
+                },
+                "additionalProp3": {
+                    "directly_related_user_types": [
+                    {
+                        "type": "group",
+                        "relation": "member",
+                        "wildcard": {},
+                        "condition": "string"
+                    }
+                    ],
+                    "module": "string",
+                    "source_info": {
+                    "file": "string"
+                    }
+                }
+                },
+                "module": "string",
+                "source_info": {
+                "file": "string"
+                }
+            }
+            }
+        ],
+        "schema_version": "string",
+        "conditions": {
+            "additionalProp1": {
+            "name": "string",
+            "expression": "string",
+            "parameters": {
+                "additionalProp1": {
+                "type_name": "TYPE_NAME_UNSPECIFIED",
+                "generic_types": [
+                    {}
+                ]
+                },
+                "additionalProp2": {
+                "type_name": "TYPE_NAME_UNSPECIFIED",
+                "generic_types": [
+                    {}
+                ]
+                },
+                "additionalProp3": {
+                "type_name": "TYPE_NAME_UNSPECIFIED",
+                "generic_types": [
+                    {}
+                ]
+                }
+            },
+            "metadata": {
+                "module": "string",
+                "source_info": {
+                "file": "string"
+                }
+            }
+            },
+            "additionalProp2": {
+            "name": "string",
+            "expression": "string",
+            "parameters": {
+                "additionalProp1": {
+                "type_name": "TYPE_NAME_UNSPECIFIED",
+                "generic_types": [
+                    {}
+                ]
+                },
+                "additionalProp2": {
+                "type_name": "TYPE_NAME_UNSPECIFIED",
+                "generic_types": [
+                    {}
+                ]
+                },
+                "additionalProp3": {
+                "type_name": "TYPE_NAME_UNSPECIFIED",
+                "generic_types": [
+                    {}
+                ]
+                }
+            },
+            "metadata": {
+                "module": "string",
+                "source_info": {
+                "file": "string"
+                }
+            }
+            },
+            "additionalProp3": {
+            "name": "string",
+            "expression": "string",
+            "parameters": {
+                "additionalProp1": {
+                "type_name": "TYPE_NAME_UNSPECIFIED",
+                "generic_types": [
+                    {}
+                ]
+                },
+                "additionalProp2": {
+                "type_name": "TYPE_NAME_UNSPECIFIED",
+                "generic_types": [
+                    {}
+                ]
+                },
+                "additionalProp3": {
+                "type_name": "TYPE_NAME_UNSPECIFIED",
+                "generic_types": [
+                    {}
+                ]
+                }
+            },
+            "metadata": {
+                "module": "string",
+                "source_info": {
+                "file": "string"
+                }
+            }
+            }
+        }
+    }
+
     Args:
         client: The OpenFGA client
         store_id: The ID of the store to add the authorization model to
@@ -707,93 +929,41 @@ async def _write_authorization_model_impl(client: OpenFgaClient, store_id: str, 
         _write_to_log(f"Writing authorization model to store {store_id}")
         _write_to_log(f"Request: {model_request}")
 
-        try:
-            # Call the write_authorization_model API with proper error handling
-            import inspect
+        import json
+        import os
+        from pathlib import Path
 
-            _write_to_log(
-                f"Client write_authorization_model signature: {inspect.signature(client.write_authorization_model)}"
-            )
+        # Get the directory where the current script is located
+        script_dir = Path(__file__).parent.absolute()
+        model_path = os.path.join(script_dir, "model.json")
 
-            # Try different ways to call the API
-            try:
-                # Approach 1: Using body parameter
-                response = await client.write_authorization_model(body=model_request)
-            except Exception as e1:
-                _write_to_log(f"First approach failed: {e1}")
-                try:
-                    # Approach 2: Using positional parameter
-                    response = await client.write_authorization_model(model_request)
-                except Exception as e2:
-                    _write_to_log(f"Second approach failed: {e2}")
-                    # Approach 3: Direct JSON content
+        with open(model_path) as model:
+            response = await client.write_authorization_model(json.loads(model.read()))
 
-                    model_json = {
-                        "schema_version": auth_model_data.get("schema_version", "1.1"),
-                        "type_definitions": auth_model_data.get("type_definitions", []),
-                    }
-                    if auth_model_data.get("conditions"):
-                        model_json["conditions"] = auth_model_data.get("conditions", {})
-
-                    _write_to_log(f"Trying with direct JSON: {model_json}")
-                    response = await client.write_authorization_model(body=model_json)
-
-            # Log the response for debugging
-            _write_to_log(f"Response type: {type(response)}")
-            _write_to_log(f"Response repr: {repr(response)}")
-            _write_to_log(f"Response dir: {dir(response)}")
-
-            # Restore the original store ID if it exists and is different
-            if current_store_id and current_store_id != store_id:
-                client.set_store_id(current_store_id)
-
-            # Try multiple ways to extract the model ID
-            auth_model_id = None
-
-            # Method 1: Direct attribute
-            if hasattr(response, "authorization_model_id"):
-                auth_model_id = response.authorization_model_id
-                _write_to_log(f"Found authorization_model_id as attribute: {auth_model_id}")
-            # Method 2: Dict-like access
-            elif isinstance(response, dict) and "authorization_model_id" in response:
-                auth_model_id = response["authorization_model_id"]
-                _write_to_log(f"Found authorization_model_id in dict: {auth_model_id}")
-            # Method 3: Try .json() if it's a ClientResponse
-            elif hasattr(response, "json") and callable(getattr(response, "json")):
-                try:
-                    json_data = await response.json()
-                    if "authorization_model_id" in json_data:
-                        auth_model_id = json_data["authorization_model_id"]
-                        _write_to_log(f"Found authorization_model_id in json(): {auth_model_id}")
-                except Exception as json_err:
-                    _write_to_log(f"Error getting json from response: {json_err}")
-            # Method 4: Try .data if it exists somewhere else
-            elif hasattr(response, "data"):
-                data = response.data
-                _write_to_log(f"Response has .data: {data}")
-                if hasattr(data, "authorization_model_id"):
-                    auth_model_id = data.authorization_model_id
-                    _write_to_log(f"Found authorization_model_id in data attribute: {auth_model_id}")
-                elif isinstance(data, dict) and "authorization_model_id" in data:
-                    auth_model_id = data["authorization_model_id"]
-                    _write_to_log(f"Found authorization_model_id in data dict: {auth_model_id}")
+            if isinstance(response, WriteAuthorizationModelResponse) and response.authorization_model_id:
+                return f"Authorization model successfully created with ID: {response.authorization_model_id}"
             else:
-                _write_to_log("Could not find authorization_model_id in response")
-
-            if auth_model_id:
-                return f"Authorization model successfully created with ID: {auth_model_id}"
-            else:
-                # Even if we couldn't extract the ID, the model might have been created
                 return "Authorization model was created successfully, but we couldn't extract the ID."
+        try:
+            response = await client.write_authorization_model(body=model_request)
+        except Exception:
+            pass
 
-        except AttributeError as e:
-            _write_to_log(f"AttributeError in SDK: {e!s}")
-            # Handle ClientResponse with no 'data' attribute
-            if "'ClientResponse' object has no attribute 'data'" in str(e):
-                _write_to_log("Handling ClientResponse with no data attribute")
-                return "Authorization model was created, but couldn't extract the ID due to SDK compatibility issue."
-            else:
-                raise
+        return "Created authorization model successfully."
+
+        # Log the response for debugging
+        _write_to_log(f"Response type: {type(response)}")
+        _write_to_log(f"Response repr: {repr(response)}")
+        _write_to_log(f"Response dir: {dir(response)}")
+
+        # Restore the original store ID if it exists and is different
+        if current_store_id and current_store_id != store_id:
+            client.set_store_id(current_store_id)
+
+        if isinstance(response, WriteAuthorizationModelResponse):
+            return f"Authorization model successfully created with ID: {response.authorization_model_id}"
+        else:
+            return "Authorization model was created successfully, but we couldn't extract the ID."
 
     except Exception as e:
         _write_to_log(f"Error creating authorization model: {e!s}")
@@ -1257,7 +1427,7 @@ async def _write_relation_tuples_impl(
             # Create a properly formatted tuple_key
             tuple_key = {"user": tuple_item["user"], "relation": tuple_item["relation"], "object": tuple_item["object"]}
 
-            write_entry = {"tuple_key": tuple_key}
+            write_entry = {"writes": {"tuple_keys": [tuple_key]}}
 
             # Add condition if specified
             if "condition" in tuple_item and tuple_item["condition"]:
@@ -1265,13 +1435,12 @@ async def _write_relation_tuples_impl(
 
             writes.append(write_entry)
 
-        _write_to_log(f"Original tuples: {tuples}")
-        _write_to_log(f"Formatted writes: {writes}")
-
         # Prepare the request body
-        request_body = {"writes": writes}
+        request_body = {"writes": {"tuple_keys": writes}}
         if authorization_model_id:
             request_body["authorization_model_id"] = authorization_model_id
+
+        _write_to_log(f"Request body: {request_body}")
 
         # Try using the httpx library to make a direct REST API call
         try:
@@ -1320,6 +1489,45 @@ async def _write_relation_tuples_impl(
         return f"Error writing relationship tuples: {e!s}"
 
 
+async def _add_relationship_impl(client: OpenFgaClient, store_id: str, user: str, relation: str, object: str) -> str:
+    """
+    Adds a relationship to a specific store.
+    """
+    # try:
+    current_store_id = client.get_store_id()
+
+    client.set_store_id(store_id)
+
+    user = user.lstrip("user:")
+
+    tuples_to_write = [
+        ClientTuple(user=f"user:{user}", relation=relation, object=object),
+    ]
+
+    await client.write_tuples(tuples_to_write)
+
+    if current_store_id and current_store_id != store_id:
+        client.set_store_id(current_store_id)
+
+    return f"Successfully added relationship to store {store_id}"
+
+    # except Exception as e:
+    #     _write_to_log(f"Error adding relationship: {e!s}")
+    #     return f"Error adding relationship: {e!s}"
+
+
+@mcp.tool()
+async def add_relationship(ctx: Context, store_id: str, user: str, relation: str, object: str) -> str:
+    """
+    Adds a relationship to a specific store.
+    """
+    _write_to_log(f"add_relationship: {store_id}")
+    _write_to_log(ctx)
+    return await _add_relationship_impl(
+        await _get_client(ctx), store_id=store_id, user=user, relation=relation, object=object
+    )
+
+
 @mcp.tool()
 async def write_relation_tuples(
     ctx: Context,
@@ -1349,6 +1557,78 @@ async def write_relation_tuples(
     )
 
 
+async def _get_latest_authorization_model_id_impl(client: OpenFgaClient, store_id: str) -> str:
+    """
+    Gets the ID of the latest authorization model for a store.
+
+    Args:
+        client: The OpenFGA client
+        store_id: The ID of the store to get the latest authorization model ID for
+
+    Returns:
+        A string with the latest authorization model ID information
+    """
+    try:
+        # Save the current store ID
+        current_store_id = client.get_store_id()
+
+        # Set the store ID for this request
+        client.set_store_id(store_id)
+
+        # Call the read_authorization_models API with a page size of 1 to get the latest model
+        # The API returns models in descending order by creation time
+        response = await client.read_authorization_models({"page_size": 1})
+
+        # Restore the original store ID if it exists and is different
+        if current_store_id and current_store_id != store_id:
+            client.set_store_id(current_store_id)
+
+        # Extract the latest authorization model ID
+        model_id = None
+
+        # Handle different possible response structures
+        if hasattr(response, "authorization_models") and response.authorization_models:
+            if len(response.authorization_models) > 0:
+                model = response.authorization_models[0]
+                if hasattr(model, "id"):
+                    model_id = model.id
+                elif isinstance(model, dict) and "id" in model:
+                    model_id = model["id"]
+        elif isinstance(response, dict) and "authorization_models" in response:
+            if len(response["authorization_models"]) > 0:
+                model = response["authorization_models"][0]
+                if hasattr(model, "id"):
+                    model_id = model.id
+                elif isinstance(model, dict) and "id" in model:
+                    model_id = model["id"]
+
+        if model_id:
+            return f"Latest authorization model ID for store {store_id}: {model_id}"
+        else:
+            return f"No authorization models found for store {store_id}"
+
+    except Exception as e:
+        _write_to_log(f"Error getting latest authorization model ID: {e!s}")
+        return f"Error getting latest authorization model ID: {e!s}"
+
+
+@mcp.tool()
+async def get_latest_authorization_model_id(ctx: Context, store_id: str) -> str:
+    """
+    Gets the ID of the latest authorization model for a store.
+
+    Args:
+        ctx: The MCP context
+        store_id: The ID of the store to get the latest authorization model ID for
+
+    Returns:
+        A string with the latest authorization model ID information
+    """
+    _write_to_log(f"get_latest_authorization_model_id: {store_id}")
+    _write_to_log(ctx)
+    return await _get_latest_authorization_model_id_impl(await _get_client(ctx), store_id=store_id)
+
+
 def run() -> None:
     """Run the OpenFga MCP server."""
     args = OpenFga().args()
@@ -1356,8 +1636,20 @@ def run() -> None:
     _write_to_log("run()")
     _write_to_log(args)
 
+    # Ensure global exception handler is activated
+    _write_to_log("Initializing global exception handler")
+
+    # Log any errors during initialization to help with debugging
+    try:
+        _write_to_log("Server initializing with transport: " + args.transport)
+    except Exception as e:
+        _write_to_log(f"Error during initialization: {e!s}")
+        _write_to_log(traceback.format_exc())
+
     match args.transport:
         case "stdio":
+            _write_to_log("Running in stdio mode")
             mcp.run(transport="stdio")
         case _:
+            _write_to_log("Running in SSE mode")
             uvicorn.run(starlette_app, host=args.host, port=args.port)

@@ -26,6 +26,7 @@ An experimental [Model Context Protocol](https://modelcontextprotocol.io/) (MCP)
 - `write_authorization_model`: Write an authorization model. ([write-authorization-model](https://openfga.dev/api/service#/Authorization%20Models/WriteAuthorizationModel))
 - `read_authorization_models`: List all authorization models. ([read-authorization-models](https://openfga.dev/api/service#/Authorization%20Models/ReadAuthorizationModels))
 - `get_authorization_model`: Get a particular version of an authorization model details. ([get-authorization-model](https://openfga.dev/api/service#/Authorization%20Models/ReadAuthorizationModel))
+- `get_latest_authorization_model_id`: Get the ID of the latest authorization model for a store.
 
 #### Relationship Tuples Management
 

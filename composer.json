@@ -1,0 +1,96 @@
+{
+  "name": "evansims/openfga-mcp",
+  "description": "Query and administer OpenFGA and Auth0 FGA using AI agents.",
+  "license": "Apache-2.0",
+  "type": "library",
+  "keywords": [
+    "openfga",
+    "authorization",
+    "fine-grained-authorization",
+    "access-control",
+    "permissions",
+    "rbac",
+    "abac",
+    "relationship-based-access-control",
+    "zanzibar",
+    "auth0-fga",
+    "security",
+    "authentication",
+    "policy-engine",
+    "observability",
+    "opentelemetry"
+  ],
+  "authors": [
+    {
+      "name": "Evan Sims",
+      "homepage": "https://evansims.com"
+    }
+  ],
+  "homepage": "https://github.com/evansims/openfga-mcp",
+  "support": {
+    "issues": "https://github.com/evansims/openfga-mcp/issues",
+    "source": "https://github.com/evansims/openfga-mcp",
+    "docs": "https://github.com/evansims/openfga-mcp#readme"
+  },
+  "require": {
+    "php": "^8.3",
+    "evansims/openfga-php": "^1.5",
+    "guzzlehttp/guzzle": "^7.2"
+  },
+  "require-dev": {
+    "ergebnis/composer-normalize": "^2",
+    "friendsofphp/php-cs-fixer": "^3",
+    "pestphp/pest": "^3",
+    "phpstan/phpstan": "^2",
+    "phpstan/phpstan-strict-rules": "^2",
+    "rector/rector": "^2",
+    "vimeo/psalm": "^6"
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "autoload": {
+    "psr-4": {
+      "OpenFGA\\MCP\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "OpenFGA\\MCP\\Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "ergebnis/composer-normalize": true,
+      "pestphp/pest-plugin": true
+    },
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "process-timeout": 0,
+    "sort-packages": true
+  },
+  "scripts": {
+    "lint": [
+      "@lint:phpstan",
+      "@lint:psalm",
+      "@lint:rector",
+      "@lint:phpcs"
+    ],
+    "lint:fix": [
+      "@lint:rector:fix",
+      "@lint:phpcs:fix"
+    ],
+    "lint:phpcs": [
+      "@putenv PHP_CS_FIXER_IGNORE_ENV=1",
+      "@php vendor/bin/php-cs-fixer fix --dry-run --diff"
+    ],
+    "lint:phpcs:fix": [
+      "@putenv PHP_CS_FIXER_IGNORE_ENV=1",
+      "@php vendor/bin/php-cs-fixer fix"
+    ],
+    "lint:phpstan": "@php vendor/bin/phpstan analyze",
+    "lint:psalm": "@php vendor/bin/psalm",
+    "lint:rector": "@php vendor/bin/rector process src --dry-run",
+    "lint:rector:fix": "@php vendor/bin/rector process src",
+    "test": "vendor/bin/pest"
+  }
+}

@@ -35,7 +35,8 @@
   "require": {
     "php": "^8.3",
     "evansims/openfga-php": "^1.5",
-    "guzzlehttp/guzzle": "^7.2"
+    "guzzlehttp/guzzle": "^7.2",
+    "php-mcp/server": "^3.2"
   },
   "require-dev": {
     "ergebnis/composer-normalize": "^2",
@@ -70,27 +71,17 @@
   },
   "scripts": {
     "lint": [
-      "@lint:phpstan",
-      "@lint:psalm",
-      "@lint:rector",
-      "@lint:phpcs"
-    ],
-    "lint:fix": [
-      "@lint:rector:fix",
-      "@lint:phpcs:fix"
-    ],
-    "lint:phpcs": [
       "@putenv PHP_CS_FIXER_IGNORE_ENV=1",
+      "@php vendor/bin/phpstan analyze",
+      "@php vendor/bin/psalm",
+      "@php vendor/bin/rector process src --dry-run",
       "@php vendor/bin/php-cs-fixer fix --dry-run --diff"
     ],
-    "lint:phpcs:fix": [
+    "lint:fix": [
       "@putenv PHP_CS_FIXER_IGNORE_ENV=1",
+      "@php vendor/bin/rector process src",
       "@php vendor/bin/php-cs-fixer fix"
     ],
-    "lint:phpstan": "@php vendor/bin/phpstan analyze",
-    "lint:psalm": "@php vendor/bin/psalm",
-    "lint:rector": "@php vendor/bin/rector process src --dry-run",
-    "lint:rector:fix": "@php vendor/bin/rector process src",
     "test": "vendor/bin/pest"
   }
 }

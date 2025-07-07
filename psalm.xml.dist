@@ -36,8 +36,6 @@
     </projectFiles>
 
     <stubs>
-        <file name="stubs/laravel.phpstub" />
-        <file name="stubs/debugbar.phpstub" />
     </stubs>
 
     <!-- Suppress issues that conflict with modern PHP patterns -->

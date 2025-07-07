@@ -35,8 +35,6 @@
         </ignoreFiles>
     </projectFiles>
 
-    <stubs>
-    </stubs>
 
     <!-- Suppress issues that conflict with modern PHP patterns -->
     <issueHandlers>
@@ -45,12 +43,7 @@
         <MixedArgumentTypeCoercion errorLevel="info" />
 
         <!-- Support for typed properties and strict types -->
-        <PropertyNotSetInConstructor errorLevel="error">
-            <!-- Laravel Commands have properties injected by the framework -->
-            <errorLevel type="suppress">
-                <directory name="src/Console/Commands" />
-            </errorLevel>
-        </PropertyNotSetInConstructor>
+        <PropertyNotSetInConstructor errorLevel="error" />
         <MissingConstructor errorLevel="error" />
 
         <!-- Modern PSR standards -->

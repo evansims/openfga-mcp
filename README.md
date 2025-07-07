@@ -1,14 +1,14 @@
 <div align="center">
   <p><a href="https://openfga.dev"><img src=".github/openfga.png" width="100" /></a></p>
 
-  <h1>OpenFGA MCP</h1>
+  <h1>OpenFGA MCP Server</h1>
 
   <p>Stop writing authorization logic. Start asking questions.</p>
 </div>
 
 <p><br /></p>
 
-**Manage and query your [OpenFGA](https://openfga.dev/) server using AI agents and tooling.** An MCP server unlocking the power of [OpenFGA](https://openfga.dev/) and [Auth0 FGA](https://auth0.com/fine-grained-authorization) inside your intelligent IDEs, terminals, and workflows.
+**Manage and query your OpenFGA server using AI agents and tooling.** Unlock the power of [OpenFGA](https://openfga.dev/) and [Auth0 FGA](https://auth0.com/fine-grained-authorization) inside agentic tooling and intelligent workflows.
 
 ## Features
 
@@ -78,24 +78,52 @@ To use Client Credentials authentication, the server accepts the following confi
 | `OPENFGA_MCP_API_ISSUER`        | `null`  | API issuer for use with your OpenFGA server    |
 | `OPENFGA_MCP_API_AUDIENCE`      | `null`  | API audience for use with your OpenFGA server  |
 
-## Usage
+## Installation
+
+### Docker (Recommended)
+
+```bash
+docker pull evansims/openfga-mcp:latest
+```
 
 ### Composer
 
 ```bash
-composer require global evansims/openfga-mcp
+composer global require evansims/openfga-mcp
 ```
+
+## Usage
 
 ### Claude Desktop
 
-Add to your Claude Desktop configuration
+Using Docker:
+
+```json
+{
+  "mcpServers": {
+    "OpenFGA": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "OPENFGA_MCP_API_URL=http://localhost:8080",
+        "evansims/openfga-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+Using PHP:
 
 ```json
 {
   "mcpServers": {
     "OpenFGA": {
       "command": "php",
-      "args": ["vendor/bin/openfga-mcp"],
+      "args": ["/path/to/vendor/bin/openfga-mcp"],
       "env": {
         "OPENFGA_MCP_API_URL": "http://localhost:8080"
       }

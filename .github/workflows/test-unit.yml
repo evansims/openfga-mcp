@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
         with:
           egress-policy: audit
 
@@ -37,16 +37,16 @@ jobs:
         run: composer update --prefer-stable --no-interaction --no-progress --ansi
 
       - name: Execute PEST tests
-        run: composer test:unit:coverage
+        run: composer test:unit
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@4650159d642e33fdc30954ca22638caf0df6cac8 # v5.4.3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: unit
+      # - name: Upload coverage reports to Codecov
+      #   uses: codecov/codecov-action@4650159d642e33fdc30954ca22638caf0df6cac8 # v5.4.3
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     flags: unit
 
-      - name: Upload test results to Codecov
-        uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: unit
+      # - name: Upload test results to Codecov
+      #   uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     flags: unit

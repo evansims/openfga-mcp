@@ -5,23 +5,30 @@ declare(strict_types=1);
 namespace OpenFGA\MCP\Tools;
 
 use OpenFGA\Client;
+use OpenFGA\Exceptions\SerializationException;
 use OpenFGA\Models\AuthorizationModelInterface;
 use OpenFGA\Responses\{CreateAuthorizationModelResponseInterface, GetAuthorizationModelResponseInterface, ListAuthorizationModelsResponseInterface};
 use PhpMcp\Server\Attributes\{McpTool};
 use Throwable;
 
-final class ModelTools
+use function assert;
+
+final readonly class ModelTools
 {
     public function __construct(
-        private readonly Client $client,
+        private Client $client,
     ) {
     }
 
     /**
      * Create a new authorization model using OpenFGA's DSL syntax.
      *
-     * @param  string $dsl   DSL representing the authorization model to create
-     * @param  string $store ID of the store to create the authorization model in
+     * @param string $dsl   DSL representing the authorization model to create
+     * @param string $store ID of the store to create the authorization model in
+     *
+     * @throws SerializationException
+     * @throws Throwable
+     *
      * @return string a success message, or an error message
      */
     #[McpTool(name: 'create_model')]
@@ -37,19 +44,25 @@ final class ModelTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to create authorization model! Error: ' . $e->getMessage();
             })
-            ->success(static function (AuthorizationModelInterface $model) use (&$authorizationModel): void {
+            ->success(static function (mixed $model) use (&$authorizationModel): void {
+                assert($model instanceof AuthorizationModelInterface);
                 $authorizationModel = $model;
             });
 
-        if ($failure || ! $authorizationModel instanceof AuthorizationModelInterface) {
-            return $failure ?? '❌ Failed to create authorization model!';
+        if (null !== $failure) {
+            return $failure;
+        }
+
+        if (! $authorizationModel instanceof AuthorizationModelInterface) {
+            return '❌ Failed to create authorization model!';
         }
 
         $this->client->createAuthorizationModel(store: $store, typeDefinitions: $authorizationModel->getTypeDefinitions(), conditions: $authorizationModel->getConditions())
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to create authorization model! Error: ' . $e->getMessage();
             })
-            ->success(static function (CreateAuthorizationModelResponseInterface $model) use (&$success): void {
+            ->success(static function (mixed $model) use (&$success): void {
+                assert($model instanceof CreateAuthorizationModelResponseInterface);
                 $success = '✅ Successfully created authorization model! Model ID: ' . $model->getModel();
             });
 
@@ -59,8 +72,11 @@ final class ModelTools
     /**
      * Get a specific authorization model from a particular store.
      *
-     * @param  string $store ID of the store to get the authorization model from
-     * @param  string $model ID of the authorization model to get
+     * @param string $store ID of the store to get the authorization model from
+     * @param string $model ID of the authorization model to get
+     *
+     * @throws Throwable
+     *
      * @return string the authorization model, or an error message
      */
     #[McpTool(name: 'get_model')]
@@ -75,8 +91,15 @@ final class ModelTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to get authorization model! Error: ' . $e->getMessage();
             })
-            ->success(static function (GetAuthorizationModelResponseInterface $model) use (&$success): void {
-                $success = '✅ Found authorization model! Model ID: ' . $model->getModel()->getId();
+            ->success(static function (mixed $model) use (&$success): void {
+                assert($model instanceof GetAuthorizationModelResponseInterface);
+                $authModel = $model->getModel();
+
+                if ($authModel instanceof AuthorizationModelInterface) {
+                    $success = '✅ Found authorization model! Model ID: ' . $authModel->getId();
+                } else {
+                    $success = '❌ Authorization model not found!';
+                }
             });
 
         return $failure ?? $success;
@@ -85,8 +108,11 @@ final class ModelTools
     /**
      * Get the DSL from a specific authorization model from a particular store.
      *
-     * @param  string $store ID of the store to get the authorization model from
-     * @param  string $model ID of the authorization model to get
+     * @param string $store ID of the store to get the authorization model from
+     * @param string $model ID of the authorization model to get
+     *
+     * @throws Throwable
+     *
      * @return string the DSL representation of the authorization model, or an error message
      */
     #[McpTool(name: 'get_model_dsl')]
@@ -101,8 +127,11 @@ final class ModelTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to get authorization model! Error: ' . $e->getMessage();
             })
-            ->success(static function (GetAuthorizationModelResponseInterface $model) use (&$success): void {
-                $success = $model->getModel()->dsl();
+            ->success(static function (mixed $model) use (&$success): void {
+                assert($model instanceof GetAuthorizationModelResponseInterface);
+                $authModel = $model->getModel();
+
+                $success = $authModel instanceof AuthorizationModelInterface ? $authModel->dsl() : '❌ Authorization model not found!';
             });
 
         return $failure ?? $success;
@@ -111,10 +140,17 @@ final class ModelTools
     /**
      * List authorization models in a store, sorted in descending order of creation.
      *
-     * @param  string       $store ID of the store to list authorization models for
-     * @return array|string A list of authorization models, or an error message
+     * @param string $store ID of the store to list authorization models for
+     *
+     * @throws Throwable
+     *
+     * @return array<array{id: string}>|string A list of authorization models, or an error message
      */
     #[McpTool(name: 'list_models')]
+    /**
+     * @param  string                          $store
+     * @return array<array{id: string}>|string
+     */
     public function listModels(
         string $store,
     ): string | array {
@@ -125,7 +161,9 @@ final class ModelTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to list authorization models! Error: ' . $e->getMessage();
             })
-            ->success(static function (ListAuthorizationModelsResponseInterface $models) use (&$success): void {
+            ->success(static function (mixed $models) use (&$success): void {
+                assert($models instanceof ListAuthorizationModelsResponseInterface);
+
                 foreach ($models->getModels() as $model) {
                     $success[] = [
                         'id' => $model->getId(),
@@ -139,7 +177,11 @@ final class ModelTools
     /**
      * Verify a DSL representation of an authorization model.
      *
-     * @param  string $dsl DSL representation of the authorization model to verify
+     * @param string $dsl DSL representation of the authorization model to verify
+     *
+     * @throws SerializationException
+     * @throws Throwable
+     *
      * @return string a success message, or an error message
      */
     #[McpTool(name: 'verify_model')]

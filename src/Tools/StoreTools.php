@@ -4,24 +4,30 @@ declare(strict_types=1);
 
 namespace OpenFGA\MCP\Tools;
 
+use DateTimeInterface;
+use InvalidArgumentException;
 use OpenFGA\Client;
 use OpenFGA\Responses\{CreateStoreResponseInterface, GetStoreResponseInterface, ListStoresResponseInterface};
 use PhpMcp\Server\Attributes\{McpTool};
 use Throwable;
 
+use function assert;
 use function sprintf;
 
-final class StoreTools
+final readonly class StoreTools
 {
     public function __construct(
-        private readonly Client $client,
+        private Client $client,
     ) {
     }
 
     /**
      * Create a new OpenFGA store.
      *
-     * @param  string $name the name of the store to create
+     * @param string $name the name of the store to create
+     *
+     * @throws Throwable
+     *
      * @return string a success message, or an error message
      */
     #[McpTool(name: 'create_store')]
@@ -35,7 +41,8 @@ final class StoreTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to create store! Error: ' . $e->getMessage();
             })
-            ->success(static function (CreateStoreResponseInterface $store) use ($name, &$success): void {
+            ->success(static function (mixed $store) use ($name, &$success): void {
+                assert($store instanceof CreateStoreResponseInterface);
                 $success = sprintf('✅ Successfully created store named %s! Store names are not unique identifiers, so please use the ID %s for future queries relating to this specific store.', $name, $store->getId());
             });
 
@@ -45,7 +52,10 @@ final class StoreTools
     /**
      * Delete an OpenFGA store.
      *
-     * @param  string $id the ID of the store to delete
+     * @param string $id the ID of the store to delete
+     *
+     * @throws Throwable
+     *
      * @return string a success message, or an error message
      */
     #[McpTool(name: 'delete_store')]
@@ -69,10 +79,17 @@ final class StoreTools
     /**
      * Get an OpenFGA store details.
      *
-     * @param  string $id the ID of the store to get details for
-     * @return string the store details, or an error message
+     * @param string $id the ID of the store to get details for
+     *
+     * @throws Throwable
+     *
+     * @return array{id: string, name: string, created_at: DateTimeInterface, updated_at: DateTimeInterface, deleted_at: DateTimeInterface|null}|string the store details, or an error message
      */
     #[McpTool(name: 'get_store')]
+    /**
+     * @param  string                                                                                                                                   $id
+     * @return array{id: string, name: string, created_at: DateTimeInterface, updated_at: DateTimeInterface, deleted_at: DateTimeInterface|null}|string
+     */
     public function getStore(
         string $id,
     ): string | array {
@@ -83,7 +100,8 @@ final class StoreTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to get store! Error: ' . $e->getMessage();
             })
-            ->success(static function (GetStoreResponseInterface $store) use (&$success): void {
+            ->success(static function (mixed $store) use (&$success): void {
+                assert($store instanceof GetStoreResponseInterface);
                 $success = [
                     'id' => $store->getId(),
                     'name' => $store->getName(),
@@ -99,9 +117,15 @@ final class StoreTools
     /**
      * List all OpenFGA stores.
      *
-     * @return array{id: string, name: string}|string a list of stores, or an error message
+     * @throws InvalidArgumentException
+     * @throws Throwable
+     *
+     * @return array<array{id: string, name: string, created_at: DateTimeInterface, updated_at: DateTimeInterface, deleted_at: DateTimeInterface|null}>|string a list of stores, or an error message
      */
     #[McpTool(name: 'list_stores')]
+    /**
+     * @return array<array{id: string, name: string, created_at: DateTimeInterface, updated_at: DateTimeInterface, deleted_at: DateTimeInterface|null}>|string
+     */
     public function listStores(): string | array
     {
         $failure = null;
@@ -111,7 +135,9 @@ final class StoreTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to list stores! Error: ' . $e->getMessage();
             })
-            ->success(static function (ListStoresResponseInterface $stores) use (&$success): void {
+            ->success(static function (mixed $stores) use (&$success): void {
+                assert($stores instanceof ListStoresResponseInterface);
+
                 foreach ($stores->getStores() as $store) {
                     $success[] = [
                         'id' => $store->getId(),

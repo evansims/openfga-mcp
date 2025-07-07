@@ -4,29 +4,41 @@ declare(strict_types=1);
 
 namespace OpenFGA\MCP\Tools;
 
+use InvalidArgumentException;
 use OpenFGA\Client;
+use OpenFGA\Exceptions\{ClientException, ClientThrowable};
 use OpenFGA\Models\Collections\{TupleKeys, UserTypeFilters};
 use OpenFGA\Models\{TupleKey};
 use OpenFGA\Responses\{CheckResponseInterface, ListObjectsResponseInterface, ListUsersResponseInterface, WriteTuplesResponseInterface};
 use PhpMcp\Server\Attributes\{McpTool};
+use ReflectionException;
 use Throwable;
 
-final class RelationshipTools
+use function assert;
+use function is_string;
+
+final readonly class RelationshipTools
 {
     public function __construct(
-        private readonly Client $client,
+        private Client $client,
     ) {
     }
 
     /**
      * Check if something has a relation to an object. This answers the question, for example, can "user:1" (user) read (relation) "document:1" (object)?
      *
-     * @param  string       $store    ID of the store to use
-     * @param  string       $model    ID of the authorization model to use
-     * @param  string       $user     ID of the user to check
-     * @param  string       $relation relation to check
-     * @param  string       $object   ID of the object to check
-     * @return array|string A list of authorization models, or an error message
+     * @param string $store    ID of the store to use
+     * @param string $model    ID of the authorization model to use
+     * @param string $user     ID of the user to check
+     * @param string $relation relation to check
+     * @param string $object   ID of the object to check
+     *
+     * @throws ClientException
+     * @throws InvalidArgumentException
+     * @throws ReflectionException
+     * @throws Throwable
+     *
+     * @return string A success or error message
      */
     #[McpTool(name: 'check_permission')]
     public function checkPermission(
@@ -35,7 +47,7 @@ final class RelationshipTools
         string $user,
         string $relation,
         string $object,
-    ): string | array {
+    ): string {
         $failure = null;
         $success = '';
 
@@ -49,8 +61,11 @@ final class RelationshipTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to check permission! Error: ' . $e->getMessage();
             })
-            ->success(static function (CheckResponseInterface $response) use (&$success): void {
-                $success = $response->getAllowed() ? '✅ Permission allowed' : '❌ Permission denied';
+            ->success(static function (mixed $response) use (&$success): void {
+                assert($response instanceof CheckResponseInterface);
+                $allowed = $response->getAllowed();
+
+                $success = true === $allowed ? '✅ Permission allowed' : '❌ Permission denied';
             });
 
         return $failure ?? $success;
@@ -59,11 +74,18 @@ final class RelationshipTools
     /**
      * Grant permission to something on an object.
      *
-     * @param  string $store    ID of the store to grant permission to
-     * @param  string $model    ID of the authorization model to grant permission to
-     * @param  string $user     ID of the user to grant permission to
-     * @param  string $relation relation to grant permission to
-     * @param  string $object   ID of the object to grant permission to
+     * @param string $store    ID of the store to grant permission to
+     * @param string $model    ID of the authorization model to grant permission to
+     * @param string $user     ID of the user to grant permission to
+     * @param string $relation relation to grant permission to
+     * @param string $object   ID of the object to grant permission to
+     *
+     * @throws ClientException
+     * @throws ClientThrowable
+     * @throws InvalidArgumentException
+     * @throws ReflectionException
+     * @throws Throwable
+     *
      * @return string a success message, or an error message
      */
     #[McpTool(name: 'grant_permission')]
@@ -87,7 +109,8 @@ final class RelationshipTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to grant permission! Error: ' . $e->getMessage();
             })
-            ->success(static function (WriteTuplesResponseInterface $response) use (&$success): void {
+            ->success(static function (mixed $response) use (&$success): void {
+                assert($response instanceof WriteTuplesResponseInterface);
                 $success = '✅ Permission granted successfully';
             });
 
@@ -97,13 +120,25 @@ final class RelationshipTools
     /**
      * List objects of a type that something has a relation to.
      *
-     * @param  string $store    ID of the store to list objects for
-     * @param  string $model    ID of the authorization model to list objects for
-     * @param  string $user     ID of the user to list objects for
-     * @param  string $relation relation to list objects for
-     * @return string a list of objects, or an error message
+     * @param string $store    ID of the store to list objects for
+     * @param string $model    ID of the authorization model to list objects for
+     * @param string $type     Type of objects to list
+     * @param string $user     ID of the user to list objects for
+     * @param string $relation relation to list objects for
+     *
+     * @throws Throwable
+     *
+     * @return array<string>|string a list of objects, or an error message
      */
     #[McpTool(name: 'list_objects')]
+    /**
+     * @param  string               $store
+     * @param  string               $model
+     * @param  string               $type
+     * @param  string               $user
+     * @param  string               $relation
+     * @return array<string>|string
+     */
     public function listObjects(
         string $store,
         string $model,
@@ -118,7 +153,9 @@ final class RelationshipTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to list objects! Error: ' . $e->getMessage();
             })
-            ->success(static function (ListObjectsResponseInterface $response) use (&$success): void {
+            ->success(static function (mixed $response) use (&$success): void {
+                assert($response instanceof ListObjectsResponseInterface);
+
                 foreach ($response->getObjects() as $object) {
                     $success[] = $object;
                 }
@@ -130,13 +167,26 @@ final class RelationshipTools
     /**
      * List users that have a given relationship with a given object.
      *
-     * @param  string $store    ID of the store to list users for
-     * @param  string $model    ID of the authorization model to list users for
-     * @param  string $object   ID of the object to list users for
-     * @param  string $relation relation to list users for
-     * @return string a list of users, or an error message
+     * @param string $store    ID of the store to list users for
+     * @param string $model    ID of the authorization model to list users for
+     * @param string $object   ID of the object to list users for
+     * @param string $relation relation to list users for
+     *
+     * @throws ClientThrowable
+     * @throws InvalidArgumentException
+     * @throws ReflectionException
+     * @throws Throwable
+     *
+     * @return array<string>|string a list of users, or an error message
      */
     #[McpTool(name: 'list_users')]
+    /**
+     * @param  string               $store
+     * @param  string               $model
+     * @param  string               $object
+     * @param  string               $relation
+     * @return array<string>|string
+     */
     public function listUsers(
         string $store,
         string $model,
@@ -150,9 +200,15 @@ final class RelationshipTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to list users! Error: ' . $e->getMessage();
             })
-            ->success(static function (ListUsersResponseInterface $response) use (&$success): void {
+            ->success(static function (mixed $response) use (&$success): void {
+                assert($response instanceof ListUsersResponseInterface);
+
                 foreach ($response->getUsers() as $user) {
-                    $success[] = $user->getObject();
+                    $object = $user->getObject();
+
+                    if (null !== $object && is_string($object)) {
+                        $success[] = $object;
+                    }
                 }
             });
 
@@ -162,11 +218,18 @@ final class RelationshipTools
     /**
      * Revoke permission from something on an object.
      *
-     * @param  string $store    ID of the store to revoke permission from
-     * @param  string $model    ID of the authorization model to revoke permission from
-     * @param  string $user     ID of the user to revoke permission from
-     * @param  string $relation relation to revoke permission from
-     * @param  string $object   ID of the object to revoke permission from
+     * @param string $store    ID of the store to revoke permission from
+     * @param string $model    ID of the authorization model to revoke permission from
+     * @param string $user     ID of the user to revoke permission from
+     * @param string $relation relation to revoke permission from
+     * @param string $object   ID of the object to revoke permission from
+     *
+     * @throws ClientException
+     * @throws ClientThrowable
+     * @throws InvalidArgumentException
+     * @throws ReflectionException
+     * @throws Throwable
+     *
      * @return string a success message, or an error message
      */
     #[McpTool(name: 'revoke_permission')]
@@ -190,7 +253,8 @@ final class RelationshipTools
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to revoke permission! Error: ' . $e->getMessage();
             })
-            ->success(static function (WriteTuplesResponseInterface $response) use (&$success): void {
+            ->success(static function (mixed $response) use (&$success): void {
+                assert($response instanceof WriteTuplesResponseInterface);
                 $success = '✅ Permission revoked successfully';
             });
 

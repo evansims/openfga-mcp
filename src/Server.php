@@ -50,7 +50,7 @@ function getConfiguredString(string $env, string $default = ''): string
         return $default;
     }
 
-    $value = trim((string) $value);
+    $value = trim($value);
 
     if ('' === $value) {
         return $default;
@@ -78,5 +78,5 @@ function getConfiguredBool(string $env, bool $default = false): bool
         return $default;
     }
 
-    return (bool) $value;
+    return $value;
 }

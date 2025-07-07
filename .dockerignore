@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+tests/
+phpunit.xml
+phpunit.xml.dist
+.phpunit.result.cache
+.pest/
+
+# Development
+.php-cs-fixer.cache
+.php-cs-fixer.dist.php
+phpstan.neon.dist
+psalm.xml.dist
+rector.php
+
+# Documentation
+*.md
+docs/
+.github/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Vendor (will be rebuilt)
+vendor/
+
+# Claude
+.claude/
+CLAUDE.md

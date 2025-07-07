@@ -59,6 +59,9 @@
       "OpenFGA\\MCP\\Tests\\": "tests/"
     }
   },
+  "bin": [
+    "bin/openfga-mcp"
+  ],
   "config": {
     "allow-plugins": {
       "ergebnis/composer-normalize": true,

@@ -148,8 +148,8 @@ class ModelTools
      *
      * @return string The DSL representation of the authorization model, or an error message.
      */
-    #[McpTool(name: 'get_dsl_from_model')]
-    public function getDslFromModel(
+    #[McpTool(name: 'get_model_dsl')]
+    public function getModelDsl(
         string $store,
         string $model,
     ): string

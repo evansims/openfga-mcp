@@ -6,21 +6,23 @@ namespace OpenFGA\MCP\Tools;
 
 use OpenFGA\Client;
 use OpenFGA\Responses\{CreateStoreResponseInterface, GetStoreResponseInterface, ListStoresResponseInterface};
-use PhpMcp\Server\Attributes\{McpTool, McpResource, McpResourceTemplate, McpPrompt, Schema};
+use PhpMcp\Server\Attributes\{McpTool};
 use Throwable;
 
-class StoreTools
+use function sprintf;
+
+final class StoreTools
 {
     public function __construct(
-        private Client $client,
-    ) {}
+        private readonly Client $client,
+    ) {
+    }
 
     /**
      * Create a new OpenFGA store.
      *
-     * @param string $name The name of the store to create.
-     *
-     * @return string A success message, or an error message.
+     * @param  string $name the name of the store to create
+     * @return string a success message, or an error message
      */
     #[McpTool(name: 'create_store')]
     public function createStore(
@@ -30,11 +32,11 @@ class StoreTools
         $success = '';
 
         $this->client->createStore(name: $name)
-            ->failure(function (Throwable $e) use (&$failure) {
-                $failure = "❌ Failed to create store! Error: {$e->getMessage()}";
+            ->failure(static function (Throwable $e) use (&$failure): void {
+                $failure = '❌ Failed to create store! Error: ' . $e->getMessage();
             })
-            ->success(function (CreateStoreResponseInterface $store) use ($name, &$success) {
-                $success = "✅ Successfully created store named {$name}! Store names are not unique identifiers, so please use the ID {$store->getId()} for future queries relating to this specific store.";
+            ->success(static function (CreateStoreResponseInterface $store) use ($name, &$success): void {
+                $success = sprintf('✅ Successfully created store named %s! Store names are not unique identifiers, so please use the ID %s for future queries relating to this specific store.', $name, $store->getId());
             });
 
         return $failure ?? $success;
@@ -43,9 +45,8 @@ class StoreTools
     /**
      * Delete an OpenFGA store.
      *
-     * @param string $id The ID of the store to delete.
-     *
-     * @return string A success message, or an error message.
+     * @param  string $id the ID of the store to delete
+     * @return string a success message, or an error message
      */
     #[McpTool(name: 'delete_store')]
     public function deleteStore(
@@ -55,11 +56,11 @@ class StoreTools
         $success = '';
 
         $this->client->deleteStore(store: $id)
-            ->failure(function (Throwable $e) use (&$failure) {
-                $failure = "❌ Failed to delete store! Error: {$e->getMessage()}";
+            ->failure(static function (Throwable $e) use (&$failure): void {
+                $failure = '❌ Failed to delete store! Error: ' . $e->getMessage();
             })
-            ->success(function () use (&$success) {
-                $success = "✅ Successfully deleted store!";
+            ->success(static function () use (&$success): void {
+                $success = '✅ Successfully deleted store!';
             });
 
         return $failure ?? $success;
@@ -68,9 +69,8 @@ class StoreTools
     /**
      * Get an OpenFGA store details.
      *
-     * @param string $id The ID of the store to get details for.
-     *
-     * @return string The store details, or an error message.
+     * @param  string $id the ID of the store to get details for
+     * @return string the store details, or an error message
      */
     #[McpTool(name: 'get_store')]
     public function getStore(
@@ -80,10 +80,10 @@ class StoreTools
         $success = '';
 
         $this->client->getStore(store: $id)
-            ->failure(function (Throwable $e) use (&$failure) {
-                $failure = "❌ Failed to get store! Error: {$e->getMessage()}";
+            ->failure(static function (Throwable $e) use (&$failure): void {
+                $failure = '❌ Failed to get store! Error: ' . $e->getMessage();
             })
-            ->success(function (GetStoreResponseInterface $store) use (&$success) {
+            ->success(static function (GetStoreResponseInterface $store) use (&$success): void {
                 $success = [
                     'id' => $store->getId(),
                     'name' => $store->getName(),
@@ -99,7 +99,7 @@ class StoreTools
     /**
      * List all OpenFGA stores.
      *
-     * @return string|array{id: string, name: string} A list of stores, or an error message.
+     * @return array{id: string, name: string}|string a list of stores, or an error message
      */
     #[McpTool(name: 'list_stores')]
     public function listStores(): string | array
@@ -108,10 +108,10 @@ class StoreTools
         $success = [];
 
         $this->client->listStores()
-            ->failure(function (Throwable $e) use (&$failure) {
-                $failure = "❌ Failed to list stores! Error: {$e->getMessage()}";
+            ->failure(static function (Throwable $e) use (&$failure): void {
+                $failure = '❌ Failed to list stores! Error: ' . $e->getMessage();
             })
-            ->success(function (ListStoresResponseInterface $stores) use (&$success) {
+            ->success(static function (ListStoresResponseInterface $stores) use (&$success): void {
                 foreach ($stores->getStores() as $store) {
                     $success[] = [
                         'id' => $store->getId(),

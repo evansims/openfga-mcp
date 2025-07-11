@@ -86,6 +86,10 @@ To use Client Credentials authentication, the server accepts the following confi
 docker pull evansims/openfga-mcp:latest
 ```
 
+```bash
+docker run ghcr.io/evansims/openfga-mcp:latest
+```
+
 ### Composer
 
 ```bash

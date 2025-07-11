@@ -39,7 +39,8 @@ COPY --from=builder --chown=mcp:mcp /app /app
 USER mcp
 
 # Default environment variables
-ENV OPENFGA_MCP_API_URL="http://localhost:8080" \
+# Use host.docker.internal to connect to host machine's OpenFGA instance
+ENV OPENFGA_MCP_API_URL="http://host.docker.internal:8080" \
     OPENFGA_MCP_TRANSPORT="stdio" \
     OPENFGA_MCP_TRANSPORT_HOST="0.0.0.0" \
     OPENFGA_MCP_TRANSPORT_PORT="9090" \

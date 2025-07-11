@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "063698c1e8d4a512b87df67b93be7d6e",
+    "content-hash": "ec6dd0454aec36af0c73ca3834add396",
     "packages": [
         {
             "name": "composer/semver",
@@ -137,16 +137,16 @@
         },
         {
             "name": "evansims/openfga-php",
-            "version": "v1.5.0",
+            "version": "v1.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/evansims/openfga-php.git",
-                "reference": "86dff78aab88650db8134f41000bef15aea4a828"
+                "reference": "434a33d9bad39d364ce6e0ae57a1d711b65d58af"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/evansims/openfga-php/zipball/86dff78aab88650db8134f41000bef15aea4a828",
-                "reference": "86dff78aab88650db8134f41000bef15aea4a828",
+                "url": "https://api.github.com/repos/evansims/openfga-php/zipball/434a33d9bad39d364ce6e0ae57a1d711b65d58af",
+                "reference": "434a33d9bad39d364ce6e0ae57a1d711b65d58af",
                 "shasum": ""
             },
             "require": {
@@ -248,7 +248,7 @@
                 "issues": "https://github.com/evansims/openfga-php/issues",
                 "source": "https://github.com/evansims/openfga-php"
             },
-            "time": "2025-06-22T02:11:23+00:00"
+            "time": "2025-07-07T04:15:17+00:00"
         },
         {
             "name": "evenement/evenement",
@@ -910,16 +910,16 @@
         },
         {
             "name": "php-mcp/server",
-            "version": "3.2.1",
+            "version": "3.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-mcp/server.git",
-                "reference": "3c98d3a6d86ad4295dcde50372064f8ab884910d"
+                "reference": "05357562e9d4dee076f701ccfe1e38149938e855"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-mcp/server/zipball/3c98d3a6d86ad4295dcde50372064f8ab884910d",
-                "reference": "3c98d3a6d86ad4295dcde50372064f8ab884910d",
+                "url": "https://api.github.com/repos/php-mcp/server/zipball/05357562e9d4dee076f701ccfe1e38149938e855",
+                "reference": "05357562e9d4dee076f701ccfe1e38149938e855",
                 "shasum": ""
             },
             "require": {
@@ -980,9 +980,9 @@
             ],
             "support": {
                 "issues": "https://github.com/php-mcp/server/issues",
-                "source": "https://github.com/php-mcp/server/tree/3.2.1"
+                "source": "https://github.com/php-mcp/server/tree/3.2.2"
             },
-            "time": "2025-06-30T22:09:50+00:00"
+            "time": "2025-07-09T12:20:42+00:00"
         },
         {
             "name": "phpdocumentor/reflection-common",
@@ -4915,16 +4915,16 @@
         },
         {
             "name": "friendsofphp/php-cs-fixer",
-            "version": "v3.80.0",
+            "version": "v3.82.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer.git",
-                "reference": "e49ed46b8f7adcc451d4cd2ed34eaae33372bc60"
+                "reference": "684ed3ab41008a2a4848de8bde17eb168c596247"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHP-CS-Fixer/PHP-CS-Fixer/zipball/e49ed46b8f7adcc451d4cd2ed34eaae33372bc60",
-                "reference": "e49ed46b8f7adcc451d4cd2ed34eaae33372bc60",
+                "url": "https://api.github.com/repos/PHP-CS-Fixer/PHP-CS-Fixer/zipball/684ed3ab41008a2a4848de8bde17eb168c596247",
+                "reference": "684ed3ab41008a2a4848de8bde17eb168c596247",
                 "shasum": ""
             },
             "require": {
@@ -5008,7 +5008,7 @@
             ],
             "support": {
                 "issues": "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/issues",
-                "source": "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/tree/v3.80.0"
+                "source": "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/tree/v3.82.2"
             },
             "funding": [
                 {
@@ -5016,7 +5016,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-07-06T21:00:51+00:00"
+            "time": "2025-07-08T21:13:15+00:00"
         },
         {
             "name": "hamcrest/hamcrest-php",
@@ -7063,16 +7063,16 @@
         },
         {
             "name": "rector/rector",
-            "version": "2.1.0",
+            "version": "2.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/rectorphp/rector.git",
-                "reference": "d513dea45a94394b660e15c155d1fa27826f8e30"
+                "reference": "d0917c069bb0d9bb06ed111cf052510f609015a4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/rectorphp/rector/zipball/d513dea45a94394b660e15c155d1fa27826f8e30",
-                "reference": "d513dea45a94394b660e15c155d1fa27826f8e30",
+                "url": "https://api.github.com/repos/rectorphp/rector/zipball/d0917c069bb0d9bb06ed111cf052510f609015a4",
+                "reference": "d0917c069bb0d9bb06ed111cf052510f609015a4",
                 "shasum": ""
             },
             "require": {
@@ -7111,7 +7111,7 @@
             ],
             "support": {
                 "issues": "https://github.com/rectorphp/rector/issues",
-                "source": "https://github.com/rectorphp/rector/tree/2.1.0"
+                "source": "https://github.com/rectorphp/rector/tree/2.1.1"
             },
             "funding": [
                 {
@@ -7119,7 +7119,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-06-24T20:26:57+00:00"
+            "time": "2025-07-10T11:31:31+00:00"
         },
         {
             "name": "revolt/event-loop",
@@ -9704,6 +9704,62 @@
                 "source": "https://github.com/vimeo/psalm"
             },
             "time": "2025-07-04T09:56:28+00:00"
+        },
+        {
+            "name": "wikimedia/composer-merge-plugin",
+            "version": "v2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/wikimedia/composer-merge-plugin.git",
+                "reference": "a03d426c8e9fb2c9c569d9deeb31a083292788bc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/wikimedia/composer-merge-plugin/zipball/a03d426c8e9fb2c9c569d9deeb31a083292788bc",
+                "reference": "a03d426c8e9fb2c9c569d9deeb31a083292788bc",
+                "shasum": ""
+            },
+            "require": {
+                "composer-plugin-api": "^1.1||^2.0",
+                "php": ">=7.2.0"
+            },
+            "require-dev": {
+                "composer/composer": "^1.1||^2.0",
+                "ext-json": "*",
+                "mediawiki/mediawiki-phan-config": "0.11.1",
+                "php-parallel-lint/php-parallel-lint": "~1.3.1",
+                "phpspec/prophecy": "~1.15.0",
+                "phpunit/phpunit": "^8.5||^9.0",
+                "squizlabs/php_codesniffer": "~3.7.1"
+            },
+            "type": "composer-plugin",
+            "extra": {
+                "class": "Wikimedia\\Composer\\Merge\\V2\\MergePlugin",
+                "branch-alias": {
+                    "dev-master": "2.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Wikimedia\\Composer\\Merge\\V2\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Bryan Davis",
+                    "email": "bd808@wikimedia.org"
+                }
+            ],
+            "description": "Composer plugin to merge multiple composer.json files",
+            "support": {
+                "issues": "https://github.com/wikimedia/composer-merge-plugin/issues",
+                "source": "https://github.com/wikimedia/composer-merge-plugin/tree/v2.1.0"
+            },
+            "time": "2023-04-15T19:07:00+00:00"
         }
     ],
     "aliases": [],

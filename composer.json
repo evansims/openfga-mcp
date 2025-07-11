@@ -46,7 +46,8 @@
     "phpstan/phpstan": "^2",
     "phpstan/phpstan-strict-rules": "^2",
     "rector/rector": "^2",
-    "vimeo/psalm": "^6"
+    "vimeo/psalm": "^6",
+    "wikimedia/composer-merge-plugin": "^2"
   },
   "minimum-stability": "stable",
   "prefer-stable": true,
@@ -69,12 +70,27 @@
   "config": {
     "allow-plugins": {
       "ergebnis/composer-normalize": true,
-      "pestphp/pest-plugin": true
+      "pestphp/pest-plugin": true,
+      "wikimedia/composer-merge-plugin": true
     },
     "optimize-autoloader": true,
     "preferred-install": "dist",
     "process-timeout": 0,
     "sort-packages": true
+  },
+  "extra": {
+    "merge-plugin": {
+      "ignore-duplicates": false,
+      "include": [
+        "composer.local.json"
+      ],
+      "merge-dev": true,
+      "merge-extra": false,
+      "merge-extra-deep": false,
+      "merge-scripts": true,
+      "recurse": true,
+      "replace": true
+    }
   },
   "scripts": {
     "lint": [
@@ -93,7 +109,8 @@
       "@test:unit"
     ],
     "test:unit": [
-      "@php -d memory_limit=2G vendor/bin/pest --testsuite unit"
+      "@putenv XDEBUG_MODE=coverage",
+      "@php -d memory_limit=2G vendor/bin/pest --testsuite unit --strict-global-state --fail-on-risky --fail-on-warning --coverage --coverage-cobertura coverage/cobertura.xml --log-junit junit.xml"
     ],
     "docker:build": [
       "docker build -t openfga-mcp:local ."

@@ -110,9 +110,20 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Update Docker Hub Description
-        uses: peter-evans/dockerhub-description@v4
-        with:
-          username: ${{ vars.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ vars.DOCKERHUB_USER }}/openfga-mcp
-          readme-filepath: ./README.md
+        run: |
+          # Get auth token from Docker Hub
+          TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"username": "'${{ vars.DOCKERHUB_USER }}'", "password": "'${{ secrets.DOCKERHUB_TOKEN }}'"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          # Update the repository description
+          curl -s -X PATCH \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @- \
+            https://hub.docker.com/v2/repositories/${{ vars.DOCKERHUB_USER }}/openfga-mcp/ <<EOF
+          {
+            "full_description": $(jq -Rs . < README.md)
+          }
+          EOF

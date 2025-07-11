@@ -99,6 +99,10 @@ final readonly class RelationshipTools
         $failure = null;
         $success = '';
 
+        if (getConfiguredString('OPENFGA_MCP_API_READONLY', 'false') === 'true') {
+            return '❌ The MCP server is configured in read only mode. You cannot grant permissions in this mode.';
+        }
+
         $tuple = new TupleKey(
             user: $user,
             relation: $relation,
@@ -242,6 +246,10 @@ final readonly class RelationshipTools
     ): string {
         $failure = null;
         $success = '';
+
+        if (getConfiguredString('OPENFGA_MCP_API_READONLY', 'false') === 'true') {
+            return '❌ The MCP server is configured in read only mode. You cannot revoke permissions in this mode.';
+        }
 
         $tuple = new TupleKey(
             user: $user,

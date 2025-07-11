@@ -40,6 +40,10 @@ final readonly class ModelTools
         $success = '';
         $authorizationModel = null;
 
+        if (getConfiguredString('OPENFGA_MCP_API_READONLY', 'false') === 'true') {
+            return '❌ The MCP server is configured in read only mode. You cannot create authorization models in this mode.';
+        }
+
         $this->client->dsl(dsl: $dsl)
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to create authorization model! Error: ' . $e->getMessage();

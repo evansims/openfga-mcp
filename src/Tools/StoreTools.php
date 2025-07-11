@@ -13,6 +13,7 @@ use Throwable;
 
 use function assert;
 use function sprintf;
+use function getConfiguredString;
 
 final readonly class StoreTools
 {
@@ -36,6 +37,10 @@ final readonly class StoreTools
     ): string {
         $failure = null;
         $success = '';
+
+        if (getConfiguredString('OPENFGA_MCP_API_READONLY', 'false') === 'true') {
+            return '❌ The MCP server is configured in read only mode. You cannot create stores in this mode.';
+        }
 
         $this->client->createStore(name: $name)
             ->failure(static function (Throwable $e) use (&$failure): void {
@@ -64,6 +69,10 @@ final readonly class StoreTools
     ): string {
         $failure = null;
         $success = '';
+
+        if (getConfiguredString('OPENFGA_MCP_API_READONLY', 'false') === 'true') {
+            return '❌ The MCP server is configured in read only mode. You cannot delete stores in this mode.';
+        }
 
         $this->client->deleteStore(store: $id)
             ->failure(static function (Throwable $e) use (&$failure): void {

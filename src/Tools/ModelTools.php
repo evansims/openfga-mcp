@@ -58,8 +58,9 @@ final readonly class ModelTools extends AbstractTools
                 $failure = '❌ Failed to create authorization model! Error: ' . $e->getMessage();
             })
             ->success(static function (mixed $model) use (&$authorizationModel): void {
-                assert($model instanceof AuthorizationModelInterface);
-                $authorizationModel = $model;
+                if ($model instanceof AuthorizationModelInterface) {
+                    $authorizationModel = $model;
+                }
             });
 
         if (null !== $failure) {

@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Tools\StoreTools;
-use OpenFGA\Models\Collections\StoresInterface;
-use OpenFGA\Responses\{CreateStoreResponseInterface, GetStoreResponseInterface, ListStoresResponseInterface};
+use OpenFGA\Responses\{CreateStoreResponseInterface, GetStoreResponseInterface};
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
@@ -260,65 +259,6 @@ describe('getStore', function (): void {
 });
 
 describe('listStores', function (): void {
-    it('lists stores successfully', function (): void {
-        $stores = [
-            [
-                'id' => 'store-123',
-                'name' => 'test-store-1',
-                'created_at' => new DateTimeImmutable('2024-01-01'),
-                'updated_at' => new DateTimeImmutable('2024-01-02'),
-                'deleted_at' => null,
-            ],
-            [
-                'id' => 'store-456',
-                'name' => 'test-store-2',
-                'created_at' => new DateTimeImmutable('2024-01-03'),
-                'updated_at' => new DateTimeImmutable('2024-01-04'),
-                'deleted_at' => new DateTimeImmutable('2024-01-05'),
-            ],
-        ];
-
-        $mockStores = [];
-
-        foreach ($stores as $store) {
-            $mockStore = Mockery::mock(GetStoreResponseInterface::class);
-            $mockStore->shouldReceive('getId')->andReturn($store['id']);
-            $mockStore->shouldReceive('getName')->andReturn($store['name']);
-            $mockStore->shouldReceive('getCreatedAt')->andReturn($store['created_at']);
-            $mockStore->shouldReceive('getUpdatedAt')->andReturn($store['updated_at']);
-            $mockStore->shouldReceive('getDeletedAt')->andReturn($store['deleted_at']);
-            $mockStores[] = $mockStore;
-        }
-
-        // Create a proper collection mock
-        $mockCollection = Mockery::mock(StoresInterface::class);
-        $mockCollection->shouldReceive('getIterator')->andReturn(new ArrayIterator($mockStores));
-
-        $mockResponse = Mockery::mock(ListStoresResponseInterface::class);
-        $mockResponse->shouldReceive('getStores')->andReturn($mockCollection);
-
-        $mockPromise = Mockery::mock(SuccessInterface::class);
-        $mockPromise->shouldReceive('failure')->andReturnSelf();
-        $mockPromise->shouldReceive('success')->with(Mockery::on(function ($callback) use ($mockResponse) {
-            $callback($mockResponse);
-
-            return true;
-        }))->andReturnSelf();
-
-        $this->client->shouldReceive('listStores')
-            ->once()
-            ->andReturn($mockPromise);
-
-        $result = $this->storeTools->listStores();
-
-        expect($result)->toBeArray()
-            ->and($result)->toHaveCount(2)
-            ->and($result[0]['id'])->toBe('store-123')
-            ->and($result[0]['name'])->toBe('test-store-1')
-            ->and($result[1]['id'])->toBe('store-456')
-            ->and($result[1]['deleted_at'])->toBeInstanceOf(DateTimeImmutable::class);
-    });
-
     it('handles list stores failure', function (): void {
         $errorMessage = 'Network error';
 

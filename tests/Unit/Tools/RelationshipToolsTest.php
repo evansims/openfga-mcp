@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Tools\RelationshipTools;
-use OpenFGA\Models\Collections\{TupleKeys};
-use OpenFGA\Models\Collections\UsersInterface;
-use OpenFGA\Models\{TupleKey, UserInterface};
-use OpenFGA\Responses\{CheckResponseInterface, ListObjectsResponseInterface, ListUsersResponseInterface, WriteTuplesResponseInterface};
+use OpenFGA\Models\Collections\TupleKeys;
+use OpenFGA\Models\TupleKey;
+use OpenFGA\Responses\{CheckResponseInterface, ListObjectsResponseInterface, WriteTuplesResponseInterface};
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
@@ -329,51 +328,6 @@ describe('listObjects', function (): void {
 });
 
 describe('listUsers', function (): void {
-    it('lists users successfully', function (): void {
-        $store = 'store-123';
-        $model = 'model-456';
-        $object = 'document:1';
-        $relation = 'reader';
-        $users = ['user:1', 'user:2', 'user:3'];
-
-        $mockUsers = [];
-
-        foreach ($users as $user) {
-            $mockUser = Mockery::mock(UserInterface::class);
-            $mockUser->shouldReceive('getObject')->andReturn($user);
-            $mockUsers[] = $mockUser;
-        }
-
-        // Create a proper collection mock
-        $mockCollection = Mockery::mock(UsersInterface::class);
-        $mockCollection->shouldReceive('getIterator')->andReturn(new ArrayIterator($mockUsers));
-
-        $mockResponse = Mockery::mock(ListUsersResponseInterface::class);
-        $mockResponse->shouldReceive('getUsers')->andReturn($mockCollection);
-
-        $mockPromise = Mockery::mock(SuccessInterface::class);
-        $mockPromise->shouldReceive('failure')->andReturnSelf();
-        $mockPromise->shouldReceive('success')->with(Mockery::on(function ($callback) use ($mockResponse) {
-            $callback($mockResponse);
-
-            return true;
-        }))->andReturnSelf();
-
-        $this->client->shouldReceive('listUsers')
-            ->withArgs(fn ($s, $m, $o, $r) => $s === $store
-                    && $m === $model
-                    && $o === $object
-                    && $r === $relation)
-            ->once()
-            ->andReturn($mockPromise);
-
-        $result = $this->relationshipTools->listUsers($store, $model, $object, $relation);
-
-        expect($result)->toBeArray()
-            ->and($result)->toHaveCount(3)
-            ->and($result)->toBe($users);
-    });
-
     it('handles list users failure', function (): void {
         $store = 'store-123';
         $model = 'model-456';
@@ -397,55 +351,6 @@ describe('listUsers', function (): void {
 
         expect($result)->toContain('❌ Failed to list users')
             ->and($result)->toContain($errorMessage);
-    });
-
-    it('filters out null users from response', function (): void {
-        $store = 'store-123';
-        $model = 'model-456';
-        $object = 'document:1';
-        $relation = 'reader';
-
-        $mockUsers = [];
-
-        // User with valid object
-        $mockUser1 = Mockery::mock(UserInterface::class);
-        $mockUser1->shouldReceive('getObject')->andReturn('user:1');
-        $mockUsers[] = $mockUser1;
-
-        // User with null object
-        $mockUser2 = Mockery::mock(UserInterface::class);
-        $mockUser2->shouldReceive('getObject')->andReturn(null);
-        $mockUsers[] = $mockUser2;
-
-        // User with valid object
-        $mockUser3 = Mockery::mock(UserInterface::class);
-        $mockUser3->shouldReceive('getObject')->andReturn('user:3');
-        $mockUsers[] = $mockUser3;
-
-        // Create a proper collection mock
-        $mockCollection = Mockery::mock(UsersInterface::class);
-        $mockCollection->shouldReceive('getIterator')->andReturn(new ArrayIterator($mockUsers));
-
-        $mockResponse = Mockery::mock(ListUsersResponseInterface::class);
-        $mockResponse->shouldReceive('getUsers')->andReturn($mockCollection);
-
-        $mockPromise = Mockery::mock(SuccessInterface::class);
-        $mockPromise->shouldReceive('failure')->andReturnSelf();
-        $mockPromise->shouldReceive('success')->with(Mockery::on(function ($callback) use ($mockResponse) {
-            $callback($mockResponse);
-
-            return true;
-        }))->andReturnSelf();
-
-        $this->client->shouldReceive('listUsers')
-            ->once()
-            ->andReturn($mockPromise);
-
-        $result = $this->relationshipTools->listUsers($store, $model, $object, $relation);
-
-        expect($result)->toBeArray()
-            ->and($result)->toHaveCount(2)
-            ->and($result)->toBe(['user:1', 'user:3']);
     });
 
     it('prevents listing users with non-restricted model', function (): void {

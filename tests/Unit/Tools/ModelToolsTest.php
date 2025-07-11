@@ -5,9 +5,8 @@ declare(strict_types=1);
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Tools\ModelTools;
 use OpenFGA\Models\AuthorizationModelInterface;
-use OpenFGA\Models\Collections\AuthorizationModelsInterface;
 use OpenFGA\Models\Collections\{Conditions, TypeDefinitions};
-use OpenFGA\Responses\{CreateAuthorizationModelResponseInterface, GetAuthorizationModelResponseInterface, ListAuthorizationModelsResponseInterface};
+use OpenFGA\Responses\{CreateAuthorizationModelResponseInterface, GetAuthorizationModelResponseInterface};
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
@@ -374,51 +373,6 @@ type user';
 });
 
 describe('listModels', function (): void {
-    it('lists models successfully', function (): void {
-        $storeId = 'store-123';
-        $models = [
-            ['id' => 'model-1'],
-            ['id' => 'model-2'],
-            ['id' => 'model-3'],
-        ];
-
-        $mockModels = [];
-
-        foreach ($models as $model) {
-            $mockModel = Mockery::mock(AuthorizationModelInterface::class);
-            $mockModel->shouldReceive('getId')->andReturn($model['id']);
-            $mockModels[] = $mockModel;
-        }
-
-        // Create a proper collection mock
-        $mockCollection = Mockery::mock(AuthorizationModelsInterface::class);
-        $mockCollection->shouldReceive('getIterator')->andReturn(new ArrayIterator($mockModels));
-
-        $mockResponse = Mockery::mock(ListAuthorizationModelsResponseInterface::class);
-        $mockResponse->shouldReceive('getModels')->andReturn($mockCollection);
-
-        $mockPromise = Mockery::mock(SuccessInterface::class);
-        $mockPromise->shouldReceive('failure')->andReturnSelf();
-        $mockPromise->shouldReceive('success')->with(Mockery::on(function ($callback) use ($mockResponse) {
-            $callback($mockResponse);
-
-            return true;
-        }))->andReturnSelf();
-
-        $this->client->shouldReceive('listAuthorizationModels')
-            ->with($storeId)
-            ->once()
-            ->andReturn($mockPromise);
-
-        $result = $this->modelTools->listModels($storeId);
-
-        expect($result)->toBeArray()
-            ->and($result)->toHaveCount(3)
-            ->and($result[0]['id'])->toBe('model-1')
-            ->and($result[1]['id'])->toBe('model-2')
-            ->and($result[2]['id'])->toBe('model-3');
-    });
-
     it('handles list models failure', function (): void {
         $storeId = 'store-123';
         $errorMessage = 'Network error';

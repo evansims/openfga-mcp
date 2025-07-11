@@ -34,7 +34,6 @@
 - `check_permission`: Check if something has a relation to an object. This answers, can (user) do (relation) on (object)?
 - `grant_permission`: Grant permission to something on an object by creating a relationship tuple.
 - `revoke_permission`: Revoke permission from something on an object by deleting a relationship tuple.
-
 - `list_users`: Return a list of users that have a given relationship with a given object.
 - `list_objects`: Return a list of objects of a type that something has a relation to.
 

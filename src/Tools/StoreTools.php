@@ -42,6 +42,10 @@ final readonly class StoreTools
             return '❌ The MCP server is configured in read only mode. You cannot create stores in this mode.';
         }
 
+        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+            return '❌ The MCP server is configured in restricted mode. You cannot create stores in this mode.';
+        }
+
         $this->client->createStore(name: $name)
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to create store! Error: ' . $e->getMessage();
@@ -74,6 +78,10 @@ final readonly class StoreTools
             return '❌ The MCP server is configured in read only mode. You cannot delete stores in this mode.';
         }
 
+        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+            return '❌ The MCP server is configured in restricted mode. You cannot delete stores in this mode.';
+        }
+
         $this->client->deleteStore(store: $id)
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to delete store! Error: ' . $e->getMessage();
@@ -95,15 +103,19 @@ final readonly class StoreTools
      * @return array{id: string, name: string, created_at: DateTimeInterface, updated_at: DateTimeInterface, deleted_at: DateTimeInterface|null}|string the store details, or an error message
      */
     #[McpTool(name: 'get_store')]
-    /**
-     * @param  string                                                                                                                                   $id
-     * @return array{id: string, name: string, created_at: DateTimeInterface, updated_at: DateTimeInterface, deleted_at: DateTimeInterface|null}|string
-     */
     public function getStore(
         string $id,
     ): string | array {
         $failure = null;
         $success = '';
+
+        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+
+            if ($restrictedStore !== '' && $restrictedStore !== $id) {
+                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
+            }
+        }
 
         $this->client->getStore(store: $id)
             ->failure(static function (Throwable $e) use (&$failure): void {
@@ -132,9 +144,6 @@ final readonly class StoreTools
      * @return array<array{id: string, name: string, created_at: DateTimeInterface, updated_at: DateTimeInterface, deleted_at: DateTimeInterface|null}>|string a list of stores, or an error message
      */
     #[McpTool(name: 'list_stores')]
-    /**
-     * @return array<array{id: string, name: string, created_at: DateTimeInterface, updated_at: DateTimeInterface, deleted_at: DateTimeInterface|null}>|string
-     */
     public function listStores(): string | array
     {
         $failure = null;

@@ -44,6 +44,14 @@ final readonly class ModelTools
             return '❌ The MCP server is configured in read only mode. You cannot create authorization models in this mode.';
         }
 
+        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+
+            if ($restrictedStore !== '' && $restrictedStore !== $store) {
+                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
+            }
+        }
+
         $this->client->dsl(dsl: $dsl)
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to create authorization model! Error: ' . $e->getMessage();
@@ -91,6 +99,20 @@ final readonly class ModelTools
         $failure = null;
         $success = '';
 
+        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+
+            if ($restrictedStore !== '' && $restrictedStore !== $store) {
+                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
+            }
+
+            $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
+
+            if ($restrictedModel !== '' && $restrictedModel !== $model) {
+                return '❌ The MCP server is configured in restricted mode. You cannot query authorization models other than ' . $restrictedModel . ' in this mode.';
+            }
+        }
+
         $this->client->getAuthorizationModel(store: $store, model: $model)
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to get authorization model! Error: ' . $e->getMessage();
@@ -127,6 +149,20 @@ final readonly class ModelTools
         $failure = null;
         $success = '';
 
+        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+
+            if ($restrictedStore !== '' && $restrictedStore !== $store) {
+                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
+            }
+
+            $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
+
+            if ($restrictedModel !== '' && $restrictedModel !== $model) {
+                return '❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $restrictedModel . ' in this mode.';
+            }
+        }
+
         $this->client->getAuthorizationModel(store: $store, model: $model)
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = '❌ Failed to get authorization model! Error: ' . $e->getMessage();
@@ -160,6 +196,14 @@ final readonly class ModelTools
     ): string | array {
         $failure = null;
         $success = [];
+
+        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+
+            if ($restrictedStore !== '' && $restrictedStore !== $store) {
+                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
+            }
+        }
 
         $this->client->listAuthorizationModels(store: $store)
             ->failure(static function (Throwable $e) use (&$failure): void {

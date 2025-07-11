@@ -5,8 +5,9 @@ declare(strict_types=1);
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Tools\ModelTools;
 use OpenFGA\Models\AuthorizationModelInterface;
+use OpenFGA\Models\Collections\AuthorizationModelsInterface;
 use OpenFGA\Models\Collections\{Conditions, TypeDefinitions};
-use OpenFGA\Responses\{CreateAuthorizationModelResponseInterface, GetAuthorizationModelResponseInterface};
+use OpenFGA\Responses\{CreateAuthorizationModelResponseInterface, GetAuthorizationModelResponseInterface, ListAuthorizationModelsResponseInterface};
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
@@ -78,7 +79,7 @@ type document
 
         $mockPromise = Mockery::mock(FailureInterface::class);
         $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
-            $callback(new \Exception($errorMessage));
+            $callback(new Exception($errorMessage));
 
             return true;
         }))->andReturnSelf();
@@ -94,7 +95,7 @@ type document
         expect($result)->toContain('❌ Failed to create authorization model')
             ->and($result)->toContain($errorMessage);
     });
-    
+
     it('handles model creation failure after successful DSL parsing', function (): void {
         $dsl = 'model
   schema 1.1
@@ -116,7 +117,7 @@ type user';
 
         $mockCreatePromise = Mockery::mock(FailureInterface::class);
         $mockCreatePromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
-            $callback(new \Exception($errorMessage));
+            $callback(new Exception($errorMessage));
 
             return true;
         }))->andReturnSelf();
@@ -136,7 +137,7 @@ type user';
         expect($result)->toContain('❌ Failed to create authorization model')
             ->and($result)->toContain($errorMessage);
     });
-    
+
     it('handles null authorization model from DSL parsing', function (): void {
         $dsl = 'model
   schema 1.1
@@ -147,7 +148,7 @@ type user';
         $mockDslPromise->shouldReceive('failure')->andReturnSelf();
         $mockDslPromise->shouldReceive('success')->with(Mockery::on(function ($callback) {
             // Create a non-AuthorizationModelInterface object
-            $callback(new \stdClass());
+            $callback(new stdClass);
 
             return true;
         }))->andReturnSelf();
@@ -242,7 +243,7 @@ describe('getModel', function (): void {
 
         expect($result)->toBe('❌ Authorization model not found!');
     });
-    
+
     it('handles get model failure', function (): void {
         $storeId = 'store-123';
         $modelId = 'model-456';
@@ -250,7 +251,7 @@ describe('getModel', function (): void {
 
         $mockPromise = Mockery::mock(FailureInterface::class);
         $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
-            $callback(new \Exception($errorMessage));
+            $callback(new Exception($errorMessage));
 
             return true;
         }))->andReturnSelf();
@@ -346,7 +347,7 @@ type user';
 
         expect($result)->toBe('❌ Authorization model not found!');
     });
-    
+
     it('handles get model DSL failure', function (): void {
         $storeId = 'store-123';
         $modelId = 'model-456';
@@ -354,7 +355,7 @@ type user';
 
         $mockPromise = Mockery::mock(FailureInterface::class);
         $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
-            $callback(new \Exception($errorMessage));
+            $callback(new Exception($errorMessage));
 
             return true;
         }))->andReturnSelf();
@@ -382,15 +383,16 @@ describe('listModels', function (): void {
         ];
 
         $mockModels = [];
+
         foreach ($models as $model) {
             $mockModel = Mockery::mock(AuthorizationModelInterface::class);
             $mockModel->shouldReceive('getId')->andReturn($model['id']);
             $mockModels[] = $mockModel;
         }
-        
+
         // Create a proper collection mock
-        $mockCollection = Mockery::mock(\OpenFGA\Models\Collections\AuthorizationModelsInterface::class);
-        $mockCollection->shouldReceive('getIterator')->andReturn(new \ArrayIterator($mockModels));
+        $mockCollection = Mockery::mock(AuthorizationModelsInterface::class);
+        $mockCollection->shouldReceive('getIterator')->andReturn(new ArrayIterator($mockModels));
 
         $mockResponse = Mockery::mock(ListAuthorizationModelsResponseInterface::class);
         $mockResponse->shouldReceive('getModels')->andReturn($mockCollection);
@@ -416,14 +418,14 @@ describe('listModels', function (): void {
             ->and($result[1]['id'])->toBe('model-2')
             ->and($result[2]['id'])->toBe('model-3');
     });
-    
+
     it('handles list models failure', function (): void {
         $storeId = 'store-123';
         $errorMessage = 'Network error';
 
         $mockPromise = Mockery::mock(FailureInterface::class);
         $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
-            $callback(new \Exception($errorMessage));
+            $callback(new Exception($errorMessage));
 
             return true;
         }))->andReturnSelf();

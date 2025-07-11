@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Tools\StoreTools;
+use OpenFGA\Models\Collections\StoresInterface;
 use OpenFGA\Responses\{CreateStoreResponseInterface, GetStoreResponseInterface, ListStoresResponseInterface};
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
@@ -264,20 +265,21 @@ describe('listStores', function (): void {
             [
                 'id' => 'store-123',
                 'name' => 'test-store-1',
-                'created_at' => new \DateTimeImmutable('2024-01-01'),
-                'updated_at' => new \DateTimeImmutable('2024-01-02'),
+                'created_at' => new DateTimeImmutable('2024-01-01'),
+                'updated_at' => new DateTimeImmutable('2024-01-02'),
                 'deleted_at' => null,
             ],
             [
                 'id' => 'store-456',
                 'name' => 'test-store-2',
-                'created_at' => new \DateTimeImmutable('2024-01-03'),
-                'updated_at' => new \DateTimeImmutable('2024-01-04'),
-                'deleted_at' => new \DateTimeImmutable('2024-01-05'),
+                'created_at' => new DateTimeImmutable('2024-01-03'),
+                'updated_at' => new DateTimeImmutable('2024-01-04'),
+                'deleted_at' => new DateTimeImmutable('2024-01-05'),
             ],
         ];
 
         $mockStores = [];
+
         foreach ($stores as $store) {
             $mockStore = Mockery::mock(GetStoreResponseInterface::class);
             $mockStore->shouldReceive('getId')->andReturn($store['id']);
@@ -289,8 +291,8 @@ describe('listStores', function (): void {
         }
 
         // Create a proper collection mock
-        $mockCollection = Mockery::mock(\OpenFGA\Models\Collections\StoresInterface::class);
-        $mockCollection->shouldReceive('getIterator')->andReturn(new \ArrayIterator($mockStores));
+        $mockCollection = Mockery::mock(StoresInterface::class);
+        $mockCollection->shouldReceive('getIterator')->andReturn(new ArrayIterator($mockStores));
 
         $mockResponse = Mockery::mock(ListStoresResponseInterface::class);
         $mockResponse->shouldReceive('getStores')->andReturn($mockCollection);
@@ -314,7 +316,7 @@ describe('listStores', function (): void {
             ->and($result[0]['id'])->toBe('store-123')
             ->and($result[0]['name'])->toBe('test-store-1')
             ->and($result[1]['id'])->toBe('store-456')
-            ->and($result[1]['deleted_at'])->toBeInstanceOf(\DateTimeImmutable::class);
+            ->and($result[1]['deleted_at'])->toBeInstanceOf(DateTimeImmutable::class);
     });
 
     it('handles list stores failure', function (): void {
@@ -322,7 +324,7 @@ describe('listStores', function (): void {
 
         $mockPromise = Mockery::mock(FailureInterface::class);
         $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
-            $callback(new \Exception($errorMessage));
+            $callback(new Exception($errorMessage));
 
             return true;
         }))->andReturnSelf();

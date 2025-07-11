@@ -112,6 +112,9 @@
       "@putenv XDEBUG_MODE=coverage",
       "@php -d memory_limit=2G vendor/bin/pest --testsuite unit --strict-global-state --fail-on-risky --fail-on-warning --coverage --coverage-cobertura coverage/cobertura.xml --log-junit junit.xml"
     ],
+    "test:simple": [
+      "@php -d memory_limit=2G vendor/bin/pest --testsuite unit"
+    ],
     "docker:build": [
       "docker build -t openfga-mcp:local ."
     ]

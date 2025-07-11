@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Tools\RelationshipTools;
-use OpenFGA\Models\Collections\{TupleKeys, UserTypeFilters};
-use OpenFGA\Models\TupleKey;
+use OpenFGA\Models\Collections\{TupleKeys};
+use OpenFGA\Models\Collections\UsersInterface;
+use OpenFGA\Models\{TupleKey, UserInterface};
 use OpenFGA\Responses\{CheckResponseInterface, ListObjectsResponseInterface, ListUsersResponseInterface, WriteTuplesResponseInterface};
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
@@ -82,7 +83,7 @@ describe('checkPermission', function (): void {
 
         expect($result)->toBe('❌ Permission denied');
     });
-    
+
     it('handles check permission failure', function (): void {
         $store = 'store-123';
         $model = 'model-456';
@@ -93,7 +94,7 @@ describe('checkPermission', function (): void {
 
         $mockPromise = Mockery::mock(FailureInterface::class);
         $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
-            $callback(new \Exception($errorMessage));
+            $callback(new Exception($errorMessage));
 
             return true;
         }))->andReturnSelf();
@@ -336,15 +337,16 @@ describe('listUsers', function (): void {
         $users = ['user:1', 'user:2', 'user:3'];
 
         $mockUsers = [];
+
         foreach ($users as $user) {
-            $mockUser = Mockery::mock(\OpenFGA\Models\UserInterface::class);
+            $mockUser = Mockery::mock(UserInterface::class);
             $mockUser->shouldReceive('getObject')->andReturn($user);
             $mockUsers[] = $mockUser;
         }
 
         // Create a proper collection mock
-        $mockCollection = Mockery::mock(\OpenFGA\Models\Collections\UsersInterface::class);
-        $mockCollection->shouldReceive('getIterator')->andReturn(new \ArrayIterator($mockUsers));
+        $mockCollection = Mockery::mock(UsersInterface::class);
+        $mockCollection->shouldReceive('getIterator')->andReturn(new ArrayIterator($mockUsers));
 
         $mockResponse = Mockery::mock(ListUsersResponseInterface::class);
         $mockResponse->shouldReceive('getUsers')->andReturn($mockCollection);
@@ -371,7 +373,7 @@ describe('listUsers', function (): void {
             ->and($result)->toHaveCount(3)
             ->and($result)->toBe($users);
     });
-    
+
     it('handles list users failure', function (): void {
         $store = 'store-123';
         $model = 'model-456';
@@ -381,7 +383,7 @@ describe('listUsers', function (): void {
 
         $mockPromise = Mockery::mock(FailureInterface::class);
         $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
-            $callback(new \Exception($errorMessage));
+            $callback(new Exception($errorMessage));
 
             return true;
         }))->andReturnSelf();
@@ -396,7 +398,7 @@ describe('listUsers', function (): void {
         expect($result)->toContain('❌ Failed to list users')
             ->and($result)->toContain($errorMessage);
     });
-    
+
     it('filters out null users from response', function (): void {
         $store = 'store-123';
         $model = 'model-456';
@@ -404,25 +406,25 @@ describe('listUsers', function (): void {
         $relation = 'reader';
 
         $mockUsers = [];
-        
+
         // User with valid object
-        $mockUser1 = Mockery::mock(\OpenFGA\Models\UserInterface::class);
+        $mockUser1 = Mockery::mock(UserInterface::class);
         $mockUser1->shouldReceive('getObject')->andReturn('user:1');
         $mockUsers[] = $mockUser1;
-        
+
         // User with null object
-        $mockUser2 = Mockery::mock(\OpenFGA\Models\UserInterface::class);
+        $mockUser2 = Mockery::mock(UserInterface::class);
         $mockUser2->shouldReceive('getObject')->andReturn(null);
         $mockUsers[] = $mockUser2;
-        
+
         // User with valid object
-        $mockUser3 = Mockery::mock(\OpenFGA\Models\UserInterface::class);
+        $mockUser3 = Mockery::mock(UserInterface::class);
         $mockUser3->shouldReceive('getObject')->andReturn('user:3');
         $mockUsers[] = $mockUser3;
 
         // Create a proper collection mock
-        $mockCollection = Mockery::mock(\OpenFGA\Models\Collections\UsersInterface::class);
-        $mockCollection->shouldReceive('getIterator')->andReturn(new \ArrayIterator($mockUsers));
+        $mockCollection = Mockery::mock(UsersInterface::class);
+        $mockCollection->shouldReceive('getIterator')->andReturn(new ArrayIterator($mockUsers));
 
         $mockResponse = Mockery::mock(ListUsersResponseInterface::class);
         $mockResponse->shouldReceive('getUsers')->andReturn($mockCollection);
@@ -456,7 +458,7 @@ describe('listUsers', function (): void {
 
         expect($result)->toBe('❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than allowed-model in this mode.');
     });
-    
+
     it('prevents listing users with non-restricted store', function (): void {
         putenv('OPENFGA_MCP_API_RESTRICT=true');
         putenv('OPENFGA_MCP_API_STORE=allowed-store');

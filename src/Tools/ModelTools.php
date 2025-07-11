@@ -13,7 +13,7 @@ use Throwable;
 
 use function assert;
 
-final readonly class ModelTools
+final readonly class ModelTools extends AbstractTools
 {
     public function __construct(
         private Client $client,

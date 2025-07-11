@@ -15,7 +15,7 @@ use function assert;
 use function sprintf;
 use function getConfiguredString;
 
-final readonly class StoreTools
+final readonly class StoreTools extends AbstractTools
 {
     public function __construct(
         private Client $client,

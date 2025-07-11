@@ -17,7 +17,7 @@ use Throwable;
 use function assert;
 use function is_string;
 
-final readonly class RelationshipTools
+final readonly class RelationshipTools extends AbstractTools
 {
     public function __construct(
         private Client $client,

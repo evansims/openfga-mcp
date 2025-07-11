@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OpenFGA\MCP\Tools;
 
-use OpenFGA\Client;
+use OpenFGA\ClientInterface;
 use OpenFGA\Exceptions\SerializationException;
 use OpenFGA\Models\AuthorizationModelInterface;
 use OpenFGA\Responses\{CreateAuthorizationModelResponseInterface, GetAuthorizationModelResponseInterface, ListAuthorizationModelsResponseInterface};
@@ -12,11 +12,12 @@ use PhpMcp\Server\Attributes\{McpTool};
 use Throwable;
 
 use function assert;
+use function getConfiguredString;
 
 final readonly class ModelTools extends AbstractTools
 {
     public function __construct(
-        private Client $client,
+        private ClientInterface $client,
     ) {
     }
 
@@ -40,14 +41,14 @@ final readonly class ModelTools extends AbstractTools
         $success = '';
         $authorizationModel = null;
 
-        if (getConfiguredString('OPENFGA_MCP_API_READONLY', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
             return '❌ The MCP server is configured in read only mode. You cannot create authorization models in this mode.';
         }
 
-        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
             $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
 
-            if ($restrictedStore !== '' && $restrictedStore !== $store) {
+            if ('' !== $restrictedStore && $restrictedStore !== $store) {
                 return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
             }
         }
@@ -99,16 +100,16 @@ final readonly class ModelTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
             $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
 
-            if ($restrictedStore !== '' && $restrictedStore !== $store) {
+            if ('' !== $restrictedStore && $restrictedStore !== $store) {
                 return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
             }
 
             $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
 
-            if ($restrictedModel !== '' && $restrictedModel !== $model) {
+            if ('' !== $restrictedModel && $restrictedModel !== $model) {
                 return '❌ The MCP server is configured in restricted mode. You cannot query authorization models other than ' . $restrictedModel . ' in this mode.';
             }
         }
@@ -149,16 +150,16 @@ final readonly class ModelTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
             $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
 
-            if ($restrictedStore !== '' && $restrictedStore !== $store) {
+            if ('' !== $restrictedStore && $restrictedStore !== $store) {
                 return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
             }
 
             $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
 
-            if ($restrictedModel !== '' && $restrictedModel !== $model) {
+            if ('' !== $restrictedModel && $restrictedModel !== $model) {
                 return '❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $restrictedModel . ' in this mode.';
             }
         }
@@ -197,10 +198,10 @@ final readonly class ModelTools extends AbstractTools
         $failure = null;
         $success = [];
 
-        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
             $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
 
-            if ($restrictedStore !== '' && $restrictedStore !== $store) {
+            if ('' !== $restrictedStore && $restrictedStore !== $store) {
                 return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
             }
         }

@@ -6,19 +6,19 @@ namespace OpenFGA\MCP\Tools;
 
 use DateTimeInterface;
 use InvalidArgumentException;
-use OpenFGA\Client;
+use OpenFGA\ClientInterface;
 use OpenFGA\Responses\{CreateStoreResponseInterface, GetStoreResponseInterface, ListStoresResponseInterface};
 use PhpMcp\Server\Attributes\{McpTool};
 use Throwable;
 
 use function assert;
-use function sprintf;
 use function getConfiguredString;
+use function sprintf;
 
 final readonly class StoreTools extends AbstractTools
 {
     public function __construct(
-        private Client $client,
+        private ClientInterface $client,
     ) {
     }
 
@@ -38,11 +38,11 @@ final readonly class StoreTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if (getConfiguredString('OPENFGA_MCP_API_READONLY', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
             return '❌ The MCP server is configured in read only mode. You cannot create stores in this mode.';
         }
 
-        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
             return '❌ The MCP server is configured in restricted mode. You cannot create stores in this mode.';
         }
 
@@ -74,11 +74,11 @@ final readonly class StoreTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if (getConfiguredString('OPENFGA_MCP_API_READONLY', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
             return '❌ The MCP server is configured in read only mode. You cannot delete stores in this mode.';
         }
 
-        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
             return '❌ The MCP server is configured in restricted mode. You cannot delete stores in this mode.';
         }
 
@@ -109,10 +109,10 @@ final readonly class StoreTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if (getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false') === 'true') {
+        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
             $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
 
-            if ($restrictedStore !== '' && $restrictedStore !== $id) {
+            if ('' !== $restrictedStore && $restrictedStore !== $id) {
                 return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
             }
         }

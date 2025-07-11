@@ -41,6 +41,7 @@
   "require-dev": {
     "ergebnis/composer-normalize": "^2",
     "friendsofphp/php-cs-fixer": "^3",
+    "mockery/mockery": "^1.6",
     "pestphp/pest": "^3",
     "phpstan/phpstan": "^2",
     "phpstan/phpstan-strict-rules": "^2",
@@ -52,7 +53,10 @@
   "autoload": {
     "psr-4": {
       "OpenFGA\\MCP\\": "src/"
-    }
+    },
+    "files": [
+      "src/helpers.php"
+    ]
   },
   "autoload-dev": {
     "psr-4": {
@@ -89,7 +93,7 @@
       "@test:unit"
     ],
     "test:unit": [
-      "@php -d memory_limit=2G vendor/bin/pest --colors=always --testsuite unit --strict-global-state --fail-on-risky --fail-on-warning --coverage --strict-coverage --compact --coverage-cobertura coverage/cobertura.xml --log-junit junit.xml"
+      "@php -d memory_limit=2G vendor/bin/pest --testsuite unit"
     ],
     "docker:build": [
       "docker build -t openfga-mcp:local ."

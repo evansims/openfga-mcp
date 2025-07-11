@@ -78,7 +78,7 @@ type document
 
         $mockPromise = Mockery::mock(FailureInterface::class);
         $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
-            $callback(new Exception($errorMessage));
+            $callback(new \Exception($errorMessage));
 
             return true;
         }))->andReturnSelf();
@@ -93,6 +93,75 @@ type document
 
         expect($result)->toContain('❌ Failed to create authorization model')
             ->and($result)->toContain($errorMessage);
+    });
+    
+    it('handles model creation failure after successful DSL parsing', function (): void {
+        $dsl = 'model
+  schema 1.1
+type user';
+        $storeId = 'store-123';
+        $errorMessage = 'Network error';
+
+        $mockModel = Mockery::mock(AuthorizationModelInterface::class);
+        $mockModel->shouldReceive('getTypeDefinitions')->andReturn(new TypeDefinitions);
+        $mockModel->shouldReceive('getConditions')->andReturn(new Conditions);
+
+        $mockDslPromise = Mockery::mock(SuccessInterface::class);
+        $mockDslPromise->shouldReceive('failure')->andReturnSelf();
+        $mockDslPromise->shouldReceive('success')->with(Mockery::on(function ($callback) use ($mockModel) {
+            $callback($mockModel);
+
+            return true;
+        }))->andReturnSelf();
+
+        $mockCreatePromise = Mockery::mock(FailureInterface::class);
+        $mockCreatePromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
+            $callback(new \Exception($errorMessage));
+
+            return true;
+        }))->andReturnSelf();
+        $mockCreatePromise->shouldReceive('success')->andReturnSelf();
+
+        $this->client->shouldReceive('dsl')
+            ->with($dsl)
+            ->once()
+            ->andReturn($mockDslPromise);
+
+        $this->client->shouldReceive('createAuthorizationModel')
+            ->once()
+            ->andReturn($mockCreatePromise);
+
+        $result = $this->modelTools->createModel($dsl, $storeId);
+
+        expect($result)->toContain('❌ Failed to create authorization model')
+            ->and($result)->toContain($errorMessage);
+    });
+    
+    it('handles null authorization model from DSL parsing', function (): void {
+        $dsl = 'model
+  schema 1.1
+type user';
+        $storeId = 'store-123';
+
+        $mockDslPromise = Mockery::mock(SuccessInterface::class);
+        $mockDslPromise->shouldReceive('failure')->andReturnSelf();
+        $mockDslPromise->shouldReceive('success')->with(Mockery::on(function ($callback) {
+            // Create a non-AuthorizationModelInterface object
+            $callback(new \stdClass());
+
+            return true;
+        }))->andReturnSelf();
+
+        $this->client->shouldReceive('dsl')
+            ->with($dsl)
+            ->once()
+            ->andReturn($mockDslPromise);
+
+        $this->client->shouldReceive('createAuthorizationModel')->never();
+
+        $result = $this->modelTools->createModel($dsl, $storeId);
+
+        expect($result)->toBe('❌ Failed to create authorization model!');
     });
 
     it('prevents model creation in read-only mode', function (): void {
@@ -172,6 +241,30 @@ describe('getModel', function (): void {
         $result = $this->modelTools->getModel($storeId, $modelId);
 
         expect($result)->toBe('❌ Authorization model not found!');
+    });
+    
+    it('handles get model failure', function (): void {
+        $storeId = 'store-123';
+        $modelId = 'model-456';
+        $errorMessage = 'Network error';
+
+        $mockPromise = Mockery::mock(FailureInterface::class);
+        $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
+            $callback(new \Exception($errorMessage));
+
+            return true;
+        }))->andReturnSelf();
+        $mockPromise->shouldReceive('success')->andReturnSelf();
+
+        $this->client->shouldReceive('getAuthorizationModel')
+            ->with($storeId, $modelId)
+            ->once()
+            ->andReturn($mockPromise);
+
+        $result = $this->modelTools->getModel($storeId, $modelId);
+
+        expect($result)->toContain('❌ Failed to get authorization model')
+            ->and($result)->toContain($errorMessage);
     });
 
     it('prevents getting model from non-restricted store', function (): void {
@@ -253,9 +346,100 @@ type user';
 
         expect($result)->toBe('❌ Authorization model not found!');
     });
+    
+    it('handles get model DSL failure', function (): void {
+        $storeId = 'store-123';
+        $modelId = 'model-456';
+        $errorMessage = 'Network error';
+
+        $mockPromise = Mockery::mock(FailureInterface::class);
+        $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
+            $callback(new \Exception($errorMessage));
+
+            return true;
+        }))->andReturnSelf();
+        $mockPromise->shouldReceive('success')->andReturnSelf();
+
+        $this->client->shouldReceive('getAuthorizationModel')
+            ->with($storeId, $modelId)
+            ->once()
+            ->andReturn($mockPromise);
+
+        $result = $this->modelTools->getModelDsl($storeId, $modelId);
+
+        expect($result)->toContain('❌ Failed to get authorization model')
+            ->and($result)->toContain($errorMessage);
+    });
 });
 
 describe('listModels', function (): void {
+    it('lists models successfully', function (): void {
+        $storeId = 'store-123';
+        $models = [
+            ['id' => 'model-1'],
+            ['id' => 'model-2'],
+            ['id' => 'model-3'],
+        ];
+
+        $mockModels = [];
+        foreach ($models as $model) {
+            $mockModel = Mockery::mock(AuthorizationModelInterface::class);
+            $mockModel->shouldReceive('getId')->andReturn($model['id']);
+            $mockModels[] = $mockModel;
+        }
+        
+        // Create a proper collection mock
+        $mockCollection = Mockery::mock(\OpenFGA\Models\Collections\AuthorizationModelsInterface::class);
+        $mockCollection->shouldReceive('getIterator')->andReturn(new \ArrayIterator($mockModels));
+
+        $mockResponse = Mockery::mock(ListAuthorizationModelsResponseInterface::class);
+        $mockResponse->shouldReceive('getModels')->andReturn($mockCollection);
+
+        $mockPromise = Mockery::mock(SuccessInterface::class);
+        $mockPromise->shouldReceive('failure')->andReturnSelf();
+        $mockPromise->shouldReceive('success')->with(Mockery::on(function ($callback) use ($mockResponse) {
+            $callback($mockResponse);
+
+            return true;
+        }))->andReturnSelf();
+
+        $this->client->shouldReceive('listAuthorizationModels')
+            ->with($storeId)
+            ->once()
+            ->andReturn($mockPromise);
+
+        $result = $this->modelTools->listModels($storeId);
+
+        expect($result)->toBeArray()
+            ->and($result)->toHaveCount(3)
+            ->and($result[0]['id'])->toBe('model-1')
+            ->and($result[1]['id'])->toBe('model-2')
+            ->and($result[2]['id'])->toBe('model-3');
+    });
+    
+    it('handles list models failure', function (): void {
+        $storeId = 'store-123';
+        $errorMessage = 'Network error';
+
+        $mockPromise = Mockery::mock(FailureInterface::class);
+        $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
+            $callback(new \Exception($errorMessage));
+
+            return true;
+        }))->andReturnSelf();
+        $mockPromise->shouldReceive('success')->andReturnSelf();
+
+        $this->client->shouldReceive('listAuthorizationModels')
+            ->with($storeId)
+            ->once()
+            ->andReturn($mockPromise);
+
+        $result = $this->modelTools->listModels($storeId);
+
+        expect($result)->toContain('❌ Failed to list authorization models')
+            ->and($result)->toContain($errorMessage);
+    });
+
     it('prevents listing models from non-restricted store', function (): void {
         putenv('OPENFGA_MCP_API_RESTRICT=true');
         putenv('OPENFGA_MCP_API_STORE=allowed-store');

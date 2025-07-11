@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Tools\RelationshipTools;
-use OpenFGA\Models\Collections\{TupleKeys};
+use OpenFGA\Models\Collections\{TupleKeys, UserTypeFilters};
 use OpenFGA\Models\TupleKey;
-use OpenFGA\Responses\{CheckResponseInterface, ListObjectsResponseInterface, WriteTuplesResponseInterface};
+use OpenFGA\Responses\{CheckResponseInterface, ListObjectsResponseInterface, ListUsersResponseInterface, WriteTuplesResponseInterface};
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
@@ -81,6 +81,32 @@ describe('checkPermission', function (): void {
         $result = $this->relationshipTools->checkPermission($store, $model, $user, $relation, $object);
 
         expect($result)->toBe('❌ Permission denied');
+    });
+    
+    it('handles check permission failure', function (): void {
+        $store = 'store-123';
+        $model = 'model-456';
+        $user = 'user:1';
+        $relation = 'reader';
+        $object = 'document:1';
+        $errorMessage = 'Network error';
+
+        $mockPromise = Mockery::mock(FailureInterface::class);
+        $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
+            $callback(new \Exception($errorMessage));
+
+            return true;
+        }))->andReturnSelf();
+        $mockPromise->shouldReceive('success')->andReturnSelf();
+
+        $this->client->shouldReceive('check')
+            ->once()
+            ->andReturn($mockPromise);
+
+        $result = $this->relationshipTools->checkPermission($store, $model, $user, $relation, $object);
+
+        expect($result)->toContain('❌ Failed to check permission')
+            ->and($result)->toContain($errorMessage);
     });
 
     it('prevents checking permission with non-restricted store', function (): void {
@@ -302,6 +328,124 @@ describe('listObjects', function (): void {
 });
 
 describe('listUsers', function (): void {
+    it('lists users successfully', function (): void {
+        $store = 'store-123';
+        $model = 'model-456';
+        $object = 'document:1';
+        $relation = 'reader';
+        $users = ['user:1', 'user:2', 'user:3'];
+
+        $mockUsers = [];
+        foreach ($users as $user) {
+            $mockUser = Mockery::mock(\OpenFGA\Models\UserInterface::class);
+            $mockUser->shouldReceive('getObject')->andReturn($user);
+            $mockUsers[] = $mockUser;
+        }
+
+        // Create a proper collection mock
+        $mockCollection = Mockery::mock(\OpenFGA\Models\Collections\UsersInterface::class);
+        $mockCollection->shouldReceive('getIterator')->andReturn(new \ArrayIterator($mockUsers));
+
+        $mockResponse = Mockery::mock(ListUsersResponseInterface::class);
+        $mockResponse->shouldReceive('getUsers')->andReturn($mockCollection);
+
+        $mockPromise = Mockery::mock(SuccessInterface::class);
+        $mockPromise->shouldReceive('failure')->andReturnSelf();
+        $mockPromise->shouldReceive('success')->with(Mockery::on(function ($callback) use ($mockResponse) {
+            $callback($mockResponse);
+
+            return true;
+        }))->andReturnSelf();
+
+        $this->client->shouldReceive('listUsers')
+            ->withArgs(fn ($s, $m, $o, $r) => $s === $store
+                    && $m === $model
+                    && $o === $object
+                    && $r === $relation)
+            ->once()
+            ->andReturn($mockPromise);
+
+        $result = $this->relationshipTools->listUsers($store, $model, $object, $relation);
+
+        expect($result)->toBeArray()
+            ->and($result)->toHaveCount(3)
+            ->and($result)->toBe($users);
+    });
+    
+    it('handles list users failure', function (): void {
+        $store = 'store-123';
+        $model = 'model-456';
+        $object = 'document:1';
+        $relation = 'reader';
+        $errorMessage = 'Network error';
+
+        $mockPromise = Mockery::mock(FailureInterface::class);
+        $mockPromise->shouldReceive('failure')->with(Mockery::on(function ($callback) use ($errorMessage) {
+            $callback(new \Exception($errorMessage));
+
+            return true;
+        }))->andReturnSelf();
+        $mockPromise->shouldReceive('success')->andReturnSelf();
+
+        $this->client->shouldReceive('listUsers')
+            ->once()
+            ->andReturn($mockPromise);
+
+        $result = $this->relationshipTools->listUsers($store, $model, $object, $relation);
+
+        expect($result)->toContain('❌ Failed to list users')
+            ->and($result)->toContain($errorMessage);
+    });
+    
+    it('filters out null users from response', function (): void {
+        $store = 'store-123';
+        $model = 'model-456';
+        $object = 'document:1';
+        $relation = 'reader';
+
+        $mockUsers = [];
+        
+        // User with valid object
+        $mockUser1 = Mockery::mock(\OpenFGA\Models\UserInterface::class);
+        $mockUser1->shouldReceive('getObject')->andReturn('user:1');
+        $mockUsers[] = $mockUser1;
+        
+        // User with null object
+        $mockUser2 = Mockery::mock(\OpenFGA\Models\UserInterface::class);
+        $mockUser2->shouldReceive('getObject')->andReturn(null);
+        $mockUsers[] = $mockUser2;
+        
+        // User with valid object
+        $mockUser3 = Mockery::mock(\OpenFGA\Models\UserInterface::class);
+        $mockUser3->shouldReceive('getObject')->andReturn('user:3');
+        $mockUsers[] = $mockUser3;
+
+        // Create a proper collection mock
+        $mockCollection = Mockery::mock(\OpenFGA\Models\Collections\UsersInterface::class);
+        $mockCollection->shouldReceive('getIterator')->andReturn(new \ArrayIterator($mockUsers));
+
+        $mockResponse = Mockery::mock(ListUsersResponseInterface::class);
+        $mockResponse->shouldReceive('getUsers')->andReturn($mockCollection);
+
+        $mockPromise = Mockery::mock(SuccessInterface::class);
+        $mockPromise->shouldReceive('failure')->andReturnSelf();
+        $mockPromise->shouldReceive('success')->with(Mockery::on(function ($callback) use ($mockResponse) {
+            $callback($mockResponse);
+
+            return true;
+        }))->andReturnSelf();
+
+        $this->client->shouldReceive('listUsers')
+            ->once()
+            ->andReturn($mockPromise);
+
+        $result = $this->relationshipTools->listUsers($store, $model, $object, $relation);
+
+        expect($result)->toBeArray()
+            ->and($result)->toHaveCount(2)
+            ->and($result)->toBe(['user:1', 'user:3']);
+    });
+
     it('prevents listing users with non-restricted model', function (): void {
         putenv('OPENFGA_MCP_API_RESTRICT=true');
         putenv('OPENFGA_MCP_API_MODEL=allowed-model');
@@ -311,5 +455,16 @@ describe('listUsers', function (): void {
         $result = $this->relationshipTools->listUsers('store-123', 'different-model', 'document:1', 'reader');
 
         expect($result)->toBe('❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than allowed-model in this mode.');
+    });
+    
+    it('prevents listing users with non-restricted store', function (): void {
+        putenv('OPENFGA_MCP_API_RESTRICT=true');
+        putenv('OPENFGA_MCP_API_STORE=allowed-store');
+
+        $this->client->shouldReceive('listUsers')->never();
+
+        $result = $this->relationshipTools->listUsers('different-store', 'model-123', 'document:1', 'reader');
+
+        expect($result)->toBe('❌ The MCP server is configured in restricted mode. You cannot query stores other than allowed-store in this mode.');
     });
 });

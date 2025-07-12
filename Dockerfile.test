@@ -31,7 +31,6 @@ RUN composer install --no-interaction --prefer-dist
 # Copy source code
 COPY src ./src
 COPY bin ./bin
-COPY tools ./tools
 
 # Copy test configuration file
 COPY phpunit.xml ./

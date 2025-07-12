@@ -1,0 +1,148 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OpenFGA\MCP\Resources;
+
+use DateTimeInterface;
+use OpenFGA\ClientInterface;
+use OpenFGA\Responses\{GetStoreResponseInterface, ListAuthorizationModelsResponseInterface, ListStoresResponseInterface};
+use PhpMcp\Server\Attributes\{McpResource, McpResourceTemplate};
+use Throwable;
+
+use function assert;
+use function count;
+
+final readonly class StoreResources extends AbstractResources
+{
+    public function __construct(
+        private ClientInterface $client,
+    ) {
+    }
+
+    /**
+     * Get detailed information about a specific OpenFGA store.
+     *
+     * @param string $storeId the ID of the store to fetch
+     *
+     * @throws Throwable
+     *
+     * @return array<string, mixed> store details
+     */
+    #[McpResourceTemplate(
+        uriTemplate: 'openfga://store/{storeId}',
+        name: 'OpenFGA Store Details',
+        description: 'Get detailed information about a specific OpenFGA store',
+        mimeType: 'application/json',
+    )]
+    public function getStore(string $storeId): array
+    {
+        $failure = null;
+        $storeData = [];
+
+        $this->client->getStore(store: $storeId)
+            ->failure(static function (Throwable $e) use (&$failure): void {
+                $failure = ['error' => '❌ Failed to fetch store! Error: ' . $e->getMessage()];
+            })
+            ->success(static function (mixed $response) use (&$storeData): void {
+                assert($response instanceof GetStoreResponseInterface);
+
+                $storeData = [
+                    'id' => $response->getId(),
+                    'name' => $response->getName(),
+                    'created_at' => $response->getCreatedAt()->format(DateTimeInterface::ATOM),
+                    'updated_at' => $response->getUpdatedAt()->format(DateTimeInterface::ATOM),
+                    'deleted_at' => $response->getDeletedAt()?->format(DateTimeInterface::ATOM),
+                ];
+            });
+
+        return $failure ?? $storeData;
+    }
+
+    /**
+     * List all authorization models in a specific OpenFGA store.
+     *
+     * @param string $storeId the ID of the store
+     *
+     * @throws Throwable
+     *
+     * @return array<string, mixed> list of models in the store
+     */
+    #[McpResourceTemplate(
+        uriTemplate: 'openfga://store/{storeId}/models',
+        name: 'OpenFGA Store Models',
+        description: 'List all authorization models in a specific OpenFGA store',
+        mimeType: 'application/json',
+    )]
+    public function listStoreModels(string $storeId): array
+    {
+        $failure = null;
+        $models = [];
+
+        $this->client->listAuthorizationModels(store: $storeId)
+            ->failure(static function (Throwable $e) use (&$failure): void {
+                $failure = ['error' => '❌ Failed to fetch models! Error: ' . $e->getMessage()];
+            })
+            ->success(static function (mixed $response) use (&$models): void {
+                assert($response instanceof ListAuthorizationModelsResponseInterface);
+
+                foreach ($response->getModels() as $model) {
+                    $typeDefinitions = $model->getTypeDefinitions();
+                    $models[] = [
+                        'id' => $model->getId(),
+                        'created_at' => null, // Not available from interface
+                        'schema_version' => '1.1', // Default schema version
+                        'type_definitions' => count($typeDefinitions),
+                    ];
+                }
+            });
+
+        return $failure ?? [
+            'store_id' => $storeId,
+            'models' => $models,
+            'count' => count($models),
+        ];
+    }
+
+    /**
+     * List all available OpenFGA stores.
+     *
+     * @throws Throwable
+     *
+     * @return array<string, mixed> list of stores with their details
+     */
+    #[McpResource(
+        uri: 'openfga://stores',
+        name: 'OpenFGA Stores',
+        description: 'List all available OpenFGA stores',
+        mimeType: 'application/json',
+    )]
+    public function listStores(): array
+    {
+        $failure = null;
+        $stores = [];
+
+        $this->client->listStores()
+            ->failure(static function (Throwable $e) use (&$failure): void {
+                $failure = ['error' => '❌ Failed to fetch stores! Error: ' . $e->getMessage()];
+            })
+            ->success(static function (mixed $response) use (&$stores): void {
+                assert($response instanceof ListStoresResponseInterface);
+
+                foreach ($response->getStores() as $store) {
+                    $stores[] = [
+                        'id' => $store->getId(),
+                        'name' => $store->getName(),
+                        'created_at' => $store->getCreatedAt()->format(DateTimeInterface::ATOM),
+                        'updated_at' => $store->getUpdatedAt()->format(DateTimeInterface::ATOM),
+                        'deleted_at' => $store->getDeletedAt()?->format(DateTimeInterface::ATOM),
+                    ];
+                }
+            });
+
+        return $failure ?? [
+            'stores' => $stores,
+            'count' => count($stores),
+        ];
+    }
+}

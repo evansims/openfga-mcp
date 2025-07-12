@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/Helpers.php';
 
 use OpenFGA\Authentication\{ClientCredentialAuthentication, TokenAuthentication};
 use OpenFGA\{Client, ClientInterface};

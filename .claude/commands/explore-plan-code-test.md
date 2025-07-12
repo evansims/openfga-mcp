@@ -32,6 +32,6 @@ If your testing shows problems, go back to the planning stage and ultrathink.
 
 When you are happy with your work, write up a short report that could be used as the PR description. Include what you set out to do, the choices you made with their brief justification, and any commands you ran in the process that may be useful for future developers to know about.
 
-If you identify knowledge that might be valuable for future work, write those learnings in a succinct and direct manner to a Claude.md file in Markdown.
+If you identify knowledge that might be valuable for future work, write those learnings in a succinct and direct manner to a CLAUDE.md file in Markdown.
 
 $ARGUMENTS

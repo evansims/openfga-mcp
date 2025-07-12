@@ -38,7 +38,7 @@ COPY phpunit.xml ./
 # Copy tests directory
 COPY tests ./tests
 
-# Ensure coverage directory exists
-RUN mkdir -p coverage
+# Ensure coverage and output directories exist
+RUN mkdir -p coverage output
 
-CMD ["vendor/bin/pest", "--testsuite", "integration", "--coverage", "--coverage-cobertura", "coverage/integration-cobertura.xml", "--log-junit", "integration-junit.xml"]
+CMD ["vendor/bin/pest", "--testsuite", "integration", "--coverage", "--coverage-cobertura", "coverage/integration-cobertura.xml", "--log-junit", "output/integration-junit.xml"]

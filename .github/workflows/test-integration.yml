@@ -58,7 +58,7 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
-        file: ./integration-junit.xml
+        files: ./integration-junit.xml
 
     - name: Upload test artifacts
       uses: actions/upload-artifact@v4

@@ -38,9 +38,9 @@ jobs:
     - name: Run integration tests with automatic cleanup
       run: |
         # Run integration tests and capture exit code, then cleanup
-        docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
+        docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
         EXIT_CODE=$?
-        docker-compose -f docker-compose.test.yml down -v
+        docker compose -f docker-compose.test.yml down -v
         exit $EXIT_CODE
     
     - name: Upload coverage reports to Codecov

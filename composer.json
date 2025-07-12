@@ -114,7 +114,7 @@
       "@php -d memory_limit=2G vendor/bin/pest --testsuite unit --strict-global-state --fail-on-risky --fail-on-warning --coverage --coverage-cobertura coverage/cobertura.xml --log-junit junit.xml"
     ],
     "test:integration": [
-      "docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner; EXIT_CODE=$?; docker-compose -f docker-compose.test.yml down -v; exit $EXIT_CODE"
+      "docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner; EXIT_CODE=$?; docker compose -f docker-compose.test.yml down -v; exit $EXIT_CODE"
     ],
     "docker": [
       "docker build -t openfga-mcp:local ."

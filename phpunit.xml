@@ -9,10 +9,17 @@
         <testsuite name="unit">
             <directory suffix="Test.php">tests/Unit</directory>
         </testsuite>
+        <testsuite name="integration">
+            <directory suffix="Test.php">tests/Integration</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
             <directory>src</directory>
         </include>
     </source>
+    <php>
+        <!-- Environment variable to detect when running integration tests -->
+        <env name="RUNNING_INTEGRATION_TESTS" value="false" force="false"/>
+    </php>
 </phpunit>

@@ -2,5 +2,7 @@ vendor/
 .DS_Store
 .php-cs-fixer.cache
 composer.local.json
-coverage/cobertura.xml
+coverage/
 junit.xml
+integration-junit.xml
+*.cache

@@ -19,12 +19,14 @@ docker-compose.yml
 .DS_Store
 Thumbs.db
 
-# Testing
-tests/
-phpunit.xml
+# Testing artifacts (but NOT tests/ directory - needed for test container)
 phpunit.xml.dist
 .phpunit.result.cache
 .pest/
+coverage/
+*.log
+junit.xml
+integration-junit.xml
 
 # Development
 .php-cs-fixer.cache

@@ -1,0 +1,45 @@
+# Test runner Dockerfile
+FROM php:8.3-cli
+
+# Install system dependencies and PHP extensions
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    wget \
+    libzip-dev \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-install zip
+
+# Install Xdebug for code coverage
+RUN pecl install xdebug && docker-php-ext-enable xdebug
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /app
+
+# Copy composer files first
+COPY composer.json composer.lock ./
+
+# Install dependencies
+RUN composer install --no-interaction --prefer-dist
+
+# Copy source code
+COPY src ./src
+COPY bin ./bin
+COPY tools ./tools
+
+# Copy test configuration file
+COPY phpunit.xml ./
+
+# Copy tests directory
+COPY tests ./tests
+
+# Ensure coverage directory exists
+RUN mkdir -p coverage
+
+CMD ["vendor/bin/pest", "--testsuite", "integration", "--coverage", "--coverage-cobertura", "coverage/integration-cobertura.xml", "--log-junit", "integration-junit.xml"]

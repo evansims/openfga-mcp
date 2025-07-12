@@ -1,0 +1,42 @@
+services:
+  openfga:
+    image: openfga/openfga:latest
+    container_name: openfga-test
+    command: run
+    environment:
+      - OPENFGA_PLAYGROUND_ENABLED=false
+      - OPENFGA_DATASTORE_ENGINE=memory
+      - OPENFGA_LOG_LEVEL=info
+      - OPENFGA_HTTP_ADDR=0.0.0.0:8080
+      - OPENFGA_GRPC_ADDR=0.0.0.0:8081
+      - OPENFGA_PLAYGROUND_PORT=3000
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "3000:3000"
+    networks:
+      - openfga-test
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        BUILDKIT_CONTEXT_KEEP_GIT_DIR: 1
+    container_name: openfga-mcp-test
+    depends_on:
+      - openfga
+    environment:
+      - OPENFGA_MCP_API_URL=http://openfga:8080
+      - XDEBUG_MODE=coverage
+      - RUNNING_INTEGRATION_TESTS=true
+    volumes:
+      - ./coverage:/app/coverage
+      - ./junit.xml:/app/junit.xml
+    command: ["vendor/bin/pest", "--testsuite", "integration", "--coverage", "--coverage-cobertura", "coverage/integration-cobertura.xml", "--log-junit", "integration-junit.xml"]
+    networks:
+      - openfga-test
+
+networks:
+  openfga-test:
+    driver: bridge

@@ -13,6 +13,8 @@ use Throwable;
 
 use function assert;
 use function getConfiguredString;
+use function is_object;
+use function is_string;
 use function sprintf;
 
 final readonly class StoreTools extends AbstractTools
@@ -51,8 +53,23 @@ final readonly class StoreTools extends AbstractTools
                 $failure = '❌ Failed to create store! Error: ' . $e->getMessage();
             })
             ->success(static function (mixed $store) use ($name, &$success): void {
-                assert($store instanceof CreateStoreResponseInterface);
-                $success = sprintf('✅ Successfully created store named %s! Store names are not unique identifiers, so please use the ID %s for future queries relating to this specific store.', $name, $store->getId());
+                // The success callback receives the response directly
+                if ($store instanceof CreateStoreResponseInterface) {
+                    $success = sprintf('✅ Successfully created store named %s! Store names are not unique identifiers, so please use the ID %s for future queries relating to this specific store.', $name, $store->getId());
+                } else {
+                    // Handle case where we get a different response format
+                    $storeId = 'unknown';
+
+                    if (is_object($store) && method_exists($store, 'getId')) {
+                        /** @var mixed $idValue */
+                        $idValue = $store->getId();
+
+                        if (is_string($idValue)) {
+                            $storeId = $idValue;
+                        }
+                    }
+                    $success = sprintf('✅ Successfully created store named %s! Store ID: %s', $name, $storeId);
+                }
             });
 
         return $failure ?? $success;

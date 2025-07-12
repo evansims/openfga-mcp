@@ -21,10 +21,13 @@ RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --opti
 # Runtime stage
 FROM php:8.3-cli-alpine
 
-# Install runtime dependencies
+# Install runtime dependencies and PHP extensions
 RUN apk add --no-cache \
     ca-certificates \
     curl \
+    $PHPIZE_DEPS \
+    && docker-php-ext-install pcntl \
+    && apk del $PHPIZE_DEPS \
     && rm -rf /var/cache/apk/*
 
 # Create non-root user

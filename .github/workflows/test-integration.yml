@@ -43,11 +43,28 @@ jobs:
         docker-compose -f docker-compose.test.yml down -v
         exit $EXIT_CODE
     
-    - name: Upload coverage reports
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      if: always()
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
+        file: ./coverage/integration-cobertura.xml
+        fail_ci_if_error: false
+
+    - name: Upload test results to Codecov
+      uses: codecov/test-results-action@v1
+      if: always()
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
+        file: ./integration-junit.xml
+
+    - name: Upload test artifacts
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: integration-coverage
+        name: integration-test-results
         path: |
           coverage/integration-cobertura.xml
           integration-junit.xml

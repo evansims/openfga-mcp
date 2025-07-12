@@ -14,11 +14,13 @@ If there are things you still do not understand or questions you have for the us
 
 Break up large tasks into smaller subtasks. This way, we can update this plan as we go and mark tasks as completed as we implement them later.
 
+Save this implementation plan to a file called PLAN.md in the root of the project directory.
+
 # Code
 
 When you have a thorough implementation plan, you are ready to start writing code. Follow the style of the existing codebase (e.g. we prefer clearly named variables and methods to extensive comments). Make sure to run our autoformatting script when you're done, and fix linter warnings that seem reasonable to you.
 
-Update the plan incrementally as each step is implemented, so the plan persists across sessions and can be resumed at any time.
+Update the PLAN.md file incrementally as each step is implemented, so the plan persists across sessions and can be resumed at any time.
 
 # Test
 
@@ -32,6 +34,6 @@ If your testing shows problems, go back to the planning stage and ultrathink.
 
 When you are happy with your work, write up a short report that could be used as the PR description. Include what you set out to do, the choices you made with their brief justification, and any commands you ran in the process that may be useful for future developers to know about.
 
-If you identify knowledge that might be valuable for future work, write those learnings in a succinct and direct manner to a CLAUDE.md file in Markdown.
+If you identify knowledge that might be valuable for future work, write those learnings in a succinct and direct manner to a CLAUDE.md file in the root of the project directory.
 
 $ARGUMENTS

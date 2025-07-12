@@ -61,6 +61,31 @@ The project has a minimal structure focused on implementing an MCP server:
 
 ## Mission Critical Notes
 
+- Always follow SOLID, DRY and KISS principles.
 - All tests and linters MUST pass after each change.
+- All code changes MUST have accompanying tests.
+- All code changes SHOULD have a clear and concise purpose.
 - When addressing PHPStan, Psalm or other PHP linter warnings, always address the underlying issues directly, never use suppression tactics. You are forbidden from using suppression annotations or adding ignore statements to configuration files. If you are unable to address a warning, ask for help.
 - Never skip tests. If a test fails, you must address the underlying cause directly. If you are unable to fix a failing test, ask for help.
+
+## Important Implementation Notes
+
+### MCP Resources Implementation
+
+When implementing MCP resources:
+
+1. Resources are read-only data sources - they should never modify state
+2. Resource URIs should follow the pattern: `openfga://[resource-path]`
+3. Resource templates use URI templates (RFC 6570) for parameterization
+4. All resource classes should extend `AbstractResources` and be placed in `src/Resources/`
+5. Resource methods should return arrays or strings that will be auto-converted to TextContent
+6. Use the same error handling pattern as tools (with emoji indicators: ✅ for success, ❌ for errors)
+
+### OpenFGA PHP SDK Method Names
+
+The OpenFGA PHP SDK uses these method patterns:
+- Direct client methods: `listStores()`, `getStore()`, `check()`, `expand()`, `readTuples()`
+- Response methods typically use `get` prefix: `getStores()`, `getModels()`, `getTuples()`
+- Tuple methods are on the key: `$tuple->getKey()->getUser()`, not `$tuple->getUser()`
+- The `check()` method requires both store and model parameters
+- For creating tuples, use `grantPermission()` not `createRelationship()`

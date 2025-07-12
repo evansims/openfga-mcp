@@ -43,6 +43,32 @@
 - `list_users`: Return a list of users that have a given relationship with a given object.
 - `list_objects`: Return a list of objects of a type that something has a relation to.
 
+### Resources
+
+#### Store Resources
+
+- `openfga://stores`: List all available OpenFGA stores.
+- `openfga://store/{storeId}`: Get detailed information about a specific store.
+- `openfga://store/{storeId}/models`: List all authorization models in a store.
+
+#### Model Resources
+
+- `openfga://store/{storeId}/model/{modelId}`: Get detailed information about a specific authorization model.
+- `openfga://store/{storeId}/model/latest`: Get the latest authorization model in a store.
+
+#### Relationship Resources
+
+- `openfga://store/{storeId}/users`: List all users in a store (extracted from relationship tuples).
+- `openfga://store/{storeId}/objects`: List all objects in a store (extracted from relationship tuples).
+- `openfga://store/{storeId}/relationships`: List all relationship tuples in a store.
+
+### Resource Templates
+
+#### Permission Checking
+
+- `openfga://store/{storeId}/check?user={user}&relation={relation}&object={object}`: Check if a user has a specific permission on an object.
+- `openfga://store/{storeId}/expand?object={object}&relation={relation}`: Expand all users who have a specific relation to an object.
+
 ## Usage
 
 Configure your MCP client to use the server's Docker image:
@@ -105,9 +131,9 @@ To use Client Credentials authentication, the server accepts the following confi
 
 ## Future Development Goals
 
-- [ ] Add MCP resources<br />
+- [x] Add MCP resources<br />
       Read-only data sources the AI can access for information. They provide content rather than perform actions. A resource might be a file, database query result, or API response that gives the AI context or data to work with.
-- [ ] Add MCP resource templates<br />
+- [x] Add MCP resource templates<br />
       Parameterized blueprints for generating resources dynamically. Instead of static resources, templates let you create resources on-demand based on input parameters. For example, a template might generate a user profile resource when given a user ID, or create a report resource based on date ranges.
 - [ ] Add MCP prompts<br />
       Reusable prompt templates that can be invoked with parameters to generate structured prompts for the AI. They're essentially parameterized instructions or context that help shape how the AI approaches specific tasks.

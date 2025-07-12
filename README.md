@@ -56,7 +56,6 @@ Configure your MCP client to use the server's Docker image:
         "run",
         "--rm",
         "-i",
-        "--name=openfga-mcp",
         "--pull=always",
         "-e",
         "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
@@ -103,6 +102,17 @@ To use Client Credentials authentication, the server accepts the following confi
 | `OPENFGA_MCP_API_CLIENT_SECRET` | `null`  | Client secret for use with your OpenFGA server |
 | `OPENFGA_MCP_API_ISSUER`        | `null`  | API issuer for use with your OpenFGA server    |
 | `OPENFGA_MCP_API_AUDIENCE`      | `null`  | API audience for use with your OpenFGA server  |
+
+## Future Development Goals
+
+- [ ] Add MCP resources
+      Read-only data sources the AI can access for information. They provide content rather than perform actions. A resource might be a file, database query result, or API response that gives the AI context or data to work with.
+- [ ] Add MCP resource templates
+      Parameterized blueprints for generating resources dynamically. Instead of static resources, templates let you create resources on-demand based on input parameters. For example, a template might generate a user profile resource when given a user ID, or create a report resource based on date ranges.
+- [ ] Add MCP prompts
+      Reusable prompt templates that can be invoked with parameters to generate structured prompts for the AI. They're essentially parameterized instructions or context that help shape how the AI approaches specific tasks.
+- [ ] Add MCP completion provider (for resource templates and prompts)
+      Enable MCP clients to offer auto-completion suggestions in their user interfaces. They are specifically designed for Resource Templates and Prompts to help users discover available options for dynamic parts like template variables or prompt arguments.
 
 ## Contributing
 

@@ -63,24 +63,19 @@ The server should work with any MCP client, but has been tested with Claude Desk
 
 ## Configuration
 
-The server **requires** the following configuration options:
+The server supports the following configuration options:
 
-| Environment Variable  | Default                 | Description                |
-| --------------------- | ----------------------- | -------------------------- |
-| `OPENFGA_MCP_API_URL` | `http://127.0.0.1:8080` | URL of your OpenFGA server |
-
-The server accepts the following optional configuration options:
-
-| Environment Variable         | Default     | Description                                                                                           |
-| ---------------------------- | ----------- | ----------------------------------------------------------------------------------------------------- |
-| `OPENFGA_MCP_TRANSPORT`      | `stdio`     | Transport to use for communication with the MCP server (`stdio` or `http`)                            |
-| `OPENFGA_MCP_TRANSPORT_HOST` | `127.0.0.1` | The host to bind the MCP server to (only affects HTTP transport)                                      |
-| `OPENFGA_MCP_TRANSPORT_PORT` | `8080`      | The port to bind the MCP server to (only affects HTTP transport)                                      |
-| `OPENFGA_MCP_TRANSPORT_JSON` | `false`     | Enables JSON responses (only affects HTTP transport)                                                  |
-| `OPENFGA_MCP_API_READONLY`   | `false`     | Disable write operations (create, update, delete)                                                     |
-| `OPENFGA_MCP_API_RESTRICT`   | `false`     | Restrict the MCP server to ONLY use the configured OPENFGA_MCP_API_STORE and/or OPENFGA_MCP_API_MODEL |
-| `OPENFGA_MCP_API_STORE`      | `null`      | OpenFGA Store ID the MCP server should use by default                                                 |
-| `OPENFGA_MCP_API_MODEL`      | `null`      | OpenFGA Model ID the MCP server should use by default                                                 |
+| Environment Variable         | Default                 | Description                                                                                           |
+| ---------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `OPENFGA_MCP_API_URL`        | `http://127.0.0.1:8080` | URL of your OpenFGA server. Note: the Docker image defaults to `http://host.docker.internal:8080`     |
+| `OPENFGA_MCP_TRANSPORT`      | `stdio`                 | Transport to use for communication with the MCP server (`stdio` or `http`)                            |
+| `OPENFGA_MCP_TRANSPORT_HOST` | `127.0.0.1`             | The host to bind the MCP server to (only affects HTTP transport)                                      |
+| `OPENFGA_MCP_TRANSPORT_PORT` | `8080`                  | The port to bind the MCP server to (only affects HTTP transport)                                      |
+| `OPENFGA_MCP_TRANSPORT_JSON` | `false`                 | Enables JSON responses (only affects HTTP transport)                                                  |
+| `OPENFGA_MCP_API_READONLY`   | `false`                 | Disable write operations (create, update, delete)                                                     |
+| `OPENFGA_MCP_API_RESTRICT`   | `false`                 | Restrict the MCP server to ONLY use the configured OPENFGA_MCP_API_STORE and/or OPENFGA_MCP_API_MODEL |
+| `OPENFGA_MCP_API_STORE`      | `null`                  | OpenFGA Store ID the MCP server should use by default                                                 |
+| `OPENFGA_MCP_API_MODEL`      | `null`                  | OpenFGA Model ID the MCP server should use by default                                                 |
 
 ### Authentication
 

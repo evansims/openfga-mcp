@@ -32,7 +32,7 @@ services:
       - RUNNING_INTEGRATION_TESTS=true
     volumes:
       - ./coverage:/app/coverage
-      - ./junit.xml:/app/junit.xml
+      - ./integration-junit.xml:/app/integration-junit.xml
     command: ["vendor/bin/pest", "--testsuite", "integration", "--coverage", "--coverage-cobertura", "coverage/integration-cobertura.xml", "--log-junit", "integration-junit.xml"]
     networks:
       - openfga-test

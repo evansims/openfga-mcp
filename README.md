@@ -56,6 +56,8 @@ Configure your MCP client to use the server's Docker image:
         "run",
         "--rm",
         "-i",
+        "--name=openfga-mcp",
+        "--pull=always",
         "-e",
         "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
         "evansims/openfga-mcp:latest"

@@ -166,5 +166,5 @@ function setupTestStoreWithModel(?string $dsl = null): array
     $storeId = setupTestStore();
     $modelId = createTestModel($storeId, $dsl);
 
-    return [$storeId, $modelId];
+    return ['store' => $storeId, 'model' => $modelId];
 }

@@ -184,6 +184,7 @@ type document
         // List users in empty store
         $result = $this->relationshipResources->listUsers($storeId);
 
+
         expect($result)->toBeArray()
             ->and($result['users'])->toBeEmpty()
             ->and($result['count'])->toBe(0);

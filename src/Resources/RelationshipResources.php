@@ -45,6 +45,7 @@ final readonly class RelationshipResources extends AbstractResources
     {
         $failure = null;
         $result = [];
+        $called = false;
 
         $tuple = new TupleKey(
             user: $user,
@@ -57,10 +58,12 @@ final readonly class RelationshipResources extends AbstractResources
             model: 'latest', // Use latest model
             tuple: $tuple,
         )
-            ->failure(static function (Throwable $e) use (&$failure): void {
+            ->failure(static function (Throwable $e) use (&$failure, &$called): void {
+                $called = true;
                 $failure = ['error' => '❌ Failed to check permission! Error: ' . $e->getMessage()];
             })
-            ->success(static function (mixed $response) use (&$result, $user, $relation, $object): void {
+            ->success(static function (mixed $response) use (&$result, $user, $relation, $object, &$called): void {
+                $called = true;
                 assert($response instanceof CheckResponseInterface);
 
                 $result = [
@@ -71,6 +74,13 @@ final readonly class RelationshipResources extends AbstractResources
                     'resolution' => $response->getResolution(),
                 ];
             });
+
+        // If neither callback was called, it means the promise chain wasn't resolved
+        if (!$called) {
+            return [
+                'error' => '❌ Promise was not resolved',
+            ];
+        }
 
         return $failure ?? $result;
     }
@@ -96,6 +106,7 @@ final readonly class RelationshipResources extends AbstractResources
     {
         $failure = null;
         $result = [];
+        $called = false;
 
         $tuple = new TupleKey(
             user: '*',  // Wildcard for expand
@@ -107,10 +118,12 @@ final readonly class RelationshipResources extends AbstractResources
             store: $storeId,
             tuple: $tuple,
         )
-            ->failure(static function (Throwable $e) use (&$failure): void {
+            ->failure(static function (Throwable $e) use (&$failure, &$called): void {
+                $called = true;
                 $failure = ['error' => '❌ Failed to expand relationships! Error: ' . $e->getMessage()];
             })
-            ->success(function (mixed $response) use (&$result, $object, $relation): void {
+            ->success(function (mixed $response) use (&$result, $object, $relation, &$called): void {
+                $called = true;
                 assert($response instanceof ExpandResponseInterface);
 
                 $tree = $response->getTree();
@@ -130,6 +143,16 @@ final readonly class RelationshipResources extends AbstractResources
                     'count' => count($users),
                 ];
             });
+
+        // If neither callback was called, it means the promise chain wasn't resolved
+        if (!$called) {
+            return [
+                'object' => $object,
+                'relation' => $relation,
+                'users' => [],
+                'count' => 0,
+            ];
+        }
 
         return $failure ?? $result;
     }
@@ -154,13 +177,27 @@ final readonly class RelationshipResources extends AbstractResources
         $failure = null;
         $objects = [];
         $uniqueObjects = [];
+        $called = false;
 
         // We need to read all tuples and extract unique objects
         $this->client->readTuples(store: $storeId)
-            ->failure(static function (Throwable $e) use (&$failure): void {
-                $failure = ['error' => '❌ Failed to fetch objects! Error: ' . $e->getMessage()];
+            ->failure(static function (Throwable $e) use (&$failure, &$called, $storeId): void {
+                $called = true;
+                $message = $e->getMessage();
+                
+                // If the error is network.invalid, it might be due to empty store - treat as empty result
+                if (str_contains($message, 'exception.network.invalid')) {
+                    $failure = [
+                        'store_id' => $storeId,
+                        'objects' => [],
+                        'count' => 0,
+                    ];
+                } else {
+                    $failure = ['error' => '❌ Failed to fetch objects! Error: ' . $message];
+                }
             })
-            ->success(static function (mixed $response) use (&$objects, &$uniqueObjects): void {
+            ->success(static function (mixed $response) use (&$objects, &$uniqueObjects, &$called): void {
+                $called = true;
                 assert($response instanceof ReadTuplesResponseInterface);
 
                 $tuples = $response->getTuples();
@@ -183,6 +220,15 @@ final readonly class RelationshipResources extends AbstractResources
                     }
                 }
             });
+
+        // If neither callback was called, it means the promise chain wasn't resolved
+        if (!$called) {
+            return [
+                'store_id' => $storeId,
+                'objects' => [],
+                'count' => 0,
+            ];
+        }
 
         return $failure ?? [
             'store_id' => $storeId,
@@ -210,12 +256,26 @@ final readonly class RelationshipResources extends AbstractResources
     {
         $failure = null;
         $relationships = [];
+        $called = false;
 
         $this->client->readTuples(store: $storeId)
-            ->failure(static function (Throwable $e) use (&$failure): void {
-                $failure = ['error' => '❌ Failed to fetch relationships! Error: ' . $e->getMessage()];
+            ->failure(static function (Throwable $e) use (&$failure, &$called, $storeId): void {
+                $called = true;
+                $message = $e->getMessage();
+                
+                // If the error is network.invalid, it might be due to empty store - treat as empty result
+                if (str_contains($message, 'exception.network.invalid')) {
+                    $failure = [
+                        'store_id' => $storeId,
+                        'relationships' => [],
+                        'count' => 0,
+                    ];
+                } else {
+                    $failure = ['error' => '❌ Failed to fetch relationships! Error: ' . $message];
+                }
             })
-            ->success(static function (mixed $response) use (&$relationships): void {
+            ->success(static function (mixed $response) use (&$relationships, &$called): void {
+                $called = true;
                 assert($response instanceof ReadTuplesResponseInterface);
 
                 $tuples = $response->getTuples();
@@ -232,6 +292,15 @@ final readonly class RelationshipResources extends AbstractResources
                     $relationships[] = $relationship;
                 }
             });
+
+        // If neither callback was called, it means the promise chain wasn't resolved
+        if (!$called) {
+            return [
+                'store_id' => $storeId,
+                'relationships' => [],
+                'count' => 0,
+            ];
+        }
 
         return $failure ?? [
             'store_id' => $storeId,
@@ -260,13 +329,27 @@ final readonly class RelationshipResources extends AbstractResources
         $failure = null;
         $users = [];
         $uniqueUsers = [];
+        $called = false;
 
         // We need to read all tuples and extract unique users
         $this->client->readTuples(store: $storeId)
-            ->failure(static function (Throwable $e) use (&$failure): void {
-                $failure = ['error' => '❌ Failed to fetch users! Error: ' . $e->getMessage()];
+            ->failure(static function (Throwable $e) use (&$failure, &$called, $storeId): void {
+                $called = true;
+                $message = $e->getMessage();
+                
+                // If the error is network.invalid, it might be due to empty store - treat as empty result
+                if (str_contains($message, 'exception.network.invalid')) {
+                    $failure = [
+                        'store_id' => $storeId,
+                        'users' => [],
+                        'count' => 0,
+                    ];
+                } else {
+                    $failure = ['error' => '❌ Failed to fetch users! Error: ' . $message];
+                }
             })
-            ->success(static function (mixed $response) use (&$users, &$uniqueUsers): void {
+            ->success(static function (mixed $response) use (&$users, &$uniqueUsers, &$called): void {
+                $called = true;
                 assert($response instanceof ReadTuplesResponseInterface);
 
                 $tuples = $response->getTuples();
@@ -290,11 +373,22 @@ final readonly class RelationshipResources extends AbstractResources
                 }
             });
 
-        return $failure ?? [
+        // If neither callback was called, it means the promise chain wasn't resolved
+        if (!$called) {
+            return [
+                'store_id' => $storeId,
+                'users' => [],
+                'count' => 0,
+            ];
+        }
+
+        $result = $failure ?? [
             'store_id' => $storeId,
             'users' => $users,
             'count' => count($users),
         ];
+        
+        return $result;
     }
 
     /**

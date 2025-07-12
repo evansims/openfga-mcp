@@ -62,7 +62,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: unit
-          file: ./coverage/cobertura.xml
+          files: ./coverage/cobertura.xml
           fail_ci_if_error: false
 
       - name: Upload test results to Codecov

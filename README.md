@@ -37,6 +37,30 @@
 - `list_users`: Return a list of users that have a given relationship with a given object.
 - `list_objects`: Return a list of objects of a type that something has a relation to.
 
+## Usage
+
+Configure your MCP client to use the server's Docker image:
+
+```json
+{
+  "mcpServers": {
+    "OpenFGA": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
+        "evansims/openfga-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+The server should work with any MCP client, but has been tested with Claude Desktop, Claude Code, Cursor, Windsurf, Warp and Raycast.
+
 ## Configuration
 
 The server **requires** the following configuration options:
@@ -76,74 +100,6 @@ To use Client Credentials authentication, the server accepts the following confi
 | `OPENFGA_MCP_API_CLIENT_SECRET` | `null`  | Client secret for use with your OpenFGA server |
 | `OPENFGA_MCP_API_ISSUER`        | `null`  | API issuer for use with your OpenFGA server    |
 | `OPENFGA_MCP_API_AUDIENCE`      | `null`  | API audience for use with your OpenFGA server  |
-
-## Installation
-
-### Docker (Recommended)
-
-```bash
-docker pull evansims/openfga-mcp:latest
-```
-
-```bash
-docker run ghcr.io/evansims/openfga-mcp:latest
-```
-
-### Composer
-
-```bash
-composer global require evansims/openfga-mcp
-```
-
-## Usage
-
-### Claude Desktop
-
-Using Docker:
-
-```json
-{
-  "mcpServers": {
-    "OpenFGA": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "-e",
-        "OPENFGA_MCP_API_URL=http://localhost:8080",
-        "evansims/openfga-mcp:latest"
-      ]
-    }
-  }
-}
-```
-
-Using PHP:
-
-```json
-{
-  "mcpServers": {
-    "OpenFGA": {
-      "command": "php",
-      "args": ["/path/to/vendor/bin/openfga-mcp"],
-      "env": {
-        "OPENFGA_MCP_API_URL": "http://localhost:8080"
-      }
-    }
-  }
-}
-```
-
-### Claude Code
-
-### Cursor
-
-### Windsurf
-
-### Warp
-
-### Raycast
 
 ## Contributing
 

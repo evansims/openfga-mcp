@@ -172,17 +172,6 @@ To use Client Credentials authentication, the server accepts the following confi
 | `OPENFGA_MCP_API_ISSUER`        | `null`  | API issuer for use with your OpenFGA server    |
 | `OPENFGA_MCP_API_AUDIENCE`      | `null`  | API audience for use with your OpenFGA server  |
 
-## Future Development Goals
-
-- [x] Add MCP resources<br />
-      Read-only data sources the AI can access for information. They provide content rather than perform actions. A resource might be a file, database query result, or API response that gives the AI context or data to work with.
-- [x] Add MCP resource templates<br />
-      Parameterized blueprints for generating resources dynamically. Instead of static resources, templates let you create resources on-demand based on input parameters. For example, a template might generate a user profile resource when given a user ID, or create a report resource based on date ranges.
-- [x] Add MCP prompts<br />
-      Reusable prompt templates that can be invoked with parameters to generate structured prompts for the AI. They're essentially parameterized instructions or context that help shape how the AI approaches specific tasks. Includes authorization model design, relationship troubleshooting, and security guidance prompts.
-- [x] Add MCP completion provider<br />
-      Enable MCP clients to offer auto-completion suggestions in their user interfaces. They are specifically designed for Resource Templates and Prompts to help users discover available options for dynamic parts like template variables or prompt arguments. Includes both dynamic providers (fetching live data from OpenFGA) and static enum-based providers for common parameters.
-
 ## Contributing
 
 Contributions are welcome! Please ensure all tests pass and linters are satisfied before submitting a pull request.

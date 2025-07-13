@@ -1,5 +1,5 @@
 # Test runner Dockerfile
-FROM php:8.3-cli
+FROM php:8.3-cli@sha256:6d3a720f866f32853491775acb25cbfb452232be1fba039fa37f1e8c69b54244
 
 # Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \

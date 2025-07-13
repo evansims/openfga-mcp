@@ -45,7 +45,7 @@ try {
 
     $server->discover(
         basePath: __DIR__,
-        scanDirs: ['Tools', 'Resources', 'Templates', 'Prompts'],
+        scanDirs: ['Tools', 'Resources', 'Templates', 'Prompts', 'Completions'],
         saveToCache: false,
     );
 

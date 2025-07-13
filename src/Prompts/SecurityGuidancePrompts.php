@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace OpenFGA\MCP\Prompts;
 
 use OpenFGA\ClientInterface;
-use PhpMcp\Server\Attributes\McpPrompt;
+use OpenFGA\MCP\Completions\{AuditFrequency, ComplianceFramework, DelegationType, RiskLevel, SecurityLevel, SystemCriticality, SystemType};
+use PhpMcp\Server\Attributes\{CompletionProvider, McpPrompt};
 
 final readonly class SecurityGuidancePrompts extends AbstractPrompts
 {
@@ -25,8 +26,14 @@ final readonly class SecurityGuidancePrompts extends AbstractPrompts
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'audit_friendly_patterns')]
-    public function auditFriendlyPatterns(string $auditRequirements, string $auditFrequency = 'quarterly', string $systemCriticality = 'high'): array
-    {
+    public function auditFriendlyPatterns(
+        #[CompletionProvider(enum: ComplianceFramework::class)]
+        string $auditRequirements,
+        #[CompletionProvider(enum: AuditFrequency::class)]
+        string $auditFrequency = 'quarterly',
+        #[CompletionProvider(enum: SystemCriticality::class)]
+        string $systemCriticality = 'high',
+    ): array {
         $error = $this->checkRestrictedMode();
 
         if ($this->hasError($error)) {
@@ -113,8 +120,12 @@ Focus on creating authorization patterns that not only meet {$auditRequirements}
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'implement_least_privilege')]
-    public function implementLeastPrivilege(string $systemType, string $userRoles, string $sensitiveData = 'confidential business data'): array
-    {
+    public function implementLeastPrivilege(
+        #[CompletionProvider(enum: SystemType::class)]
+        string $systemType,
+        string $userRoles,
+        string $sensitiveData = 'confidential business data',
+    ): array {
         $error = $this->checkRestrictedMode();
 
         if ($this->hasError($error)) {
@@ -191,8 +202,13 @@ Focus on creating a practical, implementable least privilege model that enhances
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'secure_delegation_patterns')]
-    public function secureDelegationPatterns(string $delegationType, string $businessContext, string $riskLevel = 'medium'): array
-    {
+    public function secureDelegationPatterns(
+        #[CompletionProvider(enum: DelegationType::class)]
+        string $delegationType,
+        string $businessContext,
+        #[CompletionProvider(enum: RiskLevel::class)]
+        string $riskLevel = 'medium',
+    ): array {
         $error = $this->checkRestrictedMode();
 
         if ($this->hasError($error)) {
@@ -274,8 +290,13 @@ Focus on creating a robust, secure delegation system that meets {$businessContex
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'security_review_model')]
-    public function securityReviewModel(string $model, string $securityLevel = 'standard', string $complianceNeeds = 'SOC2'): array
-    {
+    public function securityReviewModel(
+        string $model,
+        #[CompletionProvider(enum: SecurityLevel::class)]
+        string $securityLevel = 'standard',
+        #[CompletionProvider(enum: ComplianceFramework::class)]
+        string $complianceNeeds = 'SOC2',
+    ): array {
         $error = $this->checkRestrictedMode();
 
         if ($this->hasError($error)) {

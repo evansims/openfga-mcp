@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace OpenFGA\MCP\Prompts;
 
 use OpenFGA\ClientInterface;
-use PhpMcp\Server\Attributes\McpPrompt;
+use OpenFGA\MCP\Completions\{AccessPattern, ComplexityLevel};
+use PhpMcp\Server\Attributes\{CompletionProvider, McpPrompt};
 
 final readonly class ModelDesignPrompts extends AbstractPrompts
 {
@@ -24,8 +25,11 @@ final readonly class ModelDesignPrompts extends AbstractPrompts
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'convert_rbac_to_rebac')]
-    public function convertRbacToRebac(string $roleDescription, string $migrationScope = 'incremental'): array
-    {
+    public function convertRbacToRebac(
+        string $roleDescription,
+        #[CompletionProvider(values: ['full', 'incremental', 'hybrid', 'pilot', 'phased'])]
+        string $migrationScope = 'incremental',
+    ): array {
         $error = $this->checkRestrictedMode();
 
         if ($this->hasError($error)) {
@@ -68,8 +72,13 @@ Consider:
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'design_model_for_domain')]
-    public function designModelForDomain(string $domain, string $accessPattern = 'hierarchical', string $complexity = 'moderate'): array
-    {
+    public function designModelForDomain(
+        string $domain,
+        #[CompletionProvider(enum: AccessPattern::class)]
+        string $accessPattern = 'hierarchical',
+        #[CompletionProvider(enum: ComplexityLevel::class)]
+        string $complexity = 'moderate',
+    ): array {
         $error = $this->checkRestrictedMode();
 
         if ($this->hasError($error)) {
@@ -110,8 +119,12 @@ Consider these best practices:
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'model_hierarchical_relationships')]
-    public function modelHierarchicalRelationships(string $hierarchyType, string $inheritanceModel = 'flexible'): array
-    {
+    public function modelHierarchicalRelationships(
+        #[CompletionProvider(values: ['organizational', 'resource', 'permission', 'role', 'group', 'geographic', 'functional'])]
+        string $hierarchyType,
+        #[CompletionProvider(values: ['strict', 'flexible', 'conditional', 'selective', 'reverse', 'bidirectional'])]
+        string $inheritanceModel = 'flexible',
+    ): array {
         $error = $this->checkRestrictedMode();
 
         if ($this->hasError($error)) {
@@ -158,8 +171,11 @@ Consider these inheritance patterns:
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'optimize_model_structure')]
-    public function optimizeModelStructure(string $currentModel, string $optimizationGoal = 'performance'): array
-    {
+    public function optimizeModelStructure(
+        string $currentModel,
+        #[CompletionProvider(values: ['performance', 'maintainability', 'security', 'flexibility', 'scalability', 'readability'])]
+        string $optimizationGoal = 'performance',
+    ): array {
         $error = $this->checkRestrictedMode();
 
         if ($this->hasError($error)) {

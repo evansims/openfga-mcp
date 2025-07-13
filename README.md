@@ -90,6 +90,28 @@
 - `secure_delegation_patterns`: Help design secure delegation patterns for temporary and permanent access.
 - `audit_friendly_patterns`: Generate audit-friendly authorization patterns for regulatory compliance.
 
+### Completion Providers
+
+The server provides intelligent auto-completion suggestions for resource template parameters and prompt arguments. This helps MCP clients offer a better user experience by suggesting valid options as users type.
+
+#### Dynamic Completion Providers
+
+- `StoreIdCompletionProvider`: Provides auto-completion for OpenFGA store IDs by fetching available stores from your OpenFGA server.
+- `ModelIdCompletionProvider`: Suggests model IDs from a specific store, including the 'latest' option for accessing the most recent model.
+- `RelationCompletionProvider`: Offers relation names extracted from authorization models (e.g., 'viewer', 'editor', 'owner').
+- `UserCompletionProvider`: Suggests user identifiers extracted from existing relationship tuples.
+- `ObjectCompletionProvider`: Provides object identifiers extracted from existing relationship tuples.
+
+#### Static Completion Providers
+
+The server also includes enum-based completion providers for common parameters:
+
+- **Security & Compliance**: Security levels (low, medium, high, critical), compliance frameworks (SOC2, HIPAA, PCI-DSS, GDPR), audit frequencies.
+- **System Classification**: System types (microservices, monolith, hybrid), criticality levels, access patterns.
+- **Authorization Patterns**: Delegation types (temporary, permanent, conditional), complexity levels, query types, risk levels.
+
+Completion providers respect the server's restriction settings and will only suggest options from allowed stores when `OPENFGA_MCP_API_RESTRICT` is enabled.
+
 ## Usage
 
 Configure your MCP client to use the server's Docker image:
@@ -158,8 +180,8 @@ To use Client Credentials authentication, the server accepts the following confi
       Parameterized blueprints for generating resources dynamically. Instead of static resources, templates let you create resources on-demand based on input parameters. For example, a template might generate a user profile resource when given a user ID, or create a report resource based on date ranges.
 - [x] Add MCP prompts<br />
       Reusable prompt templates that can be invoked with parameters to generate structured prompts for the AI. They're essentially parameterized instructions or context that help shape how the AI approaches specific tasks. Includes authorization model design, relationship troubleshooting, and security guidance prompts.
-- [ ] Add MCP completion provider<br />
-      Enable MCP clients to offer auto-completion suggestions in their user interfaces. They are specifically designed for Resource Templates and Prompts to help users discover available options for dynamic parts like template variables or prompt arguments.
+- [x] Add MCP completion provider<br />
+      Enable MCP clients to offer auto-completion suggestions in their user interfaces. They are specifically designed for Resource Templates and Prompts to help users discover available options for dynamic parts like template variables or prompt arguments. Includes both dynamic providers (fetching live data from OpenFGA) and static enum-based providers for common parameters.
 
 ## Contributing
 

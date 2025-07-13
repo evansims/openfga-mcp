@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace OpenFGA\MCP\Prompts;
 
 use OpenFGA\ClientInterface;
-use PhpMcp\Server\Attributes\McpPrompt;
+use OpenFGA\MCP\Completions\{ComplexityLevel, ModelIdCompletionProvider, QueryType, StoreIdCompletionProvider};
+use PhpMcp\Server\Attributes\{CompletionProvider, McpPrompt};
 
 final readonly class RelationshipTroubleshootingPrompts extends AbstractPrompts
 {
@@ -26,8 +27,14 @@ final readonly class RelationshipTroubleshootingPrompts extends AbstractPrompts
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'analyze_permission_inheritance')]
-    public function analyzePermissionInheritance(string $user, string $object, string $expectedAccess = 'should have access', string $storeId = ''): array
-    {
+    public function analyzePermissionInheritance(
+        string $user,
+        string $object,
+        #[CompletionProvider(values: ['should have access', 'should not have access', 'partial access expected', 'conditional access expected'])]
+        string $expectedAccess = 'should have access',
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId = '',
+    ): array {
         $error = $this->checkRestrictedMode(('' !== $storeId) ? $storeId : null);
 
         if ($this->hasError($error)) {
@@ -98,8 +105,15 @@ Provide clear explanations of how OpenFGA evaluates these inheritance paths and 
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'debug_permission_denial')]
-    public function debugPermissionDenial(string $user, string $relation, string $object, string $storeId = '', string $modelId = ''): array
-    {
+    public function debugPermissionDenial(
+        string $user,
+        string $relation,
+        string $object,
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId = '',
+        #[CompletionProvider(provider: ModelIdCompletionProvider::class)]
+        string $modelId = '',
+    ): array {
         $error = $this->checkRestrictedMode(('' !== $storeId) ? $storeId : null, ('' !== $modelId) ? $modelId : null);
 
         if ($this->hasError($error)) {
@@ -170,8 +184,14 @@ Focus on practical, actionable debugging steps that will quickly identify the ro
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'optimize_relationship_queries')]
-    public function optimizeRelationshipQueries(string $queryType, string $performanceIssue = 'slow response times', string $modelComplexity = 'moderate'): array
-    {
+    public function optimizeRelationshipQueries(
+        #[CompletionProvider(enum: QueryType::class)]
+        string $queryType,
+        #[CompletionProvider(values: ['slow response times', 'high latency', 'timeout errors', 'memory usage', 'CPU usage', 'throughput issues', 'concurrent query issues'])]
+        string $performanceIssue = 'slow response times',
+        #[CompletionProvider(enum: ComplexityLevel::class)]
+        string $modelComplexity = 'moderate',
+    ): array {
         $error = $this->checkRestrictedMode();
 
         if ($this->hasError($error)) {
@@ -244,8 +264,13 @@ Focus on practical optimizations that will significantly improve {$performanceIs
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'troubleshoot_unexpected_access')]
-    public function troubleshootUnexpectedAccess(string $user, string $relation, string $object, string $storeId = ''): array
-    {
+    public function troubleshootUnexpectedAccess(
+        string $user,
+        string $relation,
+        string $object,
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId = '',
+    ): array {
         $error = $this->checkRestrictedMode(('' !== $storeId) ? $storeId : null);
 
         if ($this->hasError($error)) {

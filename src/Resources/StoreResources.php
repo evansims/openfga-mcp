@@ -6,8 +6,9 @@ namespace OpenFGA\MCP\Resources;
 
 use DateTimeInterface;
 use OpenFGA\ClientInterface;
+use OpenFGA\MCP\Completions\StoreIdCompletionProvider;
 use OpenFGA\Responses\{GetStoreResponseInterface, ListAuthorizationModelsResponseInterface, ListStoresResponseInterface};
-use PhpMcp\Server\Attributes\{McpResource, McpResourceTemplate};
+use PhpMcp\Server\Attributes\{CompletionProvider, McpResource, McpResourceTemplate};
 use Throwable;
 
 use function assert;
@@ -35,8 +36,10 @@ final readonly class StoreResources extends AbstractResources
         description: 'Get detailed information about a specific OpenFGA store',
         mimeType: 'application/json',
     )]
-    public function getStore(string $storeId): array
-    {
+    public function getStore(
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId,
+    ): array {
         $failure = null;
         $storeData = [];
 
@@ -74,8 +77,10 @@ final readonly class StoreResources extends AbstractResources
         description: 'List all authorization models in a specific OpenFGA store',
         mimeType: 'application/json',
     )]
-    public function listStoreModels(string $storeId): array
-    {
+    public function listStoreModels(
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId,
+    ): array {
         $failure = null;
         $models = [];
 

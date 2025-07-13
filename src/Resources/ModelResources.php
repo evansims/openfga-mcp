@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace OpenFGA\MCP\Resources;
 
 use OpenFGA\ClientInterface;
+use OpenFGA\MCP\Completions\{ModelIdCompletionProvider, StoreIdCompletionProvider};
 use OpenFGA\Models\{AuthorizationModelInterface, ModelInterface};
 use OpenFGA\Models\Collections\TypeDefinitionRelationsInterface;
 use OpenFGA\Responses\{GetAuthorizationModelResponseInterface, ListAuthorizationModelsResponseInterface};
-use PhpMcp\Server\Attributes\McpResourceTemplate;
+use PhpMcp\Server\Attributes\{CompletionProvider, McpResourceTemplate};
 use Throwable;
 
 use function assert;
@@ -36,8 +37,10 @@ final readonly class ModelResources extends AbstractResources
         description: 'Get the latest authorization model in a store',
         mimeType: 'application/json',
     )]
-    public function getLatestModel(string $storeId): array
-    {
+    public function getLatestModel(
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId,
+    ): array {
         $failure = null;
         $modelData = [];
 
@@ -86,8 +89,12 @@ final readonly class ModelResources extends AbstractResources
         description: 'Get detailed information about a specific authorization model',
         mimeType: 'application/json',
     )]
-    public function getModel(string $storeId, string $modelId): array
-    {
+    public function getModel(
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId,
+        #[CompletionProvider(provider: ModelIdCompletionProvider::class)]
+        string $modelId,
+    ): array {
         $failure = null;
         $modelData = [];
 

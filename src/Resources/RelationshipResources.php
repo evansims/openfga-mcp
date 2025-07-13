@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace OpenFGA\MCP\Resources;
 
 use OpenFGA\ClientInterface;
+use OpenFGA\MCP\Completions\{ModelIdCompletionProvider, ObjectCompletionProvider, RelationCompletionProvider, StoreIdCompletionProvider, UserCompletionProvider};
 use OpenFGA\Models\Collections\UsersListInterface;
 use OpenFGA\Models\{LeafInterface, NodeInterface, TupleKey, UsersetTreeInterface};
 use OpenFGA\Responses\{CheckResponseInterface, ExpandResponseInterface, ReadTuplesResponseInterface};
-use PhpMcp\Server\Attributes\McpResourceTemplate;
+use PhpMcp\Server\Attributes\{CompletionProvider, McpResourceTemplate};
 use Throwable;
 
 use function array_unique;
@@ -42,8 +43,18 @@ final readonly class RelationshipResources extends AbstractResources
         description: 'Check if a user has a specific permission on an object',
         mimeType: 'application/json',
     )]
-    public function checkPermission(string $storeId, string $user, string $relation, string $object, string $modelId = 'latest'): array
-    {
+    public function checkPermission(
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId,
+        #[CompletionProvider(provider: UserCompletionProvider::class)]
+        string $user,
+        #[CompletionProvider(provider: RelationCompletionProvider::class)]
+        string $relation,
+        #[CompletionProvider(provider: ObjectCompletionProvider::class)]
+        string $object,
+        #[CompletionProvider(provider: ModelIdCompletionProvider::class)]
+        string $modelId = 'latest',
+    ): array {
         $failure = null;
         $result = [];
         $called = false;
@@ -103,8 +114,14 @@ final readonly class RelationshipResources extends AbstractResources
         description: 'Expand all users who have a specific relation to an object',
         mimeType: 'application/json',
     )]
-    public function expandRelationships(string $storeId, string $object, string $relation): array
-    {
+    public function expandRelationships(
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId,
+        #[CompletionProvider(provider: ObjectCompletionProvider::class)]
+        string $object,
+        #[CompletionProvider(provider: RelationCompletionProvider::class)]
+        string $relation,
+    ): array {
         $failure = null;
         $result = [];
         $called = false;
@@ -173,8 +190,10 @@ final readonly class RelationshipResources extends AbstractResources
         description: 'List all objects in a specific OpenFGA store',
         mimeType: 'application/json',
     )]
-    public function listObjects(string $storeId): array
-    {
+    public function listObjects(
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId,
+    ): array {
         $failure = null;
         $objects = [];
         $continuationToken = null;
@@ -246,8 +265,10 @@ final readonly class RelationshipResources extends AbstractResources
         description: 'List all relationships (tuples) in a specific OpenFGA store',
         mimeType: 'application/json',
     )]
-    public function listRelationships(string $storeId): array
-    {
+    public function listRelationships(
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId,
+    ): array {
         $failure = null;
         $relationships = [];
         $continuationToken = null;
@@ -320,8 +341,10 @@ final readonly class RelationshipResources extends AbstractResources
         description: 'List all users in a specific OpenFGA store',
         mimeType: 'application/json',
     )]
-    public function listUsers(string $storeId): array
-    {
+    public function listUsers(
+        #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
+        string $storeId,
+    ): array {
         $failure = null;
         $users = [];
         $continuationToken = null;

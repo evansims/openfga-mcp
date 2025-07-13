@@ -12,7 +12,6 @@ use PhpMcp\Server\Attributes\{McpTool};
 use Throwable;
 
 use function assert;
-use function getConfiguredString;
 
 final readonly class ModelTools extends AbstractTools
 {
@@ -41,16 +40,16 @@ final readonly class ModelTools extends AbstractTools
         $success = '';
         $authorizationModel = null;
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
-            return '❌ The MCP server is configured in read only mode. You cannot create authorization models in this mode.';
+        $error = $this->checkReadOnlyMode('create authorization models');
+
+        if (null !== $error) {
+            return $error;
         }
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $store);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $store) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         $this->client->dsl(dsl: $dsl)
@@ -101,18 +100,10 @@ final readonly class ModelTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $store, modelId: $model);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $store) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
-            }
-
-            $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
-
-            if ('' !== $restrictedModel && $restrictedModel !== $model) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query authorization models other than ' . $restrictedModel . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         $this->client->getAuthorizationModel(store: $store, model: $model)
@@ -189,22 +180,16 @@ final readonly class ModelTools extends AbstractTools
      * @return array<array{id: string}>|string A list of authorization models, or an error message
      */
     #[McpTool(name: 'list_models')]
-    /**
-     * @param  string                          $store
-     * @return array<array{id: string}>|string
-     */
     public function listModels(
         string $store,
     ): string | array {
         $failure = null;
         $success = [];
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $store);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $store) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         $this->client->listAuthorizationModels(store: $store)

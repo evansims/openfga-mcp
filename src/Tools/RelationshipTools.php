@@ -15,7 +15,6 @@ use ReflectionException;
 use Throwable;
 
 use function assert;
-use function getConfiguredString;
 use function is_string;
 
 final readonly class RelationshipTools extends AbstractTools
@@ -52,18 +51,10 @@ final readonly class RelationshipTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $store, modelId: $model);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $store) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
-            }
-
-            $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
-
-            if ('' !== $restrictedModel && $restrictedModel !== $model) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $restrictedModel . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         $tuple = new TupleKey(
@@ -115,22 +106,16 @@ final readonly class RelationshipTools extends AbstractTools
         $success = '';
         $called = false;
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
-            return '❌ The MCP server is configured in read only mode. You cannot grant permissions in this mode.';
+        $error = $this->checkReadOnlyMode('grant permissions');
+
+        if (null !== $error) {
+            return $error;
         }
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $store, modelId: $model);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $store) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
-            }
-
-            $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
-
-            if ('' !== $restrictedModel && $restrictedModel !== $model) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $restrictedModel . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         $tuple = new TupleKey(
@@ -182,18 +167,10 @@ final readonly class RelationshipTools extends AbstractTools
         $failure = null;
         $success = [];
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $store, modelId: $model);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $store) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
-            }
-
-            $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
-
-            if ('' !== $restrictedModel && $restrictedModel !== $model) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $restrictedModel . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         $this->client->listObjects(store: $store, model: $model, type: $type, relation: $relation, user: $user)
@@ -237,18 +214,10 @@ final readonly class RelationshipTools extends AbstractTools
         $success = [];
         $called = false;
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $store, modelId: $model);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $store) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
-            }
-
-            $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
-
-            if ('' !== $restrictedModel && $restrictedModel !== $model) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $restrictedModel . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         // Create a filter for 'user' type - this is the most common case
@@ -315,22 +284,16 @@ final readonly class RelationshipTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
-            return '❌ The MCP server is configured in read only mode. You cannot revoke permissions in this mode.';
+        $error = $this->checkReadOnlyMode('revoke permissions');
+
+        if (null !== $error) {
+            return $error;
         }
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $store, modelId: $model);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $store) {
-                return '❌ The MCP server is configured in restricted mode. You cannot revoke permissions for stores other than ' . $restrictedStore . ' in this mode.';
-            }
-
-            $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
-
-            if ('' !== $restrictedModel && $restrictedModel !== $model) {
-                return '❌ The MCP server is configured in restricted mode. You cannot revoke permissions using authorization models other than ' . $restrictedModel . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         $tuple = new TupleKey(

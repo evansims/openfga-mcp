@@ -18,4 +18,10 @@ afterEach(function (): void {
         deleteTestStore($this->testStoreId);
         unset($this->testStoreId);
     }
+
+    // Clean up any environment variables that might have been set during tests
+    putenv('OPENFGA_MCP_API_READONLY=');
+    putenv('OPENFGA_MCP_API_RESTRICT=');
+    putenv('OPENFGA_MCP_API_STORE=');
+    putenv('OPENFGA_MCP_API_MODEL=');
 });

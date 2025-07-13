@@ -12,7 +12,6 @@ use PhpMcp\Server\Attributes\{McpTool};
 use Throwable;
 
 use function assert;
-use function getConfiguredString;
 use function is_object;
 use function is_string;
 use function sprintf;
@@ -40,12 +39,16 @@ final readonly class StoreTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
-            return '❌ The MCP server is configured in read only mode. You cannot create stores in this mode.';
+        $error = $this->checkReadOnlyMode('create stores');
+
+        if (null !== $error) {
+            return $error;
         }
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            return '❌ The MCP server is configured in restricted mode. You cannot create stores in this mode.';
+        $error = $this->checkRestrictedModeForWrites('create stores');
+
+        if (null !== $error) {
+            return $error;
         }
 
         $this->client->createStore(name: $name)
@@ -91,12 +94,16 @@ final readonly class StoreTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
-            return '❌ The MCP server is configured in read only mode. You cannot delete stores in this mode.';
+        $error = $this->checkReadOnlyMode('delete stores');
+
+        if (null !== $error) {
+            return $error;
         }
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            return '❌ The MCP server is configured in restricted mode. You cannot delete stores in this mode.';
+        $error = $this->checkRestrictedModeForWrites('delete stores');
+
+        if (null !== $error) {
+            return $error;
         }
 
         $this->client->deleteStore(store: $id)
@@ -126,12 +133,10 @@ final readonly class StoreTools extends AbstractTools
         $failure = null;
         $success = '';
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $id);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $id) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         $this->client->getStore(store: $id)

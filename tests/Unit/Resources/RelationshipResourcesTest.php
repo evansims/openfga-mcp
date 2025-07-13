@@ -5,7 +5,7 @@ declare(strict_types=1);
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Resources\RelationshipResources;
 use OpenFGA\Models\TupleKey;
-use OpenFGA\Results\{Failure, FailureInterface, Success, SuccessInterface};
+use OpenFGA\Results\{Failure, FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
     $this->client = Mockery::mock(ClientInterface::class);
@@ -19,8 +19,8 @@ afterEach(function (): void {
 describe('listUsers resource', function (): void {
     it('handles readTuples failure', function (): void {
         $storeId = 'test-store-id';
-        $error = new \Exception('Failed to read tuples');
-        
+        $error = new Exception('Failed to read tuples');
+
         $this->client->shouldReceive('readTuples')
             ->once()
             ->andReturn(new Failure($error));
@@ -35,8 +35,8 @@ describe('listUsers resource', function (): void {
 describe('listObjects resource', function (): void {
     it('handles readTuples failure', function (): void {
         $storeId = 'test-store-id';
-        $error = new \Exception('Failed to read tuples');
-        
+        $error = new Exception('Failed to read tuples');
+
         $this->client->shouldReceive('readTuples')
             ->once()
             ->andReturn(new Failure($error));
@@ -51,8 +51,8 @@ describe('listObjects resource', function (): void {
 describe('listRelationships resource', function (): void {
     it('handles readTuples failure', function (): void {
         $storeId = 'test-store-id';
-        $error = new \Exception('Failed to read tuples');
-        
+        $error = new Exception('Failed to read tuples');
+
         $this->client->shouldReceive('readTuples')
             ->once()
             ->andReturn(new Failure($error));

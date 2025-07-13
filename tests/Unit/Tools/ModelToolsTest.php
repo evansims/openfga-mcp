@@ -286,7 +286,7 @@ describe('getModel', function (): void {
 
         $result = $this->modelTools->getModel('store-123', 'different-model');
 
-        expect($result)->toBe('❌ The MCP server is configured in restricted mode. You cannot query authorization models other than allowed-model in this mode.');
+        expect($result)->toBe('❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than allowed-model in this mode.');
     });
 });
 

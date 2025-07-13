@@ -45,27 +45,25 @@
 
 ### Resources
 
-#### Store Resources
-
 - `openfga://stores`: List all available OpenFGA stores.
+
+### Resource Templates
+
+#### Store Templates
+
 - `openfga://store/{storeId}`: Get detailed information about a specific store.
 - `openfga://store/{storeId}/models`: List all authorization models in a store.
 
-#### Model Resources
+#### Model Templates
 
 - `openfga://store/{storeId}/model/{modelId}`: Get detailed information about a specific authorization model.
 - `openfga://store/{storeId}/model/latest`: Get the latest authorization model in a store.
 
-#### Relationship Resources
+#### Relationship Templates
 
 - `openfga://store/{storeId}/users`: List all users in a store (extracted from relationship tuples).
 - `openfga://store/{storeId}/objects`: List all objects in a store (extracted from relationship tuples).
 - `openfga://store/{storeId}/relationships`: List all relationship tuples in a store.
-
-### Resource Templates
-
-#### Permission Checking
-
 - `openfga://store/{storeId}/check?user={user}&relation={relation}&object={object}`: Check if a user has a specific permission on an object.
 - `openfga://store/{storeId}/expand?object={object}&relation={relation}`: Expand all users who have a specific relation to an object.
 

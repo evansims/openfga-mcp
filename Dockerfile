@@ -1,5 +1,5 @@
 # Build stage
-FROM composer:2 AS builder
+FROM composer:2@sha256:69d57c07ed077bc22d6e584202b6d9160f636abdb6df25c7c437ded589b3fa6c AS builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
 RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
 # Runtime stage
-FROM php:8.3-cli-alpine
+FROM php:8.3-cli-alpine@sha256:f010fece535604a14edbbaec91469db1d35eeb46e6e61101417441bef5d346a0
 
 # Install runtime dependencies and PHP extensions
 RUN apk add --no-cache \

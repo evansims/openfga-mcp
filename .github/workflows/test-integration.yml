@@ -2,9 +2,9 @@ name: Integration Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -15,58 +15,63 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        install: true
-        driver-opts: |
-          network=host
-    
-    - name: Cache Docker layers
-      uses: actions/cache@v4
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
-    
-    - name: Run integration tests with automatic cleanup
-      run: |
-        # Run integration tests and capture exit code, then cleanup
-        docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
-        EXIT_CODE=$?
-        docker compose -f docker-compose.test.yml down -v
-        exit $EXIT_CODE
-    
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
-      if: always()
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        flags: integration
-        files: ./coverage/integration-cobertura.xml
-        fail_ci_if_error: false
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        with:
+          egress-policy: audit
 
-    - name: Upload test results to Codecov
-      uses: codecov/test-results-action@v1
-      if: always()
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        flags: integration
-        files: ./integration-junit.xml
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-    - name: Upload test artifacts
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: integration-test-results
-        path: |
-          coverage/integration-cobertura.xml
-          integration-junit.xml
-        retention-days: 7
-        if-no-files-found: warn
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+        with:
+          install: true
+          driver-opts: |
+            network=host
+
+      - name: Cache Docker layers
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Run integration tests with automatic cleanup
+        run: |
+          # Run integration tests and capture exit code, then cleanup
+          docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
+          EXIT_CODE=$?
+          docker compose -f docker-compose.test.yml down -v
+          exit $EXIT_CODE
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: integration
+          files: ./coverage/integration-cobertura.xml
+          fail_ci_if_error: false
+
+      - name: Upload test results to Codecov
+        uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: integration
+          files: ./integration-junit.xml
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            coverage/integration-cobertura.xml
+            integration-junit.xml
+          retention-days: 7
+          if-no-files-found: warn

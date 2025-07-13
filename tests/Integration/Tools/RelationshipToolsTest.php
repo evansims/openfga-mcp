@@ -141,7 +141,7 @@ type document
 
     it('respects read-only mode', function (): void {
         ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel();
-        putenv('OPENFGA_MCP_API_READONLY=true');
+        $_ENV['OPENFGA_MCP_API_READONLY'] = 'true';
 
         $grantResult = $this->relationshipTools->grantPermission($storeId, $modelId, 'user:test', 'reader', 'document:test');
         expect($grantResult)->toBe('❌ The MCP server is configured in read only mode. You cannot grant permissions in this mode.');
@@ -153,32 +153,32 @@ type document
         $checkResult = $this->relationshipTools->checkPermission($storeId, $modelId, 'user:test', 'reader', 'document:test');
         expect($checkResult)->toBe('❌ Permission denied');
 
-        putenv('OPENFGA_MCP_API_READONLY=');
+        unset($_ENV['OPENFGA_MCP_API_READONLY']);
     });
 
     it('respects restricted mode', function (): void {
         ['store' => $allowedStoreId, 'model' => $allowedModelId] = setupTestStoreWithModel();
         ['store' => $restrictedStoreId, 'model' => $restrictedModelId] = setupTestStoreWithModel();
 
-        putenv('OPENFGA_MCP_API_RESTRICT=true');
-        putenv('OPENFGA_MCP_API_STORE=' . $allowedStoreId);
-        putenv('OPENFGA_MCP_API_MODEL=' . $allowedModelId);
+        try {
+            $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
+            $_ENV['OPENFGA_MCP_API_STORE'] = $allowedStoreId;
+            $_ENV['OPENFGA_MCP_API_MODEL'] = $allowedModelId;
 
-        // Should allow operations on allowed store/model
-        $allowedCheck = $this->relationshipTools->checkPermission($allowedStoreId, $allowedModelId, 'user:test', 'reader', 'document:test');
-        expect($allowedCheck)->toBe('❌ Permission denied'); // No permission, but query succeeded
+            // Should allow operations on allowed store/model
+            $allowedCheck = $this->relationshipTools->checkPermission($allowedStoreId, $allowedModelId, 'user:test', 'reader', 'document:test');
+            expect($allowedCheck)->toBe('❌ Permission denied'); // No permission, but query succeeded
 
-        // Should block operations on restricted store
-        $restrictedStoreCheck = $this->relationshipTools->checkPermission($restrictedStoreId, $allowedModelId, 'user:test', 'reader', 'document:test');
-        expect($restrictedStoreCheck)->toBe('❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $allowedStoreId . ' in this mode.');
+            // Should block operations on restricted store
+            $restrictedStoreCheck = $this->relationshipTools->checkPermission($restrictedStoreId, $allowedModelId, 'user:test', 'reader', 'document:test');
+            expect($restrictedStoreCheck)->toBe('❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $allowedStoreId . ' in this mode.');
 
-        // Should block operations on restricted model
-        $restrictedModelCheck = $this->relationshipTools->checkPermission($allowedStoreId, $restrictedModelId, 'user:test', 'reader', 'document:test');
-        expect($restrictedModelCheck)->toBe('❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $allowedModelId . ' in this mode.');
-
-        putenv('OPENFGA_MCP_API_RESTRICT=');
-        putenv('OPENFGA_MCP_API_STORE=');
-        putenv('OPENFGA_MCP_API_MODEL=');
+            // Should block operations on restricted model
+            $restrictedModelCheck = $this->relationshipTools->checkPermission($allowedStoreId, $restrictedModelId, 'user:test', 'reader', 'document:test');
+            expect($restrictedModelCheck)->toBe('❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $allowedModelId . ' in this mode.');
+        } finally {
+            unset($_ENV['OPENFGA_MCP_API_RESTRICT'], $_ENV['OPENFGA_MCP_API_STORE'], $_ENV['OPENFGA_MCP_API_MODEL']);
+        }
 
         // Clean up restricted store
         deleteTestStore($restrictedStoreId);

@@ -28,9 +28,6 @@ services:
       - openfga
     environment:
       - OPENFGA_MCP_API_URL=http://openfga:8080
-      - OPENFGA_MCP_API_READONLY=false
-      - OPENFGA_MCP_API_STORE=
-      - OPENFGA_MCP_API_MODEL=
       - XDEBUG_MODE=coverage
       - RUNNING_INTEGRATION_TESTS=true
     volumes:

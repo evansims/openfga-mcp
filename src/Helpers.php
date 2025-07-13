@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 function getConfiguredString(string $env, string $default = ''): string
 {
-    $value = getenv($env);
+    // In testing environments, check $_ENV first as it can be overridden more reliably
+    $value = array_key_exists($env, $_ENV) ? $_ENV[$env] : getenv($env);
 
-    if (false === $value) {
+    if (false === $value || null === $value) {
         return $default;
     }
 
-    $value = trim($value);
+    $value = trim((string) $value);
 
     if ('' === $value) {
         return $default;
@@ -21,9 +22,10 @@ function getConfiguredString(string $env, string $default = ''): string
 
 function getConfiguredInt(string $env, int $default = 0): int
 {
-    $value = getenv($env);
+    // In testing environments, check $_ENV first as it can be overridden more reliably
+    $value = array_key_exists($env, $_ENV) ? $_ENV[$env] : getenv($env);
 
-    if (false === $value || ! is_numeric($value)) {
+    if (false === $value || null === $value || ! is_numeric($value)) {
         return $default;
     }
 
@@ -32,11 +34,14 @@ function getConfiguredInt(string $env, int $default = 0): int
 
 function getConfiguredBool(string $env, bool $default = false): bool
 {
-    $value = getenv($env);
+    // In testing environments, check $_ENV first as it can be overridden more reliably
+    $value = array_key_exists($env, $_ENV) ? $_ENV[$env] : getenv($env);
 
-    if (false === $value) {
+    if (false === $value || null === $value) {
         return $default;
     }
+
+    $value = (string) $value;
 
     // Convert string representations to bool
     if ('true' === $value || '1' === $value) {

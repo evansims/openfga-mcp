@@ -88,21 +88,21 @@ describe('StoreTools Integration', function (): void {
     });
 
     it('respects read-only mode', function (): void {
-        putenv('OPENFGA_MCP_API_READONLY=true');
+        $_ENV['OPENFGA_MCP_API_READONLY'] = 'true';
 
         $result = $this->storeTools->createStore('should-not-create');
 
         expect($result)->toBe('❌ The MCP server is configured in read only mode. You cannot create stores in this mode.');
 
-        putenv('OPENFGA_MCP_API_READONLY=');
+        unset($_ENV['OPENFGA_MCP_API_READONLY']);
     });
 
     it('respects restricted mode for store access', function (): void {
         $allowedStoreId = createTestStore('allowed-store');
         $restrictedStoreId = createTestStore('restricted-store');
 
-        putenv('OPENFGA_MCP_API_RESTRICT=true');
-        putenv('OPENFGA_MCP_API_STORE=' . $allowedStoreId);
+        $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
+        $_ENV['OPENFGA_MCP_API_STORE'] = $allowedStoreId;
 
         // Should allow access to the allowed store
         $allowedResult = $this->storeTools->getStore($allowedStoreId);
@@ -113,8 +113,7 @@ describe('StoreTools Integration', function (): void {
         $restrictedResult = $this->storeTools->getStore($restrictedStoreId);
         expect($restrictedResult)->toBe('❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $allowedStoreId . ' in this mode.');
 
-        putenv('OPENFGA_MCP_API_RESTRICT=');
-        putenv('OPENFGA_MCP_API_STORE=');
+        unset($_ENV['OPENFGA_MCP_API_RESTRICT'], $_ENV['OPENFGA_MCP_API_STORE']);
 
         // Clean up
         deleteTestStore($allowedStoreId);

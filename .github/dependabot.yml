@@ -5,30 +5,82 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     versioning-strategy: widen
     commit-message:
       prefix: "chore"
       include: "scope"
     reviewers:
       - "evansims"
+    groups:
+      php-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      php-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+      testing-tools:
+        patterns:
+          - "pestphp/*"
+          - "phpunit/*"
+          - "mockery/*"
+          - "fakerphp/*"
+        update-types:
+          - "minor"
+          - "patch"
+          - "major"
+      dev-tools:
+        patterns:
+          - "phpstan/*"
+          - "psalm/*"
+          - "rector/*"
+          - "friendsofphp/*"
+        update-types:
+          - "minor"
+          - "patch"
+          - "major"
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     commit-message:
       prefix: "ci"
       include: "scope"
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      actions-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
 
   # Maintain dependencies for Docker images
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
+      interval: "weekly"
+    open-pull-requests-limit: 3
     commit-message:
       prefix: "chore"
       include: "scope"
+    groups:
+      docker-images:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+          - "major"

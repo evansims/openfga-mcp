@@ -16,6 +16,66 @@
 
 **Manage and query your OpenFGA server using AI agents and tooling.** Unlock the power of [OpenFGA](https://openfga.dev/) and [Auth0 FGA](https://auth0.com/fine-grained-authorization) inside agentic tooling and intelligent workflows.
 
+## Usage
+
+Configure your MCP client to use the server's Docker image:
+
+```json
+{
+  "mcpServers": {
+    "OpenFGA": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--pull=always",
+        "-e",
+        "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
+        "evansims/openfga-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+The server should work with any MCP client, but has been tested with [Claude Desktop](https://claude.ai/download), [Claude Code](https://www.anthropic.com/claude-code), [Cursor](https://cursor.sh), [Windsurf](https://windsurf.com), [Warp](https://warp.dev) and [Raycast](https://raycast.com).
+
+## Configuration
+
+The server supports the following configuration options:
+
+| Environment Variable         | Default                 | Description                                                                                           |
+| ---------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `OPENFGA_MCP_API_URL`        | `http://127.0.0.1:8080` | URL of your OpenFGA server. Note: the Docker image defaults to `http://host.docker.internal:8080`     |
+| `OPENFGA_MCP_TRANSPORT`      | `stdio`                 | Transport to use for communication with the MCP server (`stdio` or `http`)                            |
+| `OPENFGA_MCP_TRANSPORT_HOST` | `127.0.0.1`             | The host to bind the MCP server to (only affects HTTP transport)                                      |
+| `OPENFGA_MCP_TRANSPORT_PORT` | `8080`                  | The port to bind the MCP server to (only affects HTTP transport)                                      |
+| `OPENFGA_MCP_TRANSPORT_JSON` | `false`                 | Enables JSON responses (only affects HTTP transport)                                                  |
+| `OPENFGA_MCP_API_READONLY`   | `false`                 | Disable write operations (create, update, delete)                                                     |
+| `OPENFGA_MCP_API_RESTRICT`   | `false`                 | Restrict the MCP server to ONLY use the configured OPENFGA_MCP_API_STORE and/or OPENFGA_MCP_API_MODEL |
+| `OPENFGA_MCP_API_STORE`      | `null`                  | OpenFGA Store ID the MCP server should use by default                                                 |
+| `OPENFGA_MCP_API_MODEL`      | `null`                  | OpenFGA Model ID the MCP server should use by default                                                 |
+
+### Authentication
+
+By default, the server will try to connect to the OpenFGA server without using authentication.
+
+To use pre-shared key (token) authentication, the server accepts the following configuration options:
+
+| Environment Variable    | Default | Description                                |
+| ----------------------- | ------- | ------------------------------------------ |
+| `OPENFGA_MCP_API_TOKEN` | `null`  | API token for use with your OpenFGA server |
+
+To use Client Credentials authentication, the server accepts the following configuration options:
+
+| Environment Variable            | Default | Description                                    |
+| ------------------------------- | ------- | ---------------------------------------------- |
+| `OPENFGA_MCP_API_CLIENT_ID`     | `null`  | Client ID for use with your OpenFGA server     |
+| `OPENFGA_MCP_API_CLIENT_SECRET` | `null`  | Client secret for use with your OpenFGA server |
+| `OPENFGA_MCP_API_ISSUER`        | `null`  | API issuer for use with your OpenFGA server    |
+| `OPENFGA_MCP_API_AUDIENCE`      | `null`  | API audience for use with your OpenFGA server  |
+
 ## Features
 
 ### Tools
@@ -111,66 +171,6 @@ The server also includes enum-based completion providers for common parameters:
 - **Authorization Patterns**: Delegation types (temporary, permanent, conditional), complexity levels, query types, risk levels.
 
 Completion providers respect the server's restriction settings and will only suggest options from allowed stores when `OPENFGA_MCP_API_RESTRICT` is enabled.
-
-## Usage
-
-Configure your MCP client to use the server's Docker image:
-
-```json
-{
-  "mcpServers": {
-    "OpenFGA": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--pull=always",
-        "-e",
-        "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
-        "evansims/openfga-mcp:latest"
-      ]
-    }
-  }
-}
-```
-
-The server should work with any MCP client, but has been tested with Claude Desktop, Claude Code, Cursor, Windsurf, Warp and Raycast.
-
-## Configuration
-
-The server supports the following configuration options:
-
-| Environment Variable         | Default                 | Description                                                                                           |
-| ---------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------- |
-| `OPENFGA_MCP_API_URL`        | `http://127.0.0.1:8080` | URL of your OpenFGA server. Note: the Docker image defaults to `http://host.docker.internal:8080`     |
-| `OPENFGA_MCP_TRANSPORT`      | `stdio`                 | Transport to use for communication with the MCP server (`stdio` or `http`)                            |
-| `OPENFGA_MCP_TRANSPORT_HOST` | `127.0.0.1`             | The host to bind the MCP server to (only affects HTTP transport)                                      |
-| `OPENFGA_MCP_TRANSPORT_PORT` | `8080`                  | The port to bind the MCP server to (only affects HTTP transport)                                      |
-| `OPENFGA_MCP_TRANSPORT_JSON` | `false`                 | Enables JSON responses (only affects HTTP transport)                                                  |
-| `OPENFGA_MCP_API_READONLY`   | `false`                 | Disable write operations (create, update, delete)                                                     |
-| `OPENFGA_MCP_API_RESTRICT`   | `false`                 | Restrict the MCP server to ONLY use the configured OPENFGA_MCP_API_STORE and/or OPENFGA_MCP_API_MODEL |
-| `OPENFGA_MCP_API_STORE`      | `null`                  | OpenFGA Store ID the MCP server should use by default                                                 |
-| `OPENFGA_MCP_API_MODEL`      | `null`                  | OpenFGA Model ID the MCP server should use by default                                                 |
-
-### Authentication
-
-By default, the server will try to connect to the OpenFGA server without using authentication.
-
-To use pre-shared key (token) authentication, the server accepts the following configuration options:
-
-| Environment Variable    | Default | Description                                |
-| ----------------------- | ------- | ------------------------------------------ |
-| `OPENFGA_MCP_API_TOKEN` | `null`  | API token for use with your OpenFGA server |
-
-To use Client Credentials authentication, the server accepts the following configuration options:
-
-| Environment Variable            | Default | Description                                    |
-| ------------------------------- | ------- | ---------------------------------------------- |
-| `OPENFGA_MCP_API_CLIENT_ID`     | `null`  | Client ID for use with your OpenFGA server     |
-| `OPENFGA_MCP_API_CLIENT_SECRET` | `null`  | Client secret for use with your OpenFGA server |
-| `OPENFGA_MCP_API_ISSUER`        | `null`  | API issuer for use with your OpenFGA server    |
-| `OPENFGA_MCP_API_AUDIENCE`      | `null`  | API audience for use with your OpenFGA server  |
 
 ## Contributing
 

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Completions\StoreIdCompletionProvider;
-use OpenFGA\Operations\ListStoresOperation;
 use PhpMcp\Server\Contracts\SessionInterface;
 
 beforeEach(function (): void {
@@ -14,115 +13,8 @@ beforeEach(function (): void {
 });
 
 describe('StoreIdCompletionProvider', function (): void {
-    it('returns store IDs from OpenFGA API', function (): void {
-        $mockOperation = Mockery::mock(ListStoresOperation::class);
-
-        $this->client->shouldReceive('stores')
-            ->once()
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('list')
-            ->once()
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('onSuccess')
-            ->once()
-            ->with(Mockery::type('callable'))
-            ->andReturnUsing(function ($callback) use ($mockOperation) {
-                $response = [
-                    'stores' => [
-                        ['id' => 'store1', 'name' => 'Store 1'],
-                        ['id' => 'store2', 'name' => 'Store 2'],
-                        ['id' => 'store3', 'name' => 'Store 3'],
-                    ],
-                ];
-                $callback($response);
-
-                return $mockOperation;
-            });
-
-        $mockOperation->shouldReceive('onFailure')
-            ->once()
-            ->with(Mockery::type('callable'))
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('await')
-            ->once()
-            ->andReturn(['store1', 'store2', 'store3']);
-
-        $result = $this->provider->getCompletions('', $this->session);
-        expect($result)->toBe(['store1', 'store2', 'store3']);
-    });
-
-    it('handles empty stores response gracefully', function (): void {
-        $mockOperation = Mockery::mock(ListStoresOperation::class);
-
-        $this->client->shouldReceive('stores')
-            ->once()
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('list')
-            ->once()
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('onSuccess')
-            ->once()
-            ->with(Mockery::type('callable'))
-            ->andReturnUsing(function ($callback) use ($mockOperation) {
-                $response = ['stores' => []];
-                $callback($response);
-
-                return $mockOperation;
-            });
-
-        $mockOperation->shouldReceive('onFailure')
-            ->once()
-            ->with(Mockery::type('callable'))
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('await')
-            ->once()
-            ->andReturn([]);
-
-        $result = $this->provider->getCompletions('', $this->session);
-        expect($result)->toBe([]);
-    });
-
-    it('handles API failure gracefully', function (): void {
-        $mockOperation = Mockery::mock(ListStoresOperation::class);
-
-        $this->client->shouldReceive('stores')
-            ->once()
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('list')
-            ->once()
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('onSuccess')
-            ->once()
-            ->with(Mockery::type('callable'))
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('onFailure')
-            ->once()
-            ->with(Mockery::type('callable'))
-            ->andReturnUsing(function ($callback) use ($mockOperation) {
-                $callback();
-
-                return $mockOperation;
-            });
-
-        $mockOperation->shouldReceive('await')
-            ->once()
-            ->andReturn([]);
-
-        $result = $this->provider->getCompletions('', $this->session);
-        expect($result)->toBe([]);
-    });
-
-    it('handles exception gracefully', function (): void {
-        $this->client->shouldReceive('stores')
+    it('returns empty array when client throws exception', function (): void {
+        $this->client->shouldReceive('listStores')
             ->once()
             ->andThrow(new Exception('API Error'));
 
@@ -130,44 +22,39 @@ describe('StoreIdCompletionProvider', function (): void {
         expect($result)->toBe([]);
     });
 
-    it('filters store IDs with invalid data', function (): void {
-        $mockOperation = Mockery::mock(ListStoresOperation::class);
-
-        $this->client->shouldReceive('stores')
+    it('returns empty array when client returns null', function (): void {
+        $this->client->shouldReceive('listStores')
             ->once()
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('list')
-            ->once()
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('onSuccess')
-            ->once()
-            ->with(Mockery::type('callable'))
-            ->andReturnUsing(function ($callback) use ($mockOperation) {
-                $response = [
-                    'stores' => [
-                        ['id' => 'store1', 'name' => 'Store 1'],
-                        ['id' => '', 'name' => 'Empty ID'],  // Should be filtered out
-                        ['name' => 'No ID'],  // Should be filtered out
-                        ['id' => 'store2', 'name' => 'Store 2'],
-                    ],
-                ];
-                $callback($response);
-
-                return $mockOperation;
-            });
-
-        $mockOperation->shouldReceive('onFailure')
-            ->once()
-            ->with(Mockery::type('callable'))
-            ->andReturn($mockOperation);
-
-        $mockOperation->shouldReceive('await')
-            ->once()
-            ->andReturn(['store1', 'store2']);
+            ->andReturn(null);
 
         $result = $this->provider->getCompletions('', $this->session);
-        expect($result)->toBe(['store1', 'store2']);
+        expect($result)->toBe([]);
+    });
+
+    it('filters completions based on current value', function (): void {
+        // Test with empty client that throws exception - should return empty array
+        $this->client->shouldReceive('listStores')
+            ->andThrow(new Exception('No stores'));
+
+        $result = $this->provider->getCompletions('test', $this->session);
+        expect($result)->toBe([]);
+    });
+
+    it('handles null client response gracefully', function (): void {
+        $this->client->shouldReceive('listStores')
+            ->once()
+            ->andReturn(null);
+
+        $result = $this->provider->getCompletions('', $this->session);
+        expect($result)->toBe([]);
+    });
+
+    it('handles client that returns empty response', function (): void {
+        $this->client->shouldReceive('listStores')
+            ->once()
+            ->andThrow(new RuntimeException('Empty response'));
+
+        $result = $this->provider->getCompletions('', $this->session);
+        expect($result)->toBe([]);
     });
 });

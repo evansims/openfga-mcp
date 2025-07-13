@@ -41,13 +41,17 @@ final readonly class ObjectCompletionProvider extends AbstractCompletions
             // Read relationship tuples to extract objects
             $objects = [];
 
+            // Use wildcard tuple (empty strings act as wildcards) to read all tuples
+            $tuple = new TupleKey(
+                user: '',
+                relation: '',
+                object: '',
+            );
+
             $this->client->readTuples(
                 store: $storeId,
-                tuple: new TupleKey(
-                    user: '',
-                    relation: '',
-                    object: '',
-                ),
+                tuple: $tuple,
+                pageSize: 50,
             )
                 ->failure(static function (): void {
                     // If we can't fetch tuples, objects will remain empty

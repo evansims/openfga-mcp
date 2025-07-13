@@ -90,7 +90,9 @@ type document
     });
 
     it('all prompts respect restricted mode', function (): void {
+        $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
         putenv('OPENFGA_MCP_API_RESTRICT=true');
+        $_ENV['OPENFGA_MCP_API_STORE'] = 'allowed-store';
         putenv('OPENFGA_MCP_API_STORE=allowed-store');
 
         // Test ModelDesignPrompts - these don't take store parameters so are not restricted
@@ -114,12 +116,16 @@ type document
             ->and($result3[0]['content'])->toContain('security review');
 
         // Clean up
+        unset($_ENV['OPENFGA_MCP_API_RESTRICT']);
         putenv('OPENFGA_MCP_API_RESTRICT=false');
+        unset($_ENV['OPENFGA_MCP_API_STORE']);
         putenv('OPENFGA_MCP_API_STORE=false');
     });
 
     it('prompts work correctly when restricted mode allows access', function (): void {
+        $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
         putenv('OPENFGA_MCP_API_RESTRICT=true');
+        $_ENV['OPENFGA_MCP_API_STORE'] = 'allowed-store';
         putenv('OPENFGA_MCP_API_STORE=allowed-store');
 
         // Test with allowed store - should work normally
@@ -133,7 +139,9 @@ type document
             ->and($result[0]['content'])->not->toContain('restricted mode');
 
         // Clean up
+        unset($_ENV['OPENFGA_MCP_API_RESTRICT']);
         putenv('OPENFGA_MCP_API_RESTRICT=false');
+        unset($_ENV['OPENFGA_MCP_API_STORE']);
         putenv('OPENFGA_MCP_API_STORE=false');
     });
 });

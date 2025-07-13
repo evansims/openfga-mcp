@@ -44,9 +44,6 @@ type document
         // List users
         $result = $this->relationshipResources->listUsers($storeId);
 
-        // Debug: Show what we actually got
-        fwrite(STDERR, 'DEBUG: listUsers result: ' . json_encode($result, JSON_PRETTY_PRINT) . "\n");
-
         // Should return all unique users
         expect($result)->toBeArray()
             ->and($result['store_id'])->toBe($storeId)

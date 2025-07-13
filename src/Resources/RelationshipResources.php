@@ -7,13 +7,14 @@ namespace OpenFGA\MCP\Resources;
 use OpenFGA\ClientInterface;
 use OpenFGA\Models\Collections\UsersListInterface;
 use OpenFGA\Models\{LeafInterface, NodeInterface, TupleKey, UsersetTreeInterface};
-use OpenFGA\Responses\{CheckResponseInterface, ExpandResponseInterface};
+use OpenFGA\Responses\{CheckResponseInterface, ExpandResponseInterface, ReadTuplesResponseInterface};
 use PhpMcp\Server\Attributes\McpResourceTemplate;
 use Throwable;
 
 use function array_unique;
 use function assert;
 use function count;
+use function in_array;
 
 final readonly class RelationshipResources extends AbstractResources
 {
@@ -160,7 +161,10 @@ final readonly class RelationshipResources extends AbstractResources
     /**
      * List all objects in a specific OpenFGA store.
      *
-     * @param  string               $storeId The ID of the store
+     * @param string $storeId The ID of the store
+     *
+     * @throws Throwable
+     *
      * @return array<string, mixed> List of objects
      */
     #[McpResourceTemplate(
@@ -171,23 +175,69 @@ final readonly class RelationshipResources extends AbstractResources
     )]
     public function listObjects(string $storeId): array
     {
-        // Note: OpenFGA's Read API requires specific tuple filters and doesn't support
-        // reading all tuples without a filter. This is a known limitation.
-        // In a real implementation, you would need to maintain a separate index
-        // of objects or use specific queries based on known relations/users.
+        $failure = null;
+        $objects = [];
+        $continuationToken = null;
+        $called = false;
 
-        return [
+        do {
+            $hasMore = false;
+            $pageSize = 100;
+
+            // Read tuples with wildcard filters (empty strings act as wildcards)
+            $tuple = new TupleKey(
+                user: '',
+                relation: '',
+                object: '',
+            );
+
+            $this->client->readTuples(
+                store: $storeId,
+                tuple: $tuple,
+                continuationToken: $continuationToken,
+                pageSize: $pageSize,
+            )
+                ->failure(static function (Throwable $e) use (&$failure, &$called): void {
+                    $called = true;
+                    $failure = ['error' => '❌ Failed to read tuples! Error: ' . $e->getMessage()];
+                })
+                ->success(static function (mixed $response) use (&$objects, &$continuationToken, &$hasMore, &$called): void {
+                    $called = true;
+                    assert($response instanceof ReadTuplesResponseInterface);
+
+                    $tuples = $response->getTuples();
+
+                    foreach ($tuples as $tuple) {
+                        $object = $tuple->getKey()->getObject();
+
+                        if (! in_array($object, $objects, true)) {
+                            $objects[] = $object;
+                        }
+                    }
+
+                    $continuationToken = $response->getContinuationToken();
+                    $hasMore = null !== $continuationToken && '' !== $continuationToken;
+                });
+
+            if (null !== $failure) {
+                break;
+            }
+        } while ($hasMore && $called);
+
+        return $failure ?? [
             'store_id' => $storeId,
-            'objects' => [],
-            'count' => 0,
-            'note' => 'Reading all objects requires specific tuple filters. Use checkPermission for specific user-relation-object queries.',
+            'objects' => $objects,
+            'count' => count($objects),
         ];
     }
 
     /**
      * List all relationships (tuples) in a specific OpenFGA store.
      *
-     * @param  string               $storeId The ID of the store
+     * @param string $storeId The ID of the store
+     *
+     * @throws Throwable
+     *
      * @return array<string, mixed> List of relationships
      */
     #[McpResourceTemplate(
@@ -198,23 +248,70 @@ final readonly class RelationshipResources extends AbstractResources
     )]
     public function listRelationships(string $storeId): array
     {
-        // Note: OpenFGA's Read API requires specific tuple filters and doesn't support
-        // reading all tuples without a filter. This is a known limitation.
-        // In a real implementation, you would need to maintain a separate index
-        // of relationships or use specific queries based on known users/objects.
+        $failure = null;
+        $relationships = [];
+        $continuationToken = null;
+        $called = false;
 
-        return [
+        do {
+            $hasMore = false;
+            $pageSize = 100;
+
+            // Read tuples with wildcard filters (empty strings act as wildcards)
+            $tuple = new TupleKey(
+                user: '',
+                relation: '',
+                object: '',
+            );
+
+            $this->client->readTuples(
+                store: $storeId,
+                tuple: $tuple,
+                continuationToken: $continuationToken,
+                pageSize: $pageSize,
+            )
+                ->failure(static function (Throwable $e) use (&$failure, &$called): void {
+                    $called = true;
+                    $failure = ['error' => '❌ Failed to read tuples! Error: ' . $e->getMessage()];
+                })
+                ->success(static function (mixed $response) use (&$relationships, &$continuationToken, &$hasMore, &$called): void {
+                    $called = true;
+                    assert($response instanceof ReadTuplesResponseInterface);
+
+                    $tuples = $response->getTuples();
+
+                    foreach ($tuples as $tuple) {
+                        $key = $tuple->getKey();
+                        $relationships[] = [
+                            'user' => $key->getUser(),
+                            'relation' => $key->getRelation(),
+                            'object' => $key->getObject(),
+                        ];
+                    }
+
+                    $continuationToken = $response->getContinuationToken();
+                    $hasMore = null !== $continuationToken && '' !== $continuationToken;
+                });
+
+            if (null !== $failure) {
+                break;
+            }
+        } while ($hasMore && $called);
+
+        return $failure ?? [
             'store_id' => $storeId,
-            'relationships' => [],
-            'count' => 0,
-            'note' => 'Reading all relationships requires specific tuple filters. Use checkPermission for specific user-relation-object queries.',
+            'relationships' => $relationships,
+            'count' => count($relationships),
         ];
     }
 
     /**
      * List all users in a specific OpenFGA store.
      *
-     * @param  string               $storeId The ID of the store
+     * @param string $storeId The ID of the store
+     *
+     * @throws Throwable
+     *
      * @return array<string, mixed> List of users
      */
     #[McpResourceTemplate(
@@ -225,16 +322,59 @@ final readonly class RelationshipResources extends AbstractResources
     )]
     public function listUsers(string $storeId): array
     {
-        // Note: OpenFGA's Read API requires specific tuple filters and doesn't support
-        // reading all tuples without a filter. This is a known limitation.
-        // In a real implementation, you would need to maintain a separate index
-        // of users or use specific queries based on known relations/objects.
+        $failure = null;
+        $users = [];
+        $continuationToken = null;
+        $called = false;
 
-        return [
+        do {
+            $hasMore = false;
+            $pageSize = 100;
+
+            // Read tuples with wildcard filters (empty strings act as wildcards)
+            $tuple = new TupleKey(
+                user: '',
+                relation: '',
+                object: '',
+            );
+
+            $this->client->readTuples(
+                store: $storeId,
+                tuple: $tuple,
+                continuationToken: $continuationToken,
+                pageSize: $pageSize,
+            )
+                ->failure(static function (Throwable $e) use (&$failure, &$called): void {
+                    $called = true;
+                    $failure = ['error' => '❌ Failed to read tuples! Error: ' . $e->getMessage()];
+                })
+                ->success(static function (mixed $response) use (&$users, &$continuationToken, &$hasMore, &$called): void {
+                    $called = true;
+                    assert($response instanceof ReadTuplesResponseInterface);
+
+                    $tuples = $response->getTuples();
+
+                    foreach ($tuples as $tuple) {
+                        $user = $tuple->getKey()->getUser();
+
+                        if (! in_array($user, $users, true)) {
+                            $users[] = $user;
+                        }
+                    }
+
+                    $continuationToken = $response->getContinuationToken();
+                    $hasMore = null !== $continuationToken && '' !== $continuationToken;
+                });
+
+            if (null !== $failure) {
+                break;
+            }
+        } while ($hasMore && $called);
+
+        return $failure ?? [
             'store_id' => $storeId,
-            'users' => [],
-            'count' => 0,
-            'note' => 'Reading all users requires specific tuple filters. Use checkPermission for specific user-relation-object queries.',
+            'users' => $users,
+            'count' => count($users),
         ];
     }
 

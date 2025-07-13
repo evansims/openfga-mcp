@@ -5,7 +5,7 @@ declare(strict_types=1);
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Resources\RelationshipResources;
 use OpenFGA\Models\TupleKey;
-use OpenFGA\Results\{FailureInterface, SuccessInterface};
+use OpenFGA\Results\{Failure, FailureInterface, Success, SuccessInterface};
 
 beforeEach(function (): void {
     $this->client = Mockery::mock(ClientInterface::class);
@@ -17,53 +17,50 @@ afterEach(function (): void {
 });
 
 describe('listUsers resource', function (): void {
-    it('returns empty users with explanation note', function (): void {
+    it('handles readTuples failure', function (): void {
         $storeId = 'test-store-id';
-
-        // No client calls expected - method returns static response
+        $error = new \Exception('Failed to read tuples');
+        
+        $this->client->shouldReceive('readTuples')
+            ->once()
+            ->andReturn(new Failure($error));
 
         $result = $this->relationshipResources->listUsers($storeId);
 
         expect($result)->toBeArray()
-            ->and($result['store_id'])->toBe($storeId)
-            ->and($result['users'])->toBeArray()
-            ->and($result['users'])->toBeEmpty()
-            ->and($result['count'])->toBe(0)
-            ->and($result['note'])->toContain('Reading all users requires specific tuple filters');
+            ->and($result['error'])->toContain('Failed to read tuples');
     });
 });
 
 describe('listObjects resource', function (): void {
-    it('returns empty objects with explanation note', function (): void {
+    it('handles readTuples failure', function (): void {
         $storeId = 'test-store-id';
-
-        // No client calls expected - method returns static response
+        $error = new \Exception('Failed to read tuples');
+        
+        $this->client->shouldReceive('readTuples')
+            ->once()
+            ->andReturn(new Failure($error));
 
         $result = $this->relationshipResources->listObjects($storeId);
 
         expect($result)->toBeArray()
-            ->and($result['store_id'])->toBe($storeId)
-            ->and($result['objects'])->toBeArray()
-            ->and($result['objects'])->toBeEmpty()
-            ->and($result['count'])->toBe(0)
-            ->and($result['note'])->toContain('Reading all objects requires specific tuple filters');
+            ->and($result['error'])->toContain('Failed to read tuples');
     });
 });
 
 describe('listRelationships resource', function (): void {
-    it('returns empty relationships with explanation note', function (): void {
+    it('handles readTuples failure', function (): void {
         $storeId = 'test-store-id';
-
-        // No client calls expected - method returns static response
+        $error = new \Exception('Failed to read tuples');
+        
+        $this->client->shouldReceive('readTuples')
+            ->once()
+            ->andReturn(new Failure($error));
 
         $result = $this->relationshipResources->listRelationships($storeId);
 
         expect($result)->toBeArray()
-            ->and($result['store_id'])->toBe($storeId)
-            ->and($result['relationships'])->toBeArray()
-            ->and($result['relationships'])->toBeEmpty()
-            ->and($result['count'])->toBe(0)
-            ->and($result['note'])->toContain('Reading all relationships requires specific tuple filters');
+            ->and($result['error'])->toContain('Failed to read tuples');
     });
 });
 
@@ -71,7 +68,7 @@ describe('checkPermission resource template', function (): void {
     it('calls check on the client', function (): void {
         $storeId = 'test-store-id';
         $user = 'user:alice';
-        $relation = 'reader';
+        $relation = 'writer';
         $object = 'document:budget';
 
         $mockPromise = Mockery::mock(SuccessInterface::class);
@@ -126,7 +123,6 @@ describe('expandRelationships resource template', function (): void {
 
         $result = $this->relationshipResources->expandRelationships($storeId, $object, $relation);
 
-        // Without executing callbacks, result is empty
         expect($result)->toBeArray();
     });
 

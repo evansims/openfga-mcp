@@ -41,18 +41,18 @@ type document
         // Wait a moment for data consistency
         sleep(1); // 1 second delay to ensure writes are persisted
 
-        // List users (Note: This will return empty due to OpenFGA Read API limitations)
+        // List users
         $result = $this->relationshipResources->listUsers($storeId);
 
         // Debug: Show what we actually got
         fwrite(STDERR, 'DEBUG: listUsers result: ' . json_encode($result, JSON_PRETTY_PRINT) . "\n");
 
-        // OpenFGA Read API doesn't support reading all tuples without specific filters
+        // Should return all unique users
         expect($result)->toBeArray()
             ->and($result['store_id'])->toBe($storeId)
-            ->and($result['users'])->toBeEmpty() // Empty due to API limitation
-            ->and($result['count'])->toBe(0)
-            ->and($result['note'])->toContain('Reading all users requires specific tuple filters');
+            ->and($result['users'])->toBeArray()
+            ->and($result['users'])->toContain('user:alice', 'user:bob', 'user:charlie')
+            ->and($result['count'])->toBe(3);
     });
 
     it('lists objects from relationships', function (): void {
@@ -76,14 +76,15 @@ type document
         // Wait for data consistency
         sleep(1);
 
-        // List objects (Note: This will return empty due to OpenFGA Read API limitations)
+        // List objects
         $result = $this->relationshipResources->listObjects($storeId);
 
-        // OpenFGA Read API doesn't support reading all tuples without specific filters
+        // Should return all unique objects
         expect($result)->toBeArray()
-            ->and($result['objects'])->toBeEmpty() // Empty due to API limitation
-            ->and($result['count'])->toBe(0)
-            ->and($result['note'])->toContain('Reading all objects requires specific tuple filters');
+            ->and($result['store_id'])->toBe($storeId)
+            ->and($result['objects'])->toBeArray()
+            ->and($result['objects'])->toContain('document:report', 'document:budget')
+            ->and($result['count'])->toBe(2);
     });
 
     it('lists all relationships', function (): void {
@@ -106,14 +107,21 @@ type document
         // Wait for data consistency
         sleep(1);
 
-        // List relationships (Note: This will return empty due to OpenFGA Read API limitations)
+        // List relationships
         $result = $this->relationshipResources->listRelationships($storeId);
 
-        // OpenFGA Read API doesn't support reading all tuples without specific filters
+        // Should return all relationships
         expect($result)->toBeArray()
-            ->and($result['relationships'])->toBeEmpty() // Empty due to API limitation
-            ->and($result['count'])->toBe(0)
-            ->and($result['note'])->toContain('Reading all relationships requires specific tuple filters');
+            ->and($result['store_id'])->toBe($storeId)
+            ->and($result['relationships'])->toBeArray()
+            ->and($result['relationships'])->toHaveCount(2)
+            ->and($result['relationships'][0]['user'])->toBe('user:alice')
+            ->and($result['relationships'][0]['relation'])->toBe('reader')
+            ->and($result['relationships'][0]['object'])->toBe('document:1')
+            ->and($result['relationships'][1]['user'])->toBe('user:bob')
+            ->and($result['relationships'][1]['relation'])->toBe('reader')
+            ->and($result['relationships'][1]['object'])->toBe('document:2')
+            ->and($result['count'])->toBe(2);
     });
 
     it('checks permissions using resource template', function (): void {

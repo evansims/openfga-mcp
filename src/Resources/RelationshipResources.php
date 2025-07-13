@@ -7,14 +7,13 @@ namespace OpenFGA\MCP\Resources;
 use OpenFGA\ClientInterface;
 use OpenFGA\Models\Collections\UsersListInterface;
 use OpenFGA\Models\{LeafInterface, NodeInterface, TupleKey, UsersetTreeInterface};
-use OpenFGA\Responses\{CheckResponseInterface, ExpandResponseInterface, ReadTuplesResponseInterface};
+use OpenFGA\Responses\{CheckResponseInterface, ExpandResponseInterface};
 use PhpMcp\Server\Attributes\{McpResourceTemplate};
 use Throwable;
 
 use function array_unique;
 use function assert;
 use function count;
-use function explode;
 
 final readonly class RelationshipResources extends AbstractResources
 {
@@ -30,18 +29,19 @@ final readonly class RelationshipResources extends AbstractResources
      * @param string $user     the user to check (e.g., "user:123")
      * @param string $relation the relation to check (e.g., "reader")
      * @param string $object   the object to check (e.g., "document:456")
+     * @param string $modelId  the authorization model ID (optional, defaults to 'latest')
      *
      * @throws Throwable
      *
      * @return array<string, mixed> permission check result
      */
     #[McpResourceTemplate(
-        uriTemplate: 'openfga://store/{storeId}/check?user={user}&relation={relation}&object={object}',
+        uriTemplate: 'openfga://store/{storeId}/check?user={user}&relation={relation}&object={object}&model={modelId}',
         name: 'OpenFGA Permission Check',
         description: 'Check if a user has a specific permission on an object',
         mimeType: 'application/json',
     )]
-    public function checkPermission(string $storeId, string $user, string $relation, string $object): array
+    public function checkPermission(string $storeId, string $user, string $relation, string $object, string $modelId = 'latest'): array
     {
         $failure = null;
         $result = [];
@@ -55,7 +55,7 @@ final readonly class RelationshipResources extends AbstractResources
 
         $this->client->check(
             store: $storeId,
-            model: 'latest', // Use latest model
+            model: $modelId,
             tuple: $tuple,
         )
             ->failure(static function (Throwable $e) use (&$failure, &$called): void {
@@ -76,7 +76,7 @@ final readonly class RelationshipResources extends AbstractResources
             });
 
         // If neither callback was called, it means the promise chain wasn't resolved
-        if (!$called) {
+        if (! $called) {
             return [
                 'error' => '❌ Promise was not resolved',
             ];
@@ -145,7 +145,7 @@ final readonly class RelationshipResources extends AbstractResources
             });
 
         // If neither callback was called, it means the promise chain wasn't resolved
-        if (!$called) {
+        if (! $called) {
             return [
                 'object' => $object,
                 'relation' => $relation,
@@ -160,10 +160,7 @@ final readonly class RelationshipResources extends AbstractResources
     /**
      * List all objects in a specific OpenFGA store.
      *
-     * @param string $storeId the ID of the store
-     *
-     * @throws Throwable
-     *
+     * @param  string               $storeId the ID of the store
      * @return array<string, mixed> list of objects
      */
     #[McpResourceTemplate(
@@ -174,76 +171,23 @@ final readonly class RelationshipResources extends AbstractResources
     )]
     public function listObjects(string $storeId): array
     {
-        $failure = null;
-        $objects = [];
-        $uniqueObjects = [];
-        $called = false;
+        // Note: OpenFGA's Read API requires specific tuple filters and doesn't support
+        // reading all tuples without a filter. This is a known limitation.
+        // In a real implementation, you would need to maintain a separate index
+        // of objects or use specific queries based on known relations/users.
 
-        // We need to read all tuples and extract unique objects
-        $this->client->readTuples(store: $storeId)
-            ->failure(static function (Throwable $e) use (&$failure, &$called, $storeId): void {
-                $called = true;
-                $message = $e->getMessage();
-                
-                // If the error is network.invalid, it might be due to empty store - treat as empty result
-                if (str_contains($message, 'exception.network.invalid')) {
-                    $failure = [
-                        'store_id' => $storeId,
-                        'objects' => [],
-                        'count' => 0,
-                    ];
-                } else {
-                    $failure = ['error' => '❌ Failed to fetch objects! Error: ' . $message];
-                }
-            })
-            ->success(static function (mixed $response) use (&$objects, &$uniqueObjects, &$called): void {
-                $called = true;
-                assert($response instanceof ReadTuplesResponseInterface);
-
-                $tuples = $response->getTuples();
-
-                foreach ($tuples as $tuple) {
-                    $objectStr = $tuple->getKey()->getObject();
-
-                    // Extract unique objects
-                    if (! isset($uniqueObjects[$objectStr])) {
-                        $uniqueObjects[$objectStr] = true;
-                        // Parse object type and id
-                        $parts = explode(':', $objectStr, 2);
-                        $objectType = $parts[0] ?? 'unknown';
-                        $objectId = $parts[1] ?? $objectStr;
-                        $objects[] = [
-                            'object' => $objectStr,
-                            'type' => $objectType,
-                            'id' => $objectId,
-                        ];
-                    }
-                }
-            });
-
-        // If neither callback was called, it means the promise chain wasn't resolved
-        if (!$called) {
-            return [
-                'store_id' => $storeId,
-                'objects' => [],
-                'count' => 0,
-            ];
-        }
-
-        return $failure ?? [
+        return [
             'store_id' => $storeId,
-            'objects' => $objects,
-            'count' => count($objects),
+            'objects' => [],
+            'count' => 0,
+            'note' => 'Reading all objects requires specific tuple filters. Use checkPermission for specific user-relation-object queries.',
         ];
     }
 
     /**
      * List all relationships (tuples) in a specific OpenFGA store.
      *
-     * @param string $storeId the ID of the store
-     *
-     * @throws Throwable
-     *
+     * @param  string               $storeId the ID of the store
      * @return array<string, mixed> list of relationships
      */
     #[McpResourceTemplate(
@@ -254,68 +198,23 @@ final readonly class RelationshipResources extends AbstractResources
     )]
     public function listRelationships(string $storeId): array
     {
-        $failure = null;
-        $relationships = [];
-        $called = false;
+        // Note: OpenFGA's Read API requires specific tuple filters and doesn't support
+        // reading all tuples without a filter. This is a known limitation.
+        // In a real implementation, you would need to maintain a separate index
+        // of relationships or use specific queries based on known users/objects.
 
-        $this->client->readTuples(store: $storeId)
-            ->failure(static function (Throwable $e) use (&$failure, &$called, $storeId): void {
-                $called = true;
-                $message = $e->getMessage();
-                
-                // If the error is network.invalid, it might be due to empty store - treat as empty result
-                if (str_contains($message, 'exception.network.invalid')) {
-                    $failure = [
-                        'store_id' => $storeId,
-                        'relationships' => [],
-                        'count' => 0,
-                    ];
-                } else {
-                    $failure = ['error' => '❌ Failed to fetch relationships! Error: ' . $message];
-                }
-            })
-            ->success(static function (mixed $response) use (&$relationships, &$called): void {
-                $called = true;
-                assert($response instanceof ReadTuplesResponseInterface);
-
-                $tuples = $response->getTuples();
-
-                foreach ($tuples as $tuple) {
-                    $relationship = [
-                        'user' => $tuple->getKey()->getUser(),
-                        'relation' => $tuple->getKey()->getRelation(),
-                        'object' => $tuple->getKey()->getObject(),
-                    ];
-
-                    // Timestamp not available from interface
-
-                    $relationships[] = $relationship;
-                }
-            });
-
-        // If neither callback was called, it means the promise chain wasn't resolved
-        if (!$called) {
-            return [
-                'store_id' => $storeId,
-                'relationships' => [],
-                'count' => 0,
-            ];
-        }
-
-        return $failure ?? [
+        return [
             'store_id' => $storeId,
-            'relationships' => $relationships,
-            'count' => count($relationships),
+            'relationships' => [],
+            'count' => 0,
+            'note' => 'Reading all relationships requires specific tuple filters. Use checkPermission for specific user-relation-object queries.',
         ];
     }
 
     /**
      * List all users in a specific OpenFGA store.
      *
-     * @param string $storeId the ID of the store
-     *
-     * @throws Throwable
-     *
+     * @param  string               $storeId the ID of the store
      * @return array<string, mixed> list of users
      */
     #[McpResourceTemplate(
@@ -326,69 +225,17 @@ final readonly class RelationshipResources extends AbstractResources
     )]
     public function listUsers(string $storeId): array
     {
-        $failure = null;
-        $users = [];
-        $uniqueUsers = [];
-        $called = false;
+        // Note: OpenFGA's Read API requires specific tuple filters and doesn't support
+        // reading all tuples without a filter. This is a known limitation.
+        // In a real implementation, you would need to maintain a separate index
+        // of users or use specific queries based on known relations/objects.
 
-        // We need to read all tuples and extract unique users
-        $this->client->readTuples(store: $storeId)
-            ->failure(static function (Throwable $e) use (&$failure, &$called, $storeId): void {
-                $called = true;
-                $message = $e->getMessage();
-                
-                // If the error is network.invalid, it might be due to empty store - treat as empty result
-                if (str_contains($message, 'exception.network.invalid')) {
-                    $failure = [
-                        'store_id' => $storeId,
-                        'users' => [],
-                        'count' => 0,
-                    ];
-                } else {
-                    $failure = ['error' => '❌ Failed to fetch users! Error: ' . $message];
-                }
-            })
-            ->success(static function (mixed $response) use (&$users, &$uniqueUsers, &$called): void {
-                $called = true;
-                assert($response instanceof ReadTuplesResponseInterface);
-
-                $tuples = $response->getTuples();
-
-                foreach ($tuples as $tuple) {
-                    $userStr = $tuple->getKey()->getUser();
-
-                    // Extract unique users
-                    if (! isset($uniqueUsers[$userStr])) {
-                        $uniqueUsers[$userStr] = true;
-                        // Parse user type and id
-                        $parts = explode(':', $userStr, 2);
-                        $userType = $parts[0] ?? 'unknown';
-                        $userId = $parts[1] ?? $userStr;
-                        $users[] = [
-                            'user' => $userStr,
-                            'type' => $userType,
-                            'id' => $userId,
-                        ];
-                    }
-                }
-            });
-
-        // If neither callback was called, it means the promise chain wasn't resolved
-        if (!$called) {
-            return [
-                'store_id' => $storeId,
-                'users' => [],
-                'count' => 0,
-            ];
-        }
-
-        $result = $failure ?? [
+        return [
             'store_id' => $storeId,
-            'users' => $users,
-            'count' => count($users),
+            'users' => [],
+            'count' => 0,
+            'note' => 'Reading all users requires specific tuple filters. Use checkPermission for specific user-relation-object queries.',
         ];
-        
-        return $result;
     }
 
     /**

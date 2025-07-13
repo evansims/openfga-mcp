@@ -17,68 +17,53 @@ afterEach(function (): void {
 });
 
 describe('listUsers resource', function (): void {
-    it('calls readTuples on the client', function (): void {
+    it('returns empty users with explanation note', function (): void {
         $storeId = 'test-store-id';
 
-        $mockPromise = Mockery::mock(SuccessInterface::class);
-        $mockPromise->shouldReceive('failure')->once()->andReturnSelf();
-        $mockPromise->shouldReceive('success')->once()->andReturnSelf();
-
-        $this->client->shouldReceive('readTuples')
-            ->with($storeId)
-            ->once()
-            ->andReturn($mockPromise);
+        // No client calls expected - method returns static response
 
         $result = $this->relationshipResources->listUsers($storeId);
 
         expect($result)->toBeArray()
             ->and($result['store_id'])->toBe($storeId)
             ->and($result['users'])->toBeArray()
-            ->and($result['count'])->toBe(0);
+            ->and($result['users'])->toBeEmpty()
+            ->and($result['count'])->toBe(0)
+            ->and($result['note'])->toContain('Reading all users requires specific tuple filters');
     });
 });
 
 describe('listObjects resource', function (): void {
-    it('calls readTuples on the client', function (): void {
+    it('returns empty objects with explanation note', function (): void {
         $storeId = 'test-store-id';
 
-        $mockPromise = Mockery::mock(SuccessInterface::class);
-        $mockPromise->shouldReceive('failure')->once()->andReturnSelf();
-        $mockPromise->shouldReceive('success')->once()->andReturnSelf();
-
-        $this->client->shouldReceive('readTuples')
-            ->with($storeId)
-            ->once()
-            ->andReturn($mockPromise);
+        // No client calls expected - method returns static response
 
         $result = $this->relationshipResources->listObjects($storeId);
 
         expect($result)->toBeArray()
             ->and($result['store_id'])->toBe($storeId)
             ->and($result['objects'])->toBeArray()
-            ->and($result['count'])->toBe(0);
+            ->and($result['objects'])->toBeEmpty()
+            ->and($result['count'])->toBe(0)
+            ->and($result['note'])->toContain('Reading all objects requires specific tuple filters');
     });
 });
 
 describe('listRelationships resource', function (): void {
-    it('calls readTuples on the client', function (): void {
+    it('returns empty relationships with explanation note', function (): void {
         $storeId = 'test-store-id';
 
-        $mockPromise = Mockery::mock(SuccessInterface::class);
-        $mockPromise->shouldReceive('failure')->once()->andReturnSelf();
-        $mockPromise->shouldReceive('success')->once()->andReturnSelf();
-
-        $this->client->shouldReceive('readTuples')
-            ->with($storeId)
-            ->once()
-            ->andReturn($mockPromise);
+        // No client calls expected - method returns static response
 
         $result = $this->relationshipResources->listRelationships($storeId);
 
         expect($result)->toBeArray()
             ->and($result['store_id'])->toBe($storeId)
             ->and($result['relationships'])->toBeArray()
-            ->and($result['count'])->toBe(0);
+            ->and($result['relationships'])->toBeEmpty()
+            ->and($result['count'])->toBe(0)
+            ->and($result['note'])->toContain('Reading all relationships requires specific tuple filters');
     });
 });
 

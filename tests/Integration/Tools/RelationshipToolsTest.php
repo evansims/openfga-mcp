@@ -11,7 +11,7 @@ beforeEach(function (): void {
 
 describe('RelationshipTools Integration', function (): void {
     it('can grant and check permissions', function (): void {
-        [$storeId, $modelId] = setupTestStoreWithModel();
+        ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel();
 
         $user = 'user:alice';
         $relation = 'reader';
@@ -31,7 +31,7 @@ describe('RelationshipTools Integration', function (): void {
     });
 
     it('can revoke permissions', function (): void {
-        [$storeId, $modelId] = setupTestStoreWithModel();
+        ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel();
 
         $user = 'user:bob';
         $relation = 'writer';
@@ -54,7 +54,7 @@ describe('RelationshipTools Integration', function (): void {
     });
 
     it('can list objects a user has access to', function (): void {
-        [$storeId, $modelId] = setupTestStoreWithModel();
+        ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel();
 
         $user = 'user:charlie';
         $relation = 'reader';
@@ -77,7 +77,7 @@ describe('RelationshipTools Integration', function (): void {
     });
 
     it('can list users with access to an object', function (): void {
-        [$storeId, $modelId] = setupTestStoreWithModel();
+        ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel();
 
         $object = 'document:shared-doc';
         $relation = 'reader';
@@ -121,7 +121,7 @@ type document
     define owner: [user]
     define viewer: [user] or owner or viewer from parent';
 
-        [$storeId, $modelId] = setupTestStoreWithModel($dsl);
+        ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel($dsl);
 
         // Create folder and document relationship
         $folder = 'folder:projects';
@@ -140,7 +140,7 @@ type document
     });
 
     it('respects read-only mode', function (): void {
-        [$storeId, $modelId] = setupTestStoreWithModel();
+        ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel();
         putenv('OPENFGA_MCP_API_READONLY=true');
 
         $grantResult = $this->relationshipTools->grantPermission($storeId, $modelId, 'user:test', 'reader', 'document:test');
@@ -157,8 +157,8 @@ type document
     });
 
     it('respects restricted mode', function (): void {
-        [$allowedStoreId, $allowedModelId] = setupTestStoreWithModel();
-        [$restrictedStoreId, $restrictedModelId] = setupTestStoreWithModel();
+        ['store' => $allowedStoreId, 'model' => $allowedModelId] = setupTestStoreWithModel();
+        ['store' => $restrictedStoreId, 'model' => $restrictedModelId] = setupTestStoreWithModel();
 
         putenv('OPENFGA_MCP_API_RESTRICT=true');
         putenv('OPENFGA_MCP_API_STORE=' . $allowedStoreId);
@@ -185,7 +185,7 @@ type document
     });
 
     it('handles batch operations efficiently', function (): void {
-        [$storeId, $modelId] = setupTestStoreWithModel();
+        ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel();
 
         $users = [];
         $documents = [];

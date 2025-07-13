@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use OpenFGA\ClientInterface;
 use OpenFGA\Exceptions\{ClientException, ClientThrowable};
 use OpenFGA\Models\Collections\{TupleKeys, UserTypeFilters};
-use OpenFGA\Models\{TupleKey};
+use OpenFGA\Models\{TupleKey, UserObjectInterface, UserTypeFilter};
 use OpenFGA\Responses\{CheckResponseInterface, ListObjectsResponseInterface, ListUsersResponseInterface, WriteTuplesResponseInterface};
 use PhpMcp\Server\Attributes\{McpTool};
 use ReflectionException;
@@ -113,6 +113,7 @@ final readonly class RelationshipTools extends AbstractTools
     ): string {
         $failure = null;
         $success = '';
+        $called = false;
 
         if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
             return '❌ The MCP server is configured in read only mode. You cannot grant permissions in this mode.';
@@ -139,13 +140,20 @@ final readonly class RelationshipTools extends AbstractTools
         );
 
         $this->client->writeTuples(store: $store, model: $model, writes: new TupleKeys($tuple))
-            ->failure(static function (Throwable $e) use (&$failure): void {
+            ->failure(static function (Throwable $e) use (&$failure, &$called): void {
+                $called = true;
                 $failure = '❌ Failed to grant permission! Error: ' . $e->getMessage();
             })
-            ->success(static function (mixed $response) use (&$success): void {
+            ->success(static function (mixed $response) use (&$success, &$called): void {
+                $called = true;
                 assert($response instanceof WriteTuplesResponseInterface);
                 $success = '✅ Permission granted successfully';
             });
+
+        // If neither callback was called, it means the promise chain wasn't resolved
+        if (! $called) {
+            return '❌ Promise was not resolved';
+        }
 
         return $failure ?? $success;
     }
@@ -227,6 +235,7 @@ final readonly class RelationshipTools extends AbstractTools
     ): string | array {
         $failure = null;
         $success = [];
+        $called = false;
 
         if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
             $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
@@ -242,21 +251,38 @@ final readonly class RelationshipTools extends AbstractTools
             }
         }
 
-        $this->client->listUsers(store: $store, model: $model, object: $object, relation: $relation, userFilters: new UserTypeFilters)
-            ->failure(static function (Throwable $e) use (&$failure): void {
+        // Create a filter for 'user' type - this is the most common case
+        // The API requires exactly 1 user filter
+        $userFilter = new UserTypeFilter(type: 'user');
+        $userFilters = new UserTypeFilters($userFilter);
+
+        $this->client->listUsers(store: $store, model: $model, object: $object, relation: $relation, userFilters: $userFilters)
+            ->failure(static function (Throwable $e) use (&$failure, &$called): void {
+                $called = true;
                 $failure = '❌ Failed to list users! Error: ' . $e->getMessage();
             })
-            ->success(static function (mixed $response) use (&$success): void {
+            ->success(static function (mixed $response) use (&$success, &$called): void {
+                $called = true;
                 assert($response instanceof ListUsersResponseInterface);
 
                 foreach ($response->getUsers() as $user) {
-                    $object = $user->getObject();
+                    $userIdentifier = $user->getObject();
 
-                    if (null !== $object && is_string($object)) {
-                        $success[] = $object;
+                    if (null !== $userIdentifier) {
+                        if (is_string($userIdentifier)) {
+                            $success[] = $userIdentifier;
+                        } elseif ($userIdentifier instanceof UserObjectInterface) {
+                            // Construct the user identifier from type and id
+                            $success[] = $userIdentifier->getType() . ':' . $userIdentifier->getId();
+                        }
                     }
                 }
             });
+
+        // If neither callback was called, it means the promise chain wasn't resolved
+        if (! $called) {
+            return '❌ Promise was not resolved';
+        }
 
         return $failure ?? $success;
     }

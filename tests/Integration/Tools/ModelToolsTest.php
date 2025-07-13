@@ -36,7 +36,7 @@ type project
     });
 
     it('can get an authorization model', function (): void {
-        [$storeId, $modelId] = setupTestStoreWithModel();
+        ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel();
 
         $result = $this->modelTools->getModel($storeId, $modelId);
 
@@ -57,7 +57,7 @@ type team
 
 type user';
 
-        [$storeId, $modelId] = setupTestStoreWithModel($customDsl);
+        ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel($customDsl);
 
         $result = $this->modelTools->getModelDsl($storeId, $modelId);
 
@@ -143,7 +143,7 @@ type user';
     });
 
     it('respects restricted mode for model access', function (): void {
-        [$storeId, $allowedModelId] = setupTestStoreWithModel();
+        ['store' => $storeId, 'model' => $allowedModelId] = setupTestStoreWithModel();
         $restrictedModelId = createTestModel($storeId);
 
         putenv('OPENFGA_MCP_API_RESTRICT=true');

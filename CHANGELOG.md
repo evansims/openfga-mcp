@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2025-07-13
+
 ### Added
 
 - Added support for MCP resources, resource templates, prompts, and completion providers

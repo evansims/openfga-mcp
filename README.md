@@ -170,8 +170,7 @@ The server also includes enum-based completion providers for common parameters:
 - **System Classification**: System types (microservices, monolith, hybrid), criticality levels, access patterns.
 - **Authorization Patterns**: Delegation types (temporary, permanent, conditional), complexity levels, query types, risk levels.
 
-Completion providers respect the server's restriction settings and will only suggest options from allowed stores when `OPENFGA_MCP_API_RESTRICT` is enabled.
+---
 
-## Contributing
-
-Contributions are welcome! Please ensure all tests pass and linters are satisfied before submitting a pull request.
+- Want to help? Get started with our [contributors guide](./.github/CONTRIBUTING.md).
+- Licensed under the [Apache 2.0 License](./LICENSE).

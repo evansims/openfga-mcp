@@ -23,11 +23,11 @@ final readonly class StoreResources extends AbstractResources
     /**
      * Get detailed information about a specific OpenFGA store.
      *
-     * @param string $storeId the ID of the store to fetch
+     * @param string $storeId The ID of the store to fetch
      *
      * @throws Throwable
      *
-     * @return array<string, mixed> store details
+     * @return array<string, mixed> Store details
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}',
@@ -62,11 +62,11 @@ final readonly class StoreResources extends AbstractResources
     /**
      * List all authorization models in a specific OpenFGA store.
      *
-     * @param string $storeId the ID of the store
+     * @param string $storeId The ID of the store
      *
      * @throws Throwable
      *
-     * @return array<string, mixed> list of models in the store
+     * @return array<string, mixed> List of models in the store
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/models',
@@ -109,7 +109,7 @@ final readonly class StoreResources extends AbstractResources
      *
      * @throws Throwable
      *
-     * @return array<string, mixed> list of stores with their details
+     * @return array<string, mixed> List of stores with their details
      */
     #[McpResource(
         uri: 'openfga://stores',

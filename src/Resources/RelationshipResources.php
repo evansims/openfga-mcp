@@ -8,7 +8,7 @@ use OpenFGA\ClientInterface;
 use OpenFGA\Models\Collections\UsersListInterface;
 use OpenFGA\Models\{LeafInterface, NodeInterface, TupleKey, UsersetTreeInterface};
 use OpenFGA\Responses\{CheckResponseInterface, ExpandResponseInterface};
-use PhpMcp\Server\Attributes\{McpResourceTemplate};
+use PhpMcp\Server\Attributes\McpResourceTemplate;
 use Throwable;
 
 use function array_unique;
@@ -25,15 +25,15 @@ final readonly class RelationshipResources extends AbstractResources
     /**
      * Check if a user has a specific permission on an object.
      *
-     * @param string $storeId  the ID of the store
-     * @param string $user     the user to check (e.g., "user:123")
-     * @param string $relation the relation to check (e.g., "reader")
-     * @param string $object   the object to check (e.g., "document:456")
-     * @param string $modelId  the authorization model ID (optional, defaults to 'latest')
+     * @param string $storeId  The ID of the store
+     * @param string $user     The user to check (e.g., "user:123")
+     * @param string $relation The relation to check (e.g., "reader")
+     * @param string $object   The object to check (e.g., "document:456")
+     * @param string $modelId  The authorization model ID (defaults to 'latest')
      *
      * @throws Throwable
      *
-     * @return array<string, mixed> permission check result
+     * @return array<string, mixed> Permission check result
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/check?user={user}&relation={relation}&object={object}&model={modelId}',
@@ -88,13 +88,13 @@ final readonly class RelationshipResources extends AbstractResources
     /**
      * Expand all users who have a specific relation to an object.
      *
-     * @param string $storeId  the ID of the store
-     * @param string $object   the object to expand (e.g., "document:456")
-     * @param string $relation the relation to expand (e.g., "reader")
+     * @param string $storeId  The ID of the store
+     * @param string $object   The object to expand (e.g., "document:456")
+     * @param string $relation The relation to expand (e.g., "reader")
      *
      * @throws Throwable
      *
-     * @return array<string, mixed> expanded relationships
+     * @return array<string, mixed> Expanded relationships
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/expand?object={object}&relation={relation}',
@@ -109,7 +109,7 @@ final readonly class RelationshipResources extends AbstractResources
         $called = false;
 
         $tuple = new TupleKey(
-            user: '*',  // Wildcard for expand
+            user: '*',
             relation: $relation,
             object: $object,
         );
@@ -160,8 +160,8 @@ final readonly class RelationshipResources extends AbstractResources
     /**
      * List all objects in a specific OpenFGA store.
      *
-     * @param  string               $storeId the ID of the store
-     * @return array<string, mixed> list of objects
+     * @param  string               $storeId The ID of the store
+     * @return array<string, mixed> List of objects
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/objects',
@@ -187,8 +187,8 @@ final readonly class RelationshipResources extends AbstractResources
     /**
      * List all relationships (tuples) in a specific OpenFGA store.
      *
-     * @param  string               $storeId the ID of the store
-     * @return array<string, mixed> list of relationships
+     * @param  string               $storeId The ID of the store
+     * @return array<string, mixed> List of relationships
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/relationships',
@@ -214,8 +214,8 @@ final readonly class RelationshipResources extends AbstractResources
     /**
      * List all users in a specific OpenFGA store.
      *
-     * @param  string               $storeId the ID of the store
-     * @return array<string, mixed> list of users
+     * @param  string               $storeId The ID of the store
+     * @return array<string, mixed> List of users
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/users',
@@ -241,41 +241,24 @@ final readonly class RelationshipResources extends AbstractResources
     /**
      * Extract users from a node in the expansion tree.
      *
-     * @param  NodeInterface $node the tree node to process
-     * @return array<string> list of users
+     * @param  NodeInterface $node The tree node to process
+     * @return array<string> List of users
      */
     private function extractUsersFromNode(NodeInterface $node): array
     {
         $users = [];
 
-        // Check if this is a leaf node
+        // Handle leaf nodes
         $leaf = $node->getLeaf();
 
         if ($leaf instanceof LeafInterface) {
             $usersList = $leaf->getUsers();
 
             if ($usersList instanceof UsersListInterface) {
-                // The users list contains UsersListUserInterface objects
                 foreach ($usersList as $userList) {
-                    // UsersListUserInterface has getUser() method that returns string
                     $users[] = $userList->getUser();
                 }
             }
-        }
-
-        // Check union nodes - these would contain multiple nodes
-        $union = $node->getUnion();
-
-        if (null !== $union) {
-            // Union nodes would have child nodes - implementation depends on actual interface
-            // For now, we'll skip recursive processing
-        }
-
-        // Check intersection nodes
-        $intersection = $node->getIntersection();
-
-        if (null !== $intersection) {
-            // Similar to union, would need recursive processing
         }
 
         return $users;

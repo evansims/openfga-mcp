@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace OpenFGA\MCP\Resources;
 
 use OpenFGA\ClientInterface;
-use OpenFGA\Models\{AuthorizationModelInterface};
+use OpenFGA\Models\{AuthorizationModelInterface, ModelInterface};
 use OpenFGA\Models\Collections\TypeDefinitionRelationsInterface;
 use OpenFGA\Responses\{GetAuthorizationModelResponseInterface, ListAuthorizationModelsResponseInterface};
-use PhpMcp\Server\Attributes\{McpResourceTemplate};
+use PhpMcp\Server\Attributes\McpResourceTemplate;
 use Throwable;
 
 use function assert;
@@ -45,7 +45,7 @@ final readonly class ModelResources extends AbstractResources
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = ['error' => '❌ Failed to fetch models! Error: ' . $e->getMessage()];
             })
-            ->success(static function (mixed $response) use (&$modelData, $storeId): void {
+            ->success(function (mixed $response) use (&$modelData, $storeId): void {
                 assert($response instanceof ListAuthorizationModelsResponseInterface);
 
                 $models = $response->getModels();
@@ -59,40 +59,12 @@ final readonly class ModelResources extends AbstractResources
                 // The first model in the list is the latest one
                 $latestModel = $models[0];
 
-                if ($latestModel instanceof AuthorizationModelInterface) {
-                    $modelData = [
-                        'store_id' => $storeId,
-                        'id' => $latestModel->getId(),
-                        'schema_version' => '1.1', // Default schema version
-                        'created_at' => null, // Not available from interface
-                        'type_definitions' => [],
-                        'is_latest' => true,
-                    ];
-                } else {
+                if (! $latestModel instanceof ModelInterface) {
+                    $modelData = ['error' => '❌ No model found'];
+
                     return;
                 }
-
-                $typeDefinitions = $latestModel->getTypeDefinitions();
-
-                foreach ($typeDefinitions as $typeDefinition) {
-                    $typeInfo = [
-                        'type' => $typeDefinition->getType(),
-                        'relations' => [],
-                    ];
-
-                    $relations = $typeDefinition->getRelations();
-
-                    if ($relations instanceof TypeDefinitionRelationsInterface) {
-                        // Relations is a collection, extract the names
-                        foreach ($relations as $name => $_) {
-                            $typeInfo['relations'][] = $name;
-                        }
-                    }
-
-                    $modelData['type_definitions'][] = $typeInfo;
-                }
-
-                $modelData['type_count'] = count($modelData['type_definitions']);
+                $modelData = $this->formatModelData($latestModel, $storeId, true);
             });
 
         return $failure ?? $modelData;
@@ -123,45 +95,65 @@ final readonly class ModelResources extends AbstractResources
             ->failure(static function (Throwable $e) use (&$failure): void {
                 $failure = ['error' => '❌ Failed to fetch model! Error: ' . $e->getMessage()];
             })
-            ->success(static function (mixed $response) use (&$modelData): void {
+            ->success(function (mixed $response) use (&$modelData, $storeId): void {
                 assert($response instanceof GetAuthorizationModelResponseInterface);
 
                 $authModel = $response->getModel();
 
-                if ($authModel instanceof AuthorizationModelInterface) {
-                    $modelData = [
-                        'id' => $authModel->getId(),
-                        'schema_version' => '1.1', // Default schema version
-                        'created_at' => null, // Not available from interface
-                        'type_definitions' => [],
-                    ];
-                } else {
+                if (! $authModel instanceof AuthorizationModelInterface) {
+                    $modelData = ['error' => '❌ Model not found'];
+
                     return;
                 }
-
-                $typeDefinitions = $authModel->getTypeDefinitions();
-
-                foreach ($typeDefinitions as $typeDefinition) {
-                    $typeInfo = [
-                        'type' => $typeDefinition->getType(),
-                        'relations' => [],
-                    ];
-
-                    $relations = $typeDefinition->getRelations();
-
-                    if ($relations instanceof TypeDefinitionRelationsInterface) {
-                        // Relations is a collection, extract the names
-                        foreach ($relations as $name => $_) {
-                            $typeInfo['relations'][] = $name;
-                        }
-                    }
-
-                    $modelData['type_definitions'][] = $typeInfo;
-                }
-
-                $modelData['type_count'] = count($modelData['type_definitions']);
+                $modelData = $this->formatModelData($authModel, $storeId);
             });
 
         return $failure ?? $modelData;
+    }
+
+    /**
+     * Format authorization model data into a consistent structure.
+     *
+     * @param  AuthorizationModelInterface $model    The model to format
+     * @param  string                      $storeId  The store ID
+     * @param  bool                        $isLatest Whether this is the latest model
+     * @return array<string, mixed>        Formatted model data
+     */
+    private function formatModelData(AuthorizationModelInterface $model, string $storeId, bool $isLatest = false): array
+    {
+        $modelData = [
+            'id' => $model->getId(),
+            'schema_version' => '1.1',
+            'created_at' => null,
+            'type_definitions' => [],
+        ];
+
+        if ($isLatest) {
+            $modelData['store_id'] = $storeId;
+            $modelData['is_latest'] = true;
+        }
+
+        $typeDefinitions = $model->getTypeDefinitions();
+
+        foreach ($typeDefinitions as $typeDefinition) {
+            $typeInfo = [
+                'type' => $typeDefinition->getType(),
+                'relations' => [],
+            ];
+
+            $relations = $typeDefinition->getRelations();
+
+            if ($relations instanceof TypeDefinitionRelationsInterface) {
+                foreach ($relations as $name => $_) {
+                    $typeInfo['relations'][] = $name;
+                }
+            }
+
+            $modelData['type_definitions'][] = $typeInfo;
+        }
+
+        $modelData['type_count'] = count($modelData['type_definitions']);
+
+        return $modelData;
     }
 }

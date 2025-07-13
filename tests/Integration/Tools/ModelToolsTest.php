@@ -129,7 +129,7 @@ type document
 
     it('respects read-only mode', function (): void {
         $storeId = setupTestStore();
-        putenv('OPENFGA_MCP_API_READONLY=true');
+        $_ENV['OPENFGA_MCP_API_READONLY'] = 'true';
 
         $dsl = 'model
   schema 1.1
@@ -139,30 +139,35 @@ type user';
 
         expect($result)->toBe('❌ The MCP server is configured in read only mode. You cannot create authorization models in this mode.');
 
-        putenv('OPENFGA_MCP_API_READONLY');
-        unset($_ENV['OPENFGA_MCP_API_READONLY']);
+        putenv('OPENFGA_MCP_API_READONLY=false');
+        $_ENV['OPENFGA_MCP_API_READONLY'] = 'false';
     });
 
     it('respects restricted mode for model access', function (): void {
         ['store' => $storeId, 'model' => $allowedModelId] = setupTestStoreWithModel();
         $restrictedModelId = createTestModel($storeId);
 
-        $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
-        $_ENV['OPENFGA_MCP_API_STORE'] = $storeId;
-        $_ENV['OPENFGA_MCP_API_MODEL'] = $allowedModelId;
+        try {
+            $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
+            $_ENV['OPENFGA_MCP_API_STORE'] = $storeId;
+            $_ENV['OPENFGA_MCP_API_MODEL'] = $allowedModelId;
 
-        // Should allow access to the allowed model
-        $allowedResult = $this->modelTools->getModel($storeId, $allowedModelId);
-        expect($allowedResult)->toContain('✅ Found authorization model');
+            // Should allow access to the allowed model
+            $allowedResult = $this->modelTools->getModel($storeId, $allowedModelId);
+            expect($allowedResult)->toContain('✅ Found authorization model');
 
-        // Should block access to other models
-        $restrictedResult = $this->modelTools->getModel($storeId, $restrictedModelId);
-        expect($restrictedResult)->toBe('❌ The MCP server is configured in restricted mode. You cannot query authorization models other than ' . $allowedModelId . ' in this mode.');
-
-        putenv('OPENFGA_MCP_API_RESTRICT');
-        putenv('OPENFGA_MCP_API_STORE');
-        putenv('OPENFGA_MCP_API_MODEL');
-        unset($_ENV['OPENFGA_MCP_API_RESTRICT'], $_ENV['OPENFGA_MCP_API_STORE'], $_ENV['OPENFGA_MCP_API_MODEL']);
+            // Should block access to other models
+            $restrictedResult = $this->modelTools->getModel($storeId, $restrictedModelId);
+            expect($restrictedResult)->toBe('❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $allowedModelId . ' in this mode.');
+        } finally {
+            // Ensure cleanup always happens
+            putenv('OPENFGA_MCP_API_RESTRICT=false');
+            putenv('OPENFGA_MCP_API_STORE=false');
+            putenv('OPENFGA_MCP_API_MODEL=false');
+            $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'false';
+            $_ENV['OPENFGA_MCP_API_STORE'] = 'false';
+            $_ENV['OPENFGA_MCP_API_MODEL'] = 'false';
+        }
     });
 
     it('creates complex models with inheritance', function (): void {

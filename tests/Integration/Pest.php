@@ -12,10 +12,22 @@ declare(strict_types=1);
 |
 */
 
+// Function to completely clear environment variables
+function clearTestEnvironment(): void
+{
+    // Clear from both $_ENV and system environment
+    $vars = ['OPENFGA_MCP_API_READONLY', 'OPENFGA_MCP_API_RESTRICT', 'OPENFGA_MCP_API_STORE', 'OPENFGA_MCP_API_MODEL'];
+
+    foreach ($vars as $var) {
+        // Set to explicit 'false' string which will be treated as false by our helper functions
+        putenv($var . '=false');
+        $_ENV[$var] = 'false';
+    }
+}
+
 // Ensure clean environment before each test
 beforeEach(function (): void {
-    // Reset environment variables to ensure clean state
-    unset($_ENV['OPENFGA_MCP_API_READONLY'], $_ENV['OPENFGA_MCP_API_RESTRICT'], $_ENV['OPENFGA_MCP_API_STORE'], $_ENV['OPENFGA_MCP_API_MODEL']);
+    clearTestEnvironment();
 });
 
 // Clean up test stores after each test
@@ -26,5 +38,5 @@ afterEach(function (): void {
     }
 
     // Clean up any environment variables that might have been set during tests
-    unset($_ENV['OPENFGA_MCP_API_READONLY'], $_ENV['OPENFGA_MCP_API_RESTRICT'], $_ENV['OPENFGA_MCP_API_STORE'], $_ENV['OPENFGA_MCP_API_MODEL']);
+    clearTestEnvironment();
 });

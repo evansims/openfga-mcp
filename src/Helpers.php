@@ -7,13 +7,14 @@ function getConfiguredString(string $env, string $default = ''): string
     // In testing environments, check $_ENV first as it can be overridden more reliably
     $value = array_key_exists($env, $_ENV) ? $_ENV[$env] : getenv($env);
 
-    if (false === $value || null === $value) {
+    // Treat false, null, empty string, or the literal string 'false' as not set
+    if (false === $value || null === $value || '' === $value || 'false' === $value) {
         return $default;
     }
 
     $value = trim((string) $value);
 
-    if ('' === $value) {
+    if ('' === $value || 'false' === $value) {
         return $default;
     }
 
@@ -37,7 +38,8 @@ function getConfiguredBool(string $env, bool $default = false): bool
     // In testing environments, check $_ENV first as it can be overridden more reliably
     $value = array_key_exists($env, $_ENV) ? $_ENV[$env] : getenv($env);
 
-    if (false === $value || null === $value) {
+    // Treat false, null, empty string, or the literal string 'false' as not set
+    if (false === $value || null === $value || '' === $value) {
         return $default;
     }
 
@@ -48,7 +50,8 @@ function getConfiguredBool(string $env, bool $default = false): bool
         return true;
     }
 
-    if ('false' === $value || '0' === $value) {
+    // Explicitly treat 'false', '0', or empty string as false (not default)
+    if ('false' === $value || '0' === $value || '' === $value) {
         return false;
     }
 

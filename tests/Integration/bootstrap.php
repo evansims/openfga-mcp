@@ -6,6 +6,8 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 require_once __DIR__ . '/../../src/Helpers.php';
 
+// Ensure clean environment at bootstrap
+
 use OpenFGA\{Client, ClientInterface};
 
 // Wait for OpenFGA to be ready

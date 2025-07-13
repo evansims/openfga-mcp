@@ -67,6 +67,29 @@
 - `openfga://store/{storeId}/check?user={user}&relation={relation}&object={object}`: Check if a user has a specific permission on an object.
 - `openfga://store/{storeId}/expand?object={object}&relation={relation}`: Expand all users who have a specific relation to an object.
 
+### Prompts
+
+#### Authorization Model Design
+
+- `design_model_for_domain`: Generate guidance for designing OpenFGA authorization models for specific domains (e.g., document management, e-commerce, healthcare).
+- `convert_rbac_to_rebac`: Provide step-by-step guidance for converting traditional RBAC systems to OpenFGA's ReBAC patterns.
+- `model_hierarchical_relationships`: Help design complex hierarchical relationships and inheritance patterns.
+- `optimize_model_structure`: Analyze and optimize existing authorization models for performance and maintainability.
+
+#### Relationship Troubleshooting
+
+- `debug_permission_denial`: Generate systematic debugging approaches for permission denials and access issues.
+- `analyze_permission_inheritance`: Provide analysis of permission inheritance paths and relationship chains.
+- `troubleshoot_unexpected_access`: Help investigate unexpected permission grants and security issues.
+- `optimize_relationship_queries`: Offer guidance for optimizing relationship query performance.
+
+#### Security Guidance
+
+- `security_review_model`: Conduct comprehensive security reviews of authorization models for compliance.
+- `implement_least_privilege`: Provide guidance for implementing principle of least privilege in authorization design.
+- `secure_delegation_patterns`: Help design secure delegation patterns for temporary and permanent access.
+- `audit_friendly_patterns`: Generate audit-friendly authorization patterns for regulatory compliance.
+
 ## Usage
 
 Configure your MCP client to use the server's Docker image:
@@ -133,8 +156,8 @@ To use Client Credentials authentication, the server accepts the following confi
       Read-only data sources the AI can access for information. They provide content rather than perform actions. A resource might be a file, database query result, or API response that gives the AI context or data to work with.
 - [x] Add MCP resource templates<br />
       Parameterized blueprints for generating resources dynamically. Instead of static resources, templates let you create resources on-demand based on input parameters. For example, a template might generate a user profile resource when given a user ID, or create a report resource based on date ranges.
-- [ ] Add MCP prompts<br />
-      Reusable prompt templates that can be invoked with parameters to generate structured prompts for the AI. They're essentially parameterized instructions or context that help shape how the AI approaches specific tasks.
+- [x] Add MCP prompts<br />
+      Reusable prompt templates that can be invoked with parameters to generate structured prompts for the AI. They're essentially parameterized instructions or context that help shape how the AI approaches specific tasks. Includes authorization model design, relationship troubleshooting, and security guidance prompts.
 - [ ] Add MCP completion provider<br />
       Enable MCP clients to offer auto-completion suggestions in their user interfaces. They are specifically designed for Resource Templates and Prompts to help users discover available options for dynamic parts like template variables or prompt arguments.
 

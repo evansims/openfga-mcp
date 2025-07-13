@@ -11,12 +11,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   unit-tests:
-    name: PHP 8.3 with Coverage
+    name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

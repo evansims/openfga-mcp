@@ -8,6 +8,9 @@ on:
   schedule:
     - cron: "0 9 * * 1" # Run weekly on Mondays at 9 AM UTC
 
+permissions:
+  contents: read
+
 jobs:
   psalm-security:
     name: "Psalm Scanner"

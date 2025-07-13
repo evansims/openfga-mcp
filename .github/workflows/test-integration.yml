@@ -11,8 +11,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   integration-tests:
+    name: Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
 

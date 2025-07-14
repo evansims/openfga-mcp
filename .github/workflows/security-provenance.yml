@@ -75,11 +75,10 @@ jobs:
       actions: read
       id-token: write
       contents: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a # v2.1.0
     with:
       base64-subjects: "${{ needs.build.outputs.digests }}"
-      upload-assets: true
-      upload-tag-name: ${{ github.event.release.tag_name || inputs.tag }}"
+      upload-assets: false
 
   verification:
     name: "Verify Package Provenance"
@@ -121,3 +120,42 @@ jobs:
             --provenance-path *.intoto.jsonl \
             --source-uri "github.com/${{ github.repository }}" \
             --source-tag "${{ github.event.release.tag_name || inputs.tag }}"
+
+  upload-provenance:
+    name: "Upload Provenance to Release"
+    needs: [build, provenance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-artifacts
+
+      - name: Download provenance
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.provenance.outputs.provenance-name }}
+
+      - name: Upload artifacts and provenance to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          echo "Uploading artifacts to release $TAG"
+          
+          # Find all files to upload
+          FILES=$(find . -name "*.tar.gz" -o -name "*.intoto.jsonl" | tr '\n' ' ')
+          
+          if [ -z "$FILES" ]; then
+            echo "Error: No files found to upload"
+            exit 1
+          fi
+          
+          echo "Found files to upload: $FILES"
+          
+          # Upload to the existing release
+          gh release upload "$TAG" $FILES \
+            --repo "${{ github.repository }}" \
+            --clobber

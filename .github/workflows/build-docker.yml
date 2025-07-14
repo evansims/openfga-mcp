@@ -78,7 +78,7 @@ jobs:
 
       - name: Test Docker image
         run: |
-          docker run --rm ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta-ghcr.outputs.version || 'latest' }} --version || true
+          docker run --rm ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta-ghcr.outputs.version || 'latest' }} --version
 
       - name: Generate artifact attestation
         if: github.event_name != 'pull_request' && steps.build-ghcr.outputs.digest != ''

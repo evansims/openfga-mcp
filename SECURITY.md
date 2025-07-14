@@ -69,6 +69,20 @@ cosign verify-attestation <dockerhub-username>/openfga-mcp:1.0.0 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
+#### Verifying GitHub Attestations (Alternative)
+
+If using GitHub's native attestation workflow instead of SLSA files:
+
+```bash
+# Download the artifact
+curl -LO https://github.com/evansims/openfga-mcp/releases/download/v1.0.0/openfga-mcp-v1.0.0.tar.gz
+
+# Verify using GitHub CLI
+gh attestation verify openfga-mcp-v1.0.0.tar.gz \
+  --owner evansims \
+  --repo openfga-mcp
+```
+
 ### Build Reproducibility
 
 Our build process aims for reproducibility by:

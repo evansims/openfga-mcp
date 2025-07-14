@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to generate SBOM for"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -25,6 +30,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
 
       - name: Setup PHP
         uses: shivammathur/setup-php@0f7f1d08e3e32076e51cae65eb0b0c871405b16e # v2.3.3
@@ -51,13 +58,19 @@ jobs:
           path: sbom.cyclonedx.json
           retention-days: 30
 
-      # Only upload SBOM to releases when a release is created
+      # Upload SBOM to release (for both release events and manual runs)
       - name: Upload SBOM to Release
-        if: github.event_name == 'release'
-        uses: svenstaro/upload-release-action@81c65b7cd4de9b2570615ce3aad67a41de5b1a13 # 2.11.2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: sbom.cyclonedx.json
-          asset_name: openfga-mcp-${{ github.event.release.tag_name }}-sbom.cyclonedx.json
-          tag: ${{ github.ref }}
-          overwrite: true
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          echo "Uploading SBOM to release $TAG"
+          
+          # Rename SBOM to include version
+          mv sbom.cyclonedx.json "openfga-mcp-${TAG}-sbom.cyclonedx.json"
+          
+          # Upload to the release
+          gh release upload "$TAG" "openfga-mcp-${TAG}-sbom.cyclonedx.json" \
+            --repo "${{ github.repository }}" \
+            --clobber

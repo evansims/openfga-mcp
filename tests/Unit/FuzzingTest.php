@@ -50,8 +50,6 @@ final class FuzzingTest extends TestCase
 
     /**
      * Run a very short fuzzing session as a smoke test.
-     *
-     * @group fuzzing
      */
     public function testQuickFuzzingSession(): void
     {

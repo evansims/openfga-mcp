@@ -108,6 +108,7 @@
     ],
     "test": [
       "@test:unit",
+      "@test:fuzz",
       "@test:integration"
     ],
     "test:unit": [

@@ -56,9 +56,9 @@ jobs:
           mv /tmp/artifacts/*.tar.gz .
 
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@7668571508540a607c2a0f52d6e2f862fd6b5c80 # v1.4.6
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
-          subject-path: 'openfga-mcp-*.tar.gz'
+          subject-path: "openfga-mcp-*.tar.gz"
 
       - name: Upload artifacts to release
         env:
@@ -66,7 +66,7 @@ jobs:
         run: |
           TAG="${{ github.event.release.tag_name || inputs.tag }}"
           echo "Uploading artifacts to release $TAG"
-          
+
           gh release upload "$TAG" openfga-mcp-*.tar.gz \
             --repo "${{ github.repository }}" \
             --clobber

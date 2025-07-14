@@ -1,5 +1,8 @@
 name: "Security: Dependabot Auto-merge"
-on: pull_request
+
+on:
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
@@ -16,10 +19,10 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
       - name: Enable auto-merge for Dependabot PRs
-        # Auto-merge minor and patch updates for all dependencies
         if: |
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+          !contains(steps.metadata.outputs.dependency-names, 'php') &&
+          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor')
         run: gh pr merge --auto --merge "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}

@@ -56,9 +56,18 @@ jobs:
           mv /tmp/artifacts/*.tar.gz .
 
       - name: Generate artifact attestation
+        id: attest
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: "openfga-mcp-*.tar.gz"
+          show-summary: true  # Default is true, but being explicit
+
+      - name: Display attestation info
+        if: steps.attest.outputs.attestation-url != ''
+        run: |
+          echo "Attestation created successfully!"
+          echo "Attestation ID: ${{ steps.attest.outputs.attestation-id }}"
+          echo "Attestation URL: ${{ steps.attest.outputs.attestation-url }}"
 
       - name: Upload artifacts to release
         env:

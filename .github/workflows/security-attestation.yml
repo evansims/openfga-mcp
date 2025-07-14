@@ -1,0 +1,72 @@
+name: "Security: Artifact Attestation"
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to generate attestation for"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-attest:
+    name: "Build and Attest"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@0f7f1d08e3e32076e51cae65eb0b0c871405b16e # v2.3.3
+        with:
+          php-version: "8.3"
+          tools: composer
+
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Create release artifacts
+        run: |
+          mkdir -p /tmp/artifacts
+          tar --sort=name \
+              --mtime="@${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct)}" \
+              --owner=0 --group=0 --numeric-owner \
+              -czf /tmp/artifacts/openfga-mcp-${{ github.event.release.tag_name || inputs.tag }}.tar.gz \
+              --exclude='.git*' \
+              --exclude='tests' \
+              --exclude='*.test' \
+              --exclude='.github' \
+              .
+          mv /tmp/artifacts/*.tar.gz .
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@7668571508540a607c2a0f52d6e2f862fd6b5c80 # v1.4.6
+        with:
+          subject-path: 'openfga-mcp-*.tar.gz'
+
+      - name: Upload artifacts to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          echo "Uploading artifacts to release $TAG"
+          
+          gh release upload "$TAG" openfga-mcp-*.tar.gz \
+            --repo "${{ github.repository }}" \
+            --clobber

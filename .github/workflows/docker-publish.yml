@@ -70,6 +70,8 @@ jobs:
           labels: ${{ steps.meta-ghcr.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
 
       - name: Test Docker image
         run: |
@@ -124,3 +126,5 @@ jobs:
           labels: ${{ steps.meta-docker.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true

@@ -1,0 +1,108 @@
+name: "Generate SLSA Provenance"
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to generate provenance for"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer
+
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Create release artifacts
+        run: |
+          # Create a reproducible build archive
+          tar --sort=name \
+              --mtime="@${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct)}" \
+              --owner=0 --group=0 --numeric-owner \
+              -czf openfga-mcp-${{ github.event.release.tag_name || inputs.tag }}.tar.gz \
+              --exclude='.git*' \
+              --exclude='tests' \
+              --exclude='*.test' \
+              --exclude='.github' \
+              .
+
+      - name: Generate artifact hashes
+        id: hash
+        run: |
+          set -euo pipefail
+          echo "digests=$(sha256sum openfga-mcp-*.tar.gz | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: openfga-mcp-*.tar.gz
+          if-no-files-found: error
+          retention-days: 5
+
+  provenance:
+    needs: [build]
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.digests }}"
+      upload-assets: true
+      upload-tag-name: ${{ github.event.release.tag_name || inputs.tag }}
+
+  verification:
+    needs: [provenance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+
+      - name: Download provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download ${{ github.event.release.tag_name || inputs.tag }} \
+            -p "*.intoto.jsonl" \
+            --repo ${{ github.repository }}
+
+      - name: Verify provenance
+        env:
+          SLSA_VERIFIER_VERSION: "2.5.1"
+        run: |
+          curl -sSLO https://github.com/slsa-framework/slsa-verifier/releases/download/v${SLSA_VERIFIER_VERSION}/slsa-verifier-linux-amd64
+          chmod +x slsa-verifier-linux-amd64
+
+          ./slsa-verifier-linux-amd64 verify-artifact \
+            openfga-mcp-*.tar.gz \
+            --provenance-path *.intoto.jsonl \
+            --source-uri "github.com/${{ github.repository }}" \
+            --source-tag "${{ github.event.release.tag_name || inputs.tag }}"

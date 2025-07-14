@@ -1,18 +1,8 @@
 name: "Security: SBOM"
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - composer.json
-      - composer.lock
-  pull_request:
-    branches: [main]
-    paths:
-      - composer.json
-      - composer.lock
   release:
-    types: [created]
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -68,6 +58,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: sbom.cyclonedx.json
-          asset_name: openfga-php-sbom.cyclonedx.json
+          asset_name: openfga-mcp-${{ github.event.release.tag_name }}-sbom.cyclonedx.json
           tag: ${{ github.ref }}
           overwrite: true

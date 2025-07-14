@@ -1,4 +1,4 @@
-name: "Tests: Unit"
+name: "Testing: Unit"
 
 on:
   push:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   unit-tests:
-    name: "Run Unit Tests"
+    name: "Run Tests"
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

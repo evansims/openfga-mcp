@@ -1,4 +1,4 @@
-name: "Tests: Integration"
+name: "Testing: Integration"
 
 on:
   push:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   integration-tests:
-    name: "Run Integration Tests"
+    name: "Run Tests"
     runs-on: ubuntu-latest
     timeout-minutes: 15
 

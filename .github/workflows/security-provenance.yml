@@ -42,15 +42,17 @@ jobs:
       - name: Create release artifacts
         run: |
           # Create a reproducible build archive
+          mkdir -p /tmp/artifacts
           tar --sort=name \
               --mtime="@${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct)}" \
               --owner=0 --group=0 --numeric-owner \
-              -czf openfga-mcp-${{ github.event.release.tag_name || inputs.tag }}.tar.gz \
+              -czf /tmp/artifacts/openfga-mcp-${{ github.event.release.tag_name || inputs.tag }}.tar.gz \
               --exclude='.git*' \
               --exclude='tests' \
               --exclude='*.test' \
               --exclude='.github' \
               .
+          mv /tmp/artifacts/*.tar.gz .
 
       - name: Generate artifact hashes
         id: hash

@@ -32,7 +32,7 @@ jobs:
           (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
           steps.metadata.outputs.update-type == 'version-update:semver-minor')
         run: |
-          gh pr merge --auto --merge "${{ github.event.pull_request.number }}" \
+          gh pr merge --auto --squash "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

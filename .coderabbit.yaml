@@ -21,6 +21,9 @@ reviews:
   # Review all changes in a PR
   changed_files_review: true
 
+  # Mark a pull request as approved once all comments have been addressed
+  request_changes_workflow: true
+
   # Automatically approve minor dependency updates
   auto_review:
     enabled: true
@@ -82,7 +85,7 @@ path_instructions:
       - Check for minimal required permissions (least privilege)
       - Ensure secrets are not exposed in logs
       - Verify proper error handling and job dependencies
-      
+
   - path: "**/Dockerfile*"
     instructions: |
       - Verify multi-stage builds are used to minimize image size
@@ -95,7 +98,7 @@ path_instructions:
       - Ensure HEALTHCHECK is properly configured
       - Check that only necessary ports are exposed
       - Verify proper use of ENTRYPOINT and CMD
-      
+
   - path: "**/docker-compose*.yml"
     instructions: |
       - Check for custom networks instead of default bridge
@@ -103,7 +106,7 @@ path_instructions:
       - Ensure volumes are properly mounted with correct permissions
       - Check that sensitive data is not hardcoded
       - Verify services use container names for inter-service communication
-      
+
   - path: ".dockerignore"
     instructions: |
       - Ensure all development files are excluded (vendor/, .git/, etc.)
@@ -220,7 +223,7 @@ review_profile:
       - Memory leaks
       - Unnecessary API calls
       - Caching opportunities
-      
+
   - name: "docker"
     description: "Docker and containerization review"
     instructions: |

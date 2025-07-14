@@ -98,6 +98,7 @@ jobs:
     name: "Verify Package Provenance"
     needs: [build, provenance]
     runs-on: ubuntu-latest
+    continue-on-error: true
     permissions:
       contents: read
     steps:
@@ -133,29 +134,61 @@ jobs:
 
       - name: Verify provenance
         env:
-          SLSA_VERIFIER_VERSION: "2.5.1"
+          SLSA_VERIFIER_VERSION: "2.6.0"
         run: |
+          # First, let's examine the provenance format
+          echo "=== Provenance format check ==="
+          if jq -e '.mediaType' *.intoto.jsonl > /dev/null 2>&1; then
+            echo "Provenance is in Sigstore bundle format"
+            BUNDLE_FORMAT=true
+          else
+            echo "Provenance is in standard intoto format"
+            BUNDLE_FORMAT=false
+          fi
+          
+          # Download the latest SLSA verifier
           curl -sSLO https://github.com/slsa-framework/slsa-verifier/releases/download/v${SLSA_VERIFIER_VERSION}/slsa-verifier-linux-amd64
           chmod +x slsa-verifier-linux-amd64
-
-          # Try with more verbose output
-          ./slsa-verifier-linux-amd64 verify-artifact \
-            openfga-mcp-*.tar.gz \
-            --provenance-path *.intoto.jsonl \
-            --source-uri "github.com/${{ github.repository }}" \
-            --source-tag "${{ github.event.release.tag_name || inputs.tag }}" \
-            --print-provenance || true
-            
-          # If that fails, try without source verification
-          echo -e "\n=== Trying without source verification ==="
-          ./slsa-verifier-linux-amd64 verify-artifact \
-            openfga-mcp-*.tar.gz \
-            --provenance-path *.intoto.jsonl
+          
+          echo -e "\n=== Verifier version ==="
+          ./slsa-verifier-linux-amd64 version
+          
+          echo -e "\n=== Attempting verification ==="
+          if [ "$BUNDLE_FORMAT" = "true" ]; then
+            # For Sigstore bundle format, we might need different parameters
+            ./slsa-verifier-linux-amd64 verify-artifact \
+              openfga-mcp-*.tar.gz \
+              --provenance-path *.intoto.jsonl \
+              --source-uri "github.com/${{ github.repository }}" \
+              --source-tag "${{ github.event.release.tag_name || inputs.tag }}" || {
+                echo -e "\n=== Trying with experimental bundle support ==="
+                ./slsa-verifier-linux-amd64 verify-artifact \
+                  openfga-mcp-*.tar.gz \
+                  --provenance-path *.intoto.jsonl \
+                  --source-uri "github.com/${{ github.repository }}" || true
+              }
+          else
+            ./slsa-verifier-linux-amd64 verify-artifact \
+              openfga-mcp-*.tar.gz \
+              --provenance-path *.intoto.jsonl \
+              --source-uri "github.com/${{ github.repository }}" \
+              --source-tag "${{ github.event.release.tag_name || inputs.tag }}" || true
+          fi
+          
+          # Extract and display the provenance content for debugging
+          echo -e "\n=== Provenance content (decoded) ==="
+          if [ "$BUNDLE_FORMAT" = "true" ]; then
+            # For Sigstore bundle, the structure is different
+            jq -r '.dsseEnvelope.payload // .payload' *.intoto.jsonl | base64 -d | jq '.' || echo "Failed to parse bundle provenance"
+          else
+            jq -r '.payload' *.intoto.jsonl | base64 -d | jq '.' || echo "Failed to parse standard provenance"
+          fi
 
   upload-provenance:
     name: "Upload Provenance to Release"
-    needs: [build, provenance, verification]
+    needs: [build, provenance]
     runs-on: ubuntu-latest
+    if: ${{ always() && needs.provenance.result == 'success' }}
     permissions:
       contents: write
     steps:

@@ -4,35 +4,40 @@ declare(strict_types=1);
 
 namespace OpenFGA\MCP\Tests\Fuzzing\Targets;
 
+use Exception;
+use Throwable;
+
+use function strlen;
+
 /**
- * Fuzzing target for tuple key construction
+ * Fuzzing target for tuple key construction.
  */
 final class TupleKeyTarget
 {
     private const MAX_LENGTH = 512;
-    
+
     public function fuzz(string $input): void
     {
         // Parse the input to get three components
         $parts = $this->parseInput($input);
-        
+
         // Simulate tuple key validation that would happen in the real code
         $this->validateUser($parts['user']);
         $this->validateRelation($parts['relation']);
         $this->validateObject($parts['object']);
-        
+
         // Simulate constructing a tuple key string
         $tupleKey = "{$parts['user']}#{$parts['relation']}@{$parts['object']}";
-        
+
         // Validate the constructed key
         if (strlen($tupleKey) > self::MAX_LENGTH * 3) {
-            throw new \Exception('Tuple key too long');
+            throw new Exception('Tuple key too long');
         }
-        
+
         // Check for injection attempts
         $this->checkForInjection($tupleKey);
     }
-    
+
     public function getInitialCorpus(): array
     {
         return [
@@ -52,92 +57,8 @@ final class TupleKeyTarget
             'user:test👤#reader📖@doc:test📄', // Emoji
         ];
     }
-    
-    private function parseInput(string $input): array
-    {
-        // Simple parsing logic to split input into three parts
-        $hash = strpos($input, '#');
-        $at = strpos($input, '@');
-        
-        if ($hash === false || $at === false || $at < $hash) {
-            // If delimiters are missing or in wrong order, split randomly
-            $len = strlen($input);
-            $third = intval($len / 3);
-            
-            return [
-                'user' => substr($input, 0, $third),
-                'relation' => substr($input, $third, $third),
-                'object' => substr($input, $third * 2),
-            ];
-        }
-        
-        return [
-            'user' => substr($input, 0, $hash),
-            'relation' => substr($input, $hash + 1, $at - $hash - 1),
-            'object' => substr($input, $at + 1),
-        ];
-    }
-    
-    private function validateUser(string $user): void
-    {
-        if (strlen($user) > self::MAX_LENGTH) {
-            throw new \Exception('User identifier too long');
-        }
-        
-        // Check for invalid characters
-        if (preg_match('/[\x00-\x1F\x7F]/', $user)) {
-            throw new \Exception('Control characters in user identifier');
-        }
-    }
-    
-    private function validateRelation(string $relation): void
-    {
-        if (strlen($relation) > self::MAX_LENGTH) {
-            throw new \Exception('Relation too long');
-        }
-        
-        if (empty($relation)) {
-            throw new \Exception('Empty relation');
-        }
-        
-        // Relations typically should be alphanumeric with underscores
-        if (!preg_match('/^[a-zA-Z0-9_]+$/', $relation)) {
-            // This might be too strict for fuzzing, log but don't throw
-            // In real implementation this might be a security concern
-        }
-    }
-    
-    private function validateObject(string $object): void
-    {
-        if (strlen($object) > self::MAX_LENGTH) {
-            throw new \Exception('Object identifier too long');
-        }
-        
-        // Check for invalid characters
-        if (preg_match('/[\x00-\x1F\x7F]/', $object)) {
-            throw new \Exception('Control characters in object identifier');
-        }
-    }
-    
-    private function checkForInjection(string $tupleKey): void
-    {
-        // Check for common injection patterns
-        $injectionPatterns = [
-            '/\b(DROP|DELETE|INSERT|UPDATE|SELECT)\b/i',
-            '/<script[^>]*>/i',
-            '/javascript:/i',
-            '/on\w+\s*=/i', // Event handlers
-        ];
-        
-        foreach ($injectionPatterns as $pattern) {
-            if (preg_match($pattern, $tupleKey)) {
-                // In production this should be handled, for fuzzing we note it
-                // but don't throw - the system should handle this safely
-            }
-        }
-    }
-    
-    public function isExpectedError(\Throwable $e): bool
+
+    public function isExpectedError(Throwable $e): bool
     {
         // These are expected validation errors from invalid tuple keys
         $expectedMessages = [
@@ -160,13 +81,97 @@ final class TupleKeyTarget
             'Empty relation',
             'Relation too long',
         ];
-        
+
         foreach ($expectedMessages as $expected) {
-            if (stripos($e->getMessage(), $expected) !== false) {
+            if (false !== stripos($e->getMessage(), $expected)) {
                 return true;
             }
         }
-        
+
         return false;
+    }
+
+    private function checkForInjection(string $tupleKey): void
+    {
+        // Check for common injection patterns
+        $injectionPatterns = [
+            '/\b(DROP|DELETE|INSERT|UPDATE|SELECT)\b/i',
+            '/<script[^>]*>/i',
+            '/javascript:/i',
+            '/on\w+\s*=/i', // Event handlers
+        ];
+
+        foreach ($injectionPatterns as $pattern) {
+            if (preg_match($pattern, $tupleKey)) {
+                // In production this should be handled, for fuzzing we note it
+                // but don't throw - the system should handle this safely
+            }
+        }
+    }
+
+    private function parseInput(string $input): array
+    {
+        // Simple parsing logic to split input into three parts
+        $hash = strpos($input, '#');
+        $at = strpos($input, '@');
+
+        if (false === $hash || false === $at || $at < $hash) {
+            // If delimiters are missing or in wrong order, split randomly
+            $len = strlen($input);
+            $third = (int) ($len / 3);
+
+            return [
+                'user' => substr($input, 0, $third),
+                'relation' => substr($input, $third, $third),
+                'object' => substr($input, $third * 2),
+            ];
+        }
+
+        return [
+            'user' => substr($input, 0, $hash),
+            'relation' => substr($input, $hash + 1, $at - $hash - 1),
+            'object' => substr($input, $at + 1),
+        ];
+    }
+
+    private function validateObject(string $object): void
+    {
+        if (self::MAX_LENGTH < strlen($object)) {
+            throw new Exception('Object identifier too long');
+        }
+
+        // Check for invalid characters
+        if (preg_match('/[\x00-\x1F\x7F]/', $object)) {
+            throw new Exception('Control characters in object identifier');
+        }
+    }
+
+    private function validateRelation(string $relation): void
+    {
+        if (self::MAX_LENGTH < strlen($relation)) {
+            throw new Exception('Relation too long');
+        }
+
+        if (empty($relation)) {
+            throw new Exception('Empty relation');
+        }
+
+        // Relations typically should be alphanumeric with underscores
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $relation)) {
+            // This might be too strict for fuzzing, log but don't throw
+            // In real implementation this might be a security concern
+        }
+    }
+
+    private function validateUser(string $user): void
+    {
+        if (self::MAX_LENGTH < strlen($user)) {
+            throw new Exception('User identifier too long');
+        }
+
+        // Check for invalid characters
+        if (preg_match('/[\x00-\x1F\x7F]/', $user)) {
+            throw new Exception('Control characters in user identifier');
+        }
     }
 }

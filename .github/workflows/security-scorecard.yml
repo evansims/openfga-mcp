@@ -1,4 +1,4 @@
-name: Scorecard supply-chain security
+name: "Security: Scorecard"
 on:
   # For Branch-Protection check. Only the default branch is supported. See
   # https://github.com/ossf/scorecard/blob/main/docs/checks.md#branch-protection
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   analysis:
-    name: Scorecard analysis
+    name: "Scorecard Analysis"
     runs-on: ubuntu-latest
 
     permissions:

@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   build:
-    name: "Generate Report"
+    name: "Generate SBOM"
     runs-on: ubuntu-latest
 
     permissions:

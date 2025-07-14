@@ -1,4 +1,4 @@
-name: "Generate SLSA Provenance"
+name: "Security: SLSA Provenance"
 
 on:
   release:
@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   build:
+    name: "Build Package"
     runs-on: ubuntu-latest
     outputs:
       digests: ${{ steps.hash.outputs.digests }}
@@ -61,6 +62,7 @@ jobs:
           retention-days: 5
 
   provenance:
+    name: "Generate Package Provenance"
     needs: [build]
     permissions:
       actions: read
@@ -73,6 +75,7 @@ jobs:
       upload-tag-name: ${{ github.event.release.tag_name || inputs.tag }}
 
   verification:
+    name: "Verify Package Provenance"
     needs: [provenance]
     runs-on: ubuntu-latest
     permissions:

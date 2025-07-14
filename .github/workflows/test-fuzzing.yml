@@ -3,31 +3,31 @@ name: "Testing: Fuzzing"
 on:
   schedule:
     # Run fuzzing every night at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   workflow_dispatch:
     inputs:
       duration:
-        description: 'Fuzzing duration in seconds'
+        description: "Fuzzing duration in seconds"
         required: false
-        default: '300'
+        default: "300"
         type: string
   pull_request:
     paths:
-      - 'src/**'
-      - 'tests/Fuzzing/**'
-      - '.github/workflows/test-fuzzing.yml'
+      - "src/**"
+      - "tests/Fuzzing/**"
+      - ".github/workflows/test-fuzzing.yml"
 
 permissions:
   contents: read
 
 jobs:
   fuzz:
-    name: Run Fuzzing Tests
+    name: Run Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
-      security-events: write  # For uploading results to security tab
+      security-events: write # For uploading results to security tab
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -41,7 +41,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@0f7f1d08e3e32076e51cae65eb0b0c871405b16e # v2.3.3
         with:
-          php-version: '8.3'
+          php-version: "8.3"
           extensions: mbstring, intl
           coverage: none
           tools: composer:v2
@@ -67,10 +67,10 @@ jobs:
         run: |
           # Set memory limit for fuzzing
           export ASAN_OPTIONS=allocator_may_return_null=1
-          
+
           # Run fuzzing with timeout
           timeout "${FUZZING_DURATION}s" php tests/Fuzzing/run-fuzzers.php || EXIT_CODE=$?
-          
+
           # Exit code 124 means timeout (expected), anything else is a real error
           if [ "${EXIT_CODE:-0}" -ne 0 ] && [ "${EXIT_CODE:-0}" -ne 124 ]; then
             echo "Fuzzing failed with exit code: ${EXIT_CODE}"

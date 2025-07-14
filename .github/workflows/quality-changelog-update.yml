@@ -1,0 +1,194 @@
+name: "Quality: Update Changelog"
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  update-changelog:
+    name: Update Changelog
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Update CHANGELOG
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          # Use toJSON to safely escape the PR title
+          PR_TITLE: ${{ toJSON(github.event.pull_request.title) }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Script to update CHANGELOG.md with the merged PR
+
+          # Function to determine the section based on conventional commit type
+          get_section() {
+            local title="$1"
+            local type=$(echo "$title" | grep -oE '^[a-z]+(\([^)]+\))?:' | sed 's/:$//' | sed 's/(.*//')
+
+            case "$type" in
+              feat|feature) echo "### Added" ;;
+              fix|bugfix) echo "### Fixed" ;;
+              docs|documentation) echo "### Documentation" ;;
+              style|formatting) echo "### Style" ;;
+              refactor|refactoring) echo "### Changed" ;;
+              perf|performance) echo "### Performance" ;;
+              test|tests|testing) echo "### Tests" ;;
+              build|ci|chore) echo "### Maintenance" ;;
+              revert) echo "### Reverted" ;;
+              *) echo "### Other" ;;
+            esac
+          }
+
+          # Ensure CHANGELOG.md exists
+          if [ ! -f CHANGELOG.md ]; then
+            echo "Error: CHANGELOG.md not found"
+            exit 1
+          fi
+
+          # Safely decode and process the PR title
+          PR_TITLE_SAFE=$(echo "$PR_TITLE" | jq -r '.')
+          
+          # Get the appropriate section for this PR
+          SECTION=$(get_section "$PR_TITLE_SAFE")
+
+          # Create the changelog entry with escaped title
+          ENTRY="- ${PR_TITLE_SAFE} ([#${PR_NUMBER}](${PR_URL}))"
+
+          # Create a temporary file with the updated changelog
+          cp CHANGELOG.md CHANGELOG.tmp
+
+          # Check if [Unreleased] section exists
+          if ! grep -q "## \[Unreleased\]" CHANGELOG.md; then
+            echo -e "\n## [Unreleased]\n" >> CHANGELOG.tmp
+          fi
+
+          # Check if the section already exists under [Unreleased]
+          # We need to find the [Unreleased] section and add our entry to the appropriate subsection
+          awk -v section="$SECTION" -v entry="$ENTRY" '
+            BEGIN {
+              in_unreleased = 0
+              section_found = 0
+              section_printed = 0
+              buffer = ""
+            }
+
+            /^## \[Unreleased\]/ {
+              in_unreleased = 1
+              print
+              next
+            }
+
+            /^## \[/ && in_unreleased {
+              # We hit another version section, print any buffered content
+              if (!section_printed && in_unreleased) {
+                if (!section_found) {
+                  print ""
+                  print section
+                }
+                print entry
+                print ""
+              }
+              if (buffer != "") {
+                print buffer
+                buffer = ""
+              }
+              in_unreleased = 0
+            }
+
+            in_unreleased && /^###/ {
+              if ($0 == section) {
+                section_found = 1
+                print
+                print entry
+                section_printed = 1
+                next
+              } else if (section_found && !section_printed) {
+                # We passed our section without printing, so add it before this section
+                print ""
+                print section
+                print entry
+                section_printed = 1
+              }
+            }
+
+            in_unreleased && /^- / {
+              if (section_found && !section_printed) {
+                buffer = buffer "\n" $0
+                next
+              }
+            }
+
+            in_unreleased && /^$/ && NR > 1 {
+              if (section_found && !section_printed && buffer != "") {
+                print entry
+                section_printed = 1
+                print buffer
+                buffer = ""
+                next
+              }
+            }
+
+            {
+              if (buffer != "") {
+                print buffer
+                buffer = ""
+              }
+              print
+            }
+
+            END {
+              if (!section_printed && in_unreleased) {
+                if (!section_found) {
+                  print ""
+                  print section
+                }
+                print entry
+              }
+            }
+          ' CHANGELOG.md > CHANGELOG.new
+
+          # Clean up any duplicate empty lines
+          awk 'NF || !p; {p=NF}' CHANGELOG.new > CHANGELOG.md
+          rm CHANGELOG.new CHANGELOG.tmp
+
+          # Configure git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          # Check if there are changes
+          if git diff --quiet; then
+            echo "No changes to CHANGELOG.md"
+            exit 0
+          fi
+
+          # Commit and push the changes
+          git add CHANGELOG.md
+          git commit -m "chore: update CHANGELOG.md for PR #${PR_NUMBER} [skip ci]"
+          git push
+

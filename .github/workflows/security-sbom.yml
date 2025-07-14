@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # Needed to upload artifacts to releases
-      packages: write # Needed for SBOM upload to GitHub packages
+      contents: write
+      packages: write
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -58,7 +58,6 @@ jobs:
           path: sbom.cyclonedx.json
           retention-days: 30
 
-      # Upload SBOM to release (for both release events and manual runs)
       - name: Upload SBOM to Release
         if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
         env:
@@ -66,10 +65,10 @@ jobs:
         run: |
           TAG="${{ github.event.release.tag_name || inputs.tag }}"
           echo "Uploading SBOM to release $TAG"
-          
+
           # Rename SBOM to include version
           mv sbom.cyclonedx.json "openfga-mcp-${TAG}-sbom.cyclonedx.json"
-          
+
           # Upload to the release
           gh release upload "$TAG" "openfga-mcp-${TAG}-sbom.cyclonedx.json" \
             --repo "${{ github.repository }}" \

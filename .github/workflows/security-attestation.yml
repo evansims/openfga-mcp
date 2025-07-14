@@ -18,7 +18,7 @@ jobs:
     name: "Build and Attest"
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       attestations: write
       id-token: write
     steps:

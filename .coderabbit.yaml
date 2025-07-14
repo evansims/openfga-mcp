@@ -82,6 +82,33 @@ path_instructions:
       - Check for minimal required permissions (least privilege)
       - Ensure secrets are not exposed in logs
       - Verify proper error handling and job dependencies
+      
+  - path: "**/Dockerfile*"
+    instructions: |
+      - Verify multi-stage builds are used to minimize image size
+      - Ensure base images use SHA256 digests for reproducibility
+      - Check that containers run as non-root user (mcp:mcp with UID/GID 1000)
+      - Verify proper file ownership with --chown=mcp:mcp
+      - Ensure Alpine base images are used for production
+      - Check layer caching optimization (composer files before source)
+      - Verify build dependencies are cleaned up (apk del, cache removal)
+      - Ensure HEALTHCHECK is properly configured
+      - Check that only necessary ports are exposed
+      - Verify proper use of ENTRYPOINT and CMD
+      
+  - path: "**/docker-compose*.yml"
+    instructions: |
+      - Check for custom networks instead of default bridge
+      - Verify proper service dependencies with depends_on
+      - Ensure volumes are properly mounted with correct permissions
+      - Check that sensitive data is not hardcoded
+      - Verify services use container names for inter-service communication
+      
+  - path: ".dockerignore"
+    instructions: |
+      - Ensure all development files are excluded (vendor/, .git/, etc.)
+      - Verify logs, caches, and temporary files are excluded
+      - Check that sensitive files are not included in build context
 
   - path: "composer.json"
     instructions: |
@@ -122,6 +149,14 @@ instructions: |
   3. Ensure no secrets or credentials in code
   4. Check for SSRF prevention in URL handling
   5. Verify proper authentication and authorization
+
+  ## Docker Best Practices:
+
+  1. **Security**: Non-root users, minimal base images, SHA-pinned images
+  2. **Optimization**: Multi-stage builds, layer caching, dependency cleanup
+  3. **Configuration**: Proper HEALTHCHECK, documented ENV variables
+  4. **Build Context**: Comprehensive .dockerignore file
+  5. **Supply Chain**: SBOM generation, provenance attestations
 
 # Tool Configuration
 tools:
@@ -185,3 +220,14 @@ review_profile:
       - Memory leaks
       - Unnecessary API calls
       - Caching opportunities
+      
+  - name: "docker"
+    description: "Docker and containerization review"
+    instructions: |
+      Focus on:
+      - Security: non-root users, minimal attack surface
+      - Image size optimization and multi-stage builds
+      - Supply chain security (pinned versions, attestations)
+      - Proper secrets management
+      - Health checks and graceful shutdown
+      - Network isolation and service dependencies

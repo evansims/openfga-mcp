@@ -21,6 +21,7 @@ permissions:
 
 jobs:
   build:
+    name: Build Docker Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -75,6 +76,7 @@ jobs:
           docker run --rm ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta-ghcr.outputs.version || 'latest' }} --version || true
 
   publish-dockerhub:
+    name: Publish Docker Image
     needs: build
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

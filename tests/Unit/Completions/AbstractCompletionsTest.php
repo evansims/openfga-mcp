@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace OpenFGA\MCP\Tests\Unit\Completions;
+
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Completions\AbstractCompletions;
 use PhpMcp\Server\Contracts\SessionInterface;

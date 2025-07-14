@@ -1,0 +1,106 @@
+name: "Testing: Fuzzing"
+
+on:
+  schedule:
+    # Run fuzzing every night at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Fuzzing duration in seconds'
+        required: false
+        default: '300'
+        type: string
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/Fuzzing/**'
+      - '.github/workflows/test-fuzzing.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: Run Fuzzing Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write  # For uploading results to security tab
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@0f7f1d08e3e32076e51cae65eb0b0c871405b16e # v2.3.3
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: |
+          composer require --dev nikic/php-fuzzer
+          composer install --prefer-dist --no-progress
+
+      - name: Create fuzzing corpus directory
+        run: mkdir -p tests/Fuzzing/corpus
+
+      - name: Download existing corpus
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: fuzzing-corpus
+          path: tests/Fuzzing/corpus
+
+      - name: Run fuzzing tests
+        env:
+          FUZZING_DURATION: ${{ github.event.inputs.duration || '300' }}
+        run: |
+          # Set memory limit for fuzzing
+          export ASAN_OPTIONS=allocator_may_return_null=1
+          
+          # Run fuzzing with timeout
+          timeout "${FUZZING_DURATION}s" php tests/Fuzzing/run-fuzzers.php || EXIT_CODE=$?
+          
+          # Exit code 124 means timeout (expected), anything else is a real error
+          if [ "${EXIT_CODE:-0}" -ne 0 ] && [ "${EXIT_CODE:-0}" -ne 124 ]; then
+            echo "Fuzzing failed with exit code: ${EXIT_CODE}"
+            exit "${EXIT_CODE}"
+          fi
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzzing-crashes-${{ github.run_id }}
+          path: tests/Fuzzing/crashes/
+          retention-days: 30
+
+      - name: Upload updated corpus
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzzing-corpus
+          path: tests/Fuzzing/corpus/
+          retention-days: 7
+
+      - name: Generate SARIF report
+        if: failure()
+        run: |
+          php tests/Fuzzing/generate-sarif.php > fuzzing-results.sarif
+
+      - name: Upload SARIF results
+        if: failure()
+        uses: github/codeql-action/upload-sarif@aa93aea877e5fb8841bcb1193f672abf6e9f2980 # v3.27.0
+        with:
+          sarif_file: fuzzing-results.sarif
+          category: fuzzing

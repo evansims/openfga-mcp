@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ec6dd0454aec36af0c73ca3834add396",
+    "content-hash": "1c03e18c9717c9f437fda2367e322374",
     "packages": [
         {
             "name": "composer/semver",
@@ -910,16 +910,16 @@
         },
         {
             "name": "php-mcp/server",
-            "version": "3.2.2",
+            "version": "3.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-mcp/server.git",
-                "reference": "05357562e9d4dee076f701ccfe1e38149938e855"
+                "reference": "37b40d5e91f0600442677ddd226e5a22d5661ee1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-mcp/server/zipball/05357562e9d4dee076f701ccfe1e38149938e855",
-                "reference": "05357562e9d4dee076f701ccfe1e38149938e855",
+                "url": "https://api.github.com/repos/php-mcp/server/zipball/37b40d5e91f0600442677ddd226e5a22d5661ee1",
+                "reference": "37b40d5e91f0600442677ddd226e5a22d5661ee1",
                 "shasum": ""
             },
             "require": {
@@ -946,7 +946,7 @@
                 "symfony/var-dumper": "^6.4.11|^7.1.5"
             },
             "suggest": {
-                "react/http": "Required for using the ReactPHP HTTP transport handler (^1.11 recommended)."
+                "ext-pcntl": "For signal handling support when using StdioServerTransport with StreamSelectLoop"
             },
             "type": "library",
             "autoload": {
@@ -980,9 +980,9 @@
             ],
             "support": {
                 "issues": "https://github.com/php-mcp/server/issues",
-                "source": "https://github.com/php-mcp/server/tree/3.2.2"
+                "source": "https://github.com/php-mcp/server/tree/3.3.0"
             },
-            "time": "2025-07-09T12:20:42+00:00"
+            "time": "2025-07-12T22:19:39+00:00"
         },
         {
             "name": "phpdocumentor/reflection-common",
@@ -1161,16 +1161,16 @@
         },
         {
             "name": "phpstan/phpdoc-parser",
-            "version": "2.1.0",
+            "version": "2.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpdoc-parser.git",
-                "reference": "9b30d6fd026b2c132b3985ce6b23bec09ab3aa68"
+                "reference": "b9e61a61e39e02dd90944e9115241c7f7e76bfd8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpdoc-parser/zipball/9b30d6fd026b2c132b3985ce6b23bec09ab3aa68",
-                "reference": "9b30d6fd026b2c132b3985ce6b23bec09ab3aa68",
+                "url": "https://api.github.com/repos/phpstan/phpdoc-parser/zipball/b9e61a61e39e02dd90944e9115241c7f7e76bfd8",
+                "reference": "b9e61a61e39e02dd90944e9115241c7f7e76bfd8",
                 "shasum": ""
             },
             "require": {
@@ -1202,9 +1202,9 @@
             "description": "PHPDoc parser with support for nullable, intersection and generic types",
             "support": {
                 "issues": "https://github.com/phpstan/phpdoc-parser/issues",
-                "source": "https://github.com/phpstan/phpdoc-parser/tree/2.1.0"
+                "source": "https://github.com/phpstan/phpdoc-parser/tree/2.2.0"
             },
-            "time": "2025-02-19T13:28:12+00:00"
+            "time": "2025-07-13T07:04:09+00:00"
         },
         {
             "name": "psr-discovery/all",
@@ -5759,6 +5759,96 @@
             "time": "2024-09-08T10:20:00+00:00"
         },
         {
+            "name": "nikic/include-interceptor",
+            "version": "v0.1.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nikic/include-interceptor.git",
+                "reference": "6a074d12c391b0906df0c2527ee8b16514025577"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nikic/include-interceptor/zipball/6a074d12c391b0906df0c2527ee8b16514025577",
+                "reference": "6a074d12c391b0906df0c2527ee8b16514025577",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.1"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^7 || ^8"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Nikic\\IncludeInterceptor\\": "src/",
+                    "Nikic\\IncludeInterceptor\\Tests\\": "tests/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Robin Appelman",
+                    "email": "icewind@owncloud.com"
+                }
+            ],
+            "description": "Intercept PHP includes",
+            "support": {
+                "issues": "https://github.com/nikic/include-interceptor/issues",
+                "source": "https://github.com/nikic/include-interceptor/tree/v0.1.2"
+            },
+            "time": "2021-11-27T21:03:08+00:00"
+        },
+        {
+            "name": "nikic/php-fuzzer",
+            "version": "v0.0.11",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nikic/PHP-Fuzzer.git",
+                "reference": "5ebe3dafec828c80391db7adb1d63f79c8185c91"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nikic/PHP-Fuzzer/zipball/5ebe3dafec828c80391db7adb1d63f79c8185c91",
+                "reference": "5ebe3dafec828c80391db7adb1d63f79c8185c91",
+                "shasum": ""
+            },
+            "require": {
+                "nikic/include-interceptor": "^0.1.1",
+                "nikic/php-parser": "^5.0",
+                "php": ">= 7.4",
+                "ulrichsg/getopt-php": "^4.0"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^9"
+            },
+            "suggest": {
+                "ext-pcntl": "Needed for timeout support"
+            },
+            "bin": [
+                "bin/php-fuzzer"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PhpFuzzer\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "support": {
+                "issues": "https://github.com/nikic/PHP-Fuzzer/issues",
+                "source": "https://github.com/nikic/PHP-Fuzzer/tree/v0.0.11"
+            },
+            "time": "2025-05-21T19:53:32+00:00"
+        },
+        {
             "name": "nikic/php-parser",
             "version": "v5.5.0",
             "source": {
@@ -9586,6 +9676,57 @@
                 }
             ],
             "time": "2024-03-03T12:36:25+00:00"
+        },
+        {
+            "name": "ulrichsg/getopt-php",
+            "version": "v4.0.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/getopt-php/getopt-php.git",
+                "reference": "9313ecde04f7bed262716e3a4d32a5e2cea3ffad"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/getopt-php/getopt-php/zipball/9313ecde04f7bed262716e3a4d32a5e2cea3ffad",
+                "reference": "9313ecde04f7bed262716e3a4d32a5e2cea3ffad",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": "^7.1 || ^8.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "*",
+                "squizlabs/php_codesniffer": "^3.5.8",
+                "tflori/phpunit-printer": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "GetOpt\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ulrich Schmidt-Goertz",
+                    "email": "ulrich@schmidt-goertz.de"
+                },
+                {
+                    "name": "Thomas Flori",
+                    "email": "thflori@gmail.com"
+                }
+            ],
+            "description": "Command line arguments parser for PHP 7.1 and above",
+            "homepage": "http://getopt-php.github.io/getopt-php",
+            "support": {
+                "issues": "https://github.com/getopt-php/getopt-php/issues",
+                "source": "https://github.com/getopt-php/getopt-php/tree/v4.0.4"
+            },
+            "time": "2025-02-11T14:42:04+00:00"
         },
         {
             "name": "vimeo/psalm",

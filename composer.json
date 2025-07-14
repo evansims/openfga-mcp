@@ -42,6 +42,7 @@
     "ergebnis/composer-normalize": "^2",
     "friendsofphp/php-cs-fixer": "^3",
     "mockery/mockery": "^1.6",
+    "nikic/php-fuzzer": "0.0.11",
     "pestphp/pest": "^3",
     "phpstan/phpstan": "^2",
     "phpstan/phpstan-strict-rules": "^2",
@@ -115,6 +116,10 @@
     ],
     "test:integration": [
       "docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner; EXIT_CODE=$?; docker compose -f docker-compose.test.yml down -v; exit $EXIT_CODE"
+    ],
+    "test:fuzz": [
+      "@putenv FUZZING_DURATION=60",
+      "@php tests/Fuzzing/run-fuzzers.php"
     ],
     "docker": [
       "docker build -t openfga-mcp:local ."

@@ -6,3 +6,5 @@ coverage/
 junit.xml
 integration-junit.xml
 *.cache
+tests/Fuzzing/corpus
+tests/Fuzzing/crashes

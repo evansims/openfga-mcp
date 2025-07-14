@@ -58,7 +58,20 @@ jobs:
         id: hash
         run: |
           set -euo pipefail
-          echo "digests=$(sha256sum openfga-mcp-*.tar.gz | base64 -w0)" >> "$GITHUB_OUTPUT"
+          # Debug: Show files
+          echo "Files in directory:"
+          ls -la openfga-mcp-*.tar.gz
+          
+          # Generate and show hash
+          HASH=$(sha256sum openfga-mcp-*.tar.gz)
+          echo "Generated hash: $HASH"
+          
+          # Base64 encode
+          DIGEST=$(echo "$HASH" | base64 -w0)
+          echo "Base64 digest: $DIGEST"
+          
+          # Set output
+          echo "digests=$DIGEST" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -79,6 +92,7 @@ jobs:
     with:
       base64-subjects: "${{ needs.build.outputs.digests }}"
       upload-assets: false
+      compile-generator: true
 
   verification:
     name: "Verify Package Provenance"

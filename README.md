@@ -39,7 +39,7 @@ Configure your MCP client to use the server's Docker image:
 }
 ```
 
-The server should work with any MCP client, but has been tested with [Claude Desktop](https://claude.ai/download), [Claude Code](https://www.anthropic.com/claude-code), [Cursor](https://cursor.sh), [Windsurf](https://windsurf.com), [Warp](https://warp.dev) and [Raycast](https://raycast.com).
+The server should work with any MCP client, but has been tested with [Visual Studio Code](https://code.visualstudio.com), [Docker](https://www.docker.com), [Claude Desktop](https://claude.ai/download), [Claude Code](https://www.anthropic.com/claude-code), [Cursor](https://cursor.sh), [Windsurf](https://windsurf.com), [Warp](https://warp.dev) and [Raycast](https://raycast.com).
 
 ## Configuration
 

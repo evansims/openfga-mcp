@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/evansims-openfga-mcp-badge.png)](https://mseep.ai/app/evansims-openfga-mcp)
+
 # OpenFGA MCP Server
 
 [![smithery badge](https://smithery.ai/badge/@evansims/openfga-mcp)](https://smithery.ai/server/@evansims/openfga-mcp)

@@ -174,3 +174,5 @@ The server also includes enum-based completion providers for common parameters:
 
 - Want to help? Get started with our [contributors guide](./.github/CONTRIBUTING.md).
 - Licensed under the [Apache 2.0 License](./LICENSE).
+
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/evansims-openfga-mcp-badge.png)](https://mseep.ai/app/evansims-openfga-mcp)

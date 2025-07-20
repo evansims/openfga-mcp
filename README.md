@@ -174,5 +174,3 @@ The server also includes enum-based completion providers for common parameters:
 
 - Want to help? Get started with our [contributors guide](./.github/CONTRIBUTING.md).
 - Licensed under the [Apache 2.0 License](./LICENSE).
-
-[![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/2ab84d60-6dc1-4cbf-9bb9-293dd8bb7164)

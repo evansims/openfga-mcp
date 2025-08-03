@@ -2,6 +2,20 @@
 
 declare(strict_types=1);
 
+/**
+ * Check if the server is running in offline mode.
+ *
+ * @return bool True if no OpenFGA configuration is provided
+ */
+function isOfflineMode(): bool
+{
+    $apiUrl = getConfiguredString('OPENFGA_MCP_API_URL', '');
+    $hasToken = '' !== getConfiguredString('OPENFGA_MCP_API_TOKEN', '');
+    $hasClientId = '' !== getConfiguredString('OPENFGA_MCP_API_CLIENT_ID', '');
+
+    return '' === $apiUrl && ! $hasToken && ! $hasClientId;
+}
+
 function getConfiguredString(string $env, string $default = ''): string
 {
     // In testing environments, check $_ENV first as it can be overridden more reliably

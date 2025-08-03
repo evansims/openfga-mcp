@@ -41,6 +41,12 @@ final readonly class ModelResources extends AbstractResources
         #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
         string $storeId,
     ): array {
+        $error = $this->checkOfflineMode('Getting latest model');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $modelData = [];
 
@@ -95,6 +101,12 @@ final readonly class ModelResources extends AbstractResources
         #[CompletionProvider(provider: ModelIdCompletionProvider::class)]
         string $modelId,
     ): array {
+        $error = $this->checkOfflineMode('Getting model details');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $modelData = [];
 

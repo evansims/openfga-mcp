@@ -23,6 +23,11 @@ final readonly class StoreIdCompletionProvider extends AbstractCompletions
     #[Override]
     public function getCompletions(string $currentValue, SessionInterface $session): array
     {
+        // Return empty array in offline mode
+        if ($this->isOffline()) {
+            return [];
+        }
+
         try {
             $storeIds = [];
 

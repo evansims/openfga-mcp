@@ -55,6 +55,12 @@ final readonly class RelationshipResources extends AbstractResources
         #[CompletionProvider(provider: ModelIdCompletionProvider::class)]
         string $modelId = 'latest',
     ): array {
+        $error = $this->checkOfflineMode('Checking permission');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $result = [];
         $called = false;
@@ -122,6 +128,12 @@ final readonly class RelationshipResources extends AbstractResources
         #[CompletionProvider(provider: RelationCompletionProvider::class)]
         string $relation,
     ): array {
+        $error = $this->checkOfflineMode('Expanding relationships');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $result = [];
         $called = false;
@@ -194,6 +206,12 @@ final readonly class RelationshipResources extends AbstractResources
         #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
         string $storeId,
     ): array {
+        $error = $this->checkOfflineMode('Listing objects');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $objects = [];
         $continuationToken = null;
@@ -269,6 +287,12 @@ final readonly class RelationshipResources extends AbstractResources
         #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
         string $storeId,
     ): array {
+        $error = $this->checkOfflineMode('Listing relationships');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $relationships = [];
         $continuationToken = null;
@@ -345,6 +369,12 @@ final readonly class RelationshipResources extends AbstractResources
         #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
         string $storeId,
     ): array {
+        $error = $this->checkOfflineMode('Listing users');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $users = [];
         $continuationToken = null;

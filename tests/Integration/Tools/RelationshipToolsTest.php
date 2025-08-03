@@ -141,20 +141,20 @@ type document
 
     it('respects read-only mode', function (): void {
         ['store' => $storeId, 'model' => $modelId] = setupTestStoreWithModel();
-        $_ENV['OPENFGA_MCP_API_READONLY'] = 'true';
+        $_ENV['OPENFGA_MCP_API_WRITEABLE'] = 'false';
 
         $grantResult = $this->relationshipTools->grantPermission($storeId, $modelId, 'user:test', 'reader', 'document:test');
-        expect($grantResult)->toBe('❌ The MCP server is configured in read only mode. You cannot grant permissions in this mode.');
+        expect($grantResult)->toBe('❌ Write operations are disabled for safety. To enable grant permissions, set OPENFGA_MCP_API_WRITEABLE=true.');
 
         $revokeResult = $this->relationshipTools->revokePermission($storeId, $modelId, 'user:test', 'reader', 'document:test');
-        expect($revokeResult)->toBe('❌ The MCP server is configured in read only mode. You cannot revoke permissions in this mode.');
+        expect($revokeResult)->toBe('❌ Write operations are disabled for safety. To enable revoke permissions, set OPENFGA_MCP_API_WRITEABLE=true.');
 
         // Check should still work in read-only mode
         $checkResult = $this->relationshipTools->checkPermission($storeId, $modelId, 'user:test', 'reader', 'document:test');
         expect($checkResult)->toBe('❌ Permission denied');
 
-        putenv('OPENFGA_MCP_API_READONLY=false');
-        $_ENV['OPENFGA_MCP_API_READONLY'] = 'false';
+        putenv('OPENFGA_MCP_API_WRITEABLE=true');
+        $_ENV['OPENFGA_MCP_API_WRITEABLE'] = 'true';
     });
 
     it('respects restricted mode', function (): void {

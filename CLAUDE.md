@@ -42,13 +42,48 @@ This separation keeps concerns clean - you're not mixing data access with action
 The project has a minimal structure focused on implementing an MCP server:
 
 - **src/Server.php**: Main class that implements the MCP server
-- **src/Helpers.php**: Helper functions for MCP server
+- **src/Helpers.php**: Helper functions for MCP server (includes `isOfflineMode()`)
+- **src/OfflineClient.php**: Offline client implementation that allows server to run without OpenFGA
 - **src/Tools/**: Directory containing classes that expose tools for MCP client to invoke
 - **src/Resources/**: Directory containing classes that expose resources for MCP client to access
 - **src/Templates/**: Directory containing classes that expose resource templates for MCP client to generate resources from
 - **src/Prompts/**: Directory containing classes that expose prompts for MCP client to generate structured prompts from
 - Built on top of `php-mcp/server` framework
 - Uses `evansims/openfga-php` for OpenFGA client functionality
+
+## Operating Modes
+
+The server supports two distinct operating modes:
+
+### Online Mode (Full Features)
+When `OPENFGA_MCP_API_URL` is configured (or authentication credentials provided), the server operates with full functionality:
+- All Tools work (create/manage stores, models, relationships)
+- All Resources provide live data from OpenFGA
+- Dynamic Completions fetch data from the server
+- Prompts work as normal
+
+### Offline Mode (Planning & Coding Only)
+When no OpenFGA configuration is provided, the server operates in offline mode:
+- Tools return error messages guiding users to configure OpenFGA
+- Resources return error responses with helpful messages
+- Completions return static defaults (e.g., common relations, object patterns)
+- **Prompts work normally** - this is the key feature of offline mode
+
+The server automatically detects the mode based on environment variables. The `OfflineClient` class implements the `ClientInterface` to maintain architectural consistency.
+
+### Detecting Mode
+```php
+// Check if in offline mode
+if (isOfflineMode()) {
+    // Handle offline case
+}
+
+// In base classes
+$error = $this->checkOfflineMode('operation name');
+if (null !== $error) {
+    return $error;
+}
+```
 
 ## Code Standards
 
@@ -67,6 +102,14 @@ The project has a minimal structure focused on implementing an MCP server:
 - All code changes SHOULD have a clear and concise purpose.
 - When addressing PHPStan, Psalm or other PHP linter warnings, always address the underlying issues directly, never use suppression tactics. You are forbidden from using suppression annotations or adding ignore statements to configuration files. If you are unable to address a warning, ask for help.
 - Never skip tests. If a test fails, you must address the underlying cause directly. If you are unable to fix a failing test, ask for help.
+
+## Security Model
+
+The server follows a **safety-first approach** for write operations:
+- **Default**: Write operations are disabled (`OPENFGA_MCP_API_WRITEABLE=false`)
+- **To Enable**: Must explicitly set `OPENFGA_MCP_API_WRITEABLE=true`
+- This prevents accidental destructive operations (create, update, delete) on OpenFGA instances
+- Read operations are always allowed when connected to an OpenFGA instance
 
 ## Important Implementation Notes
 

@@ -40,6 +40,12 @@ final readonly class StoreResources extends AbstractResources
         #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
         string $storeId,
     ): array {
+        $error = $this->checkOfflineMode('Fetching store details');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $storeData = [];
 
@@ -81,6 +87,12 @@ final readonly class StoreResources extends AbstractResources
         #[CompletionProvider(provider: StoreIdCompletionProvider::class)]
         string $storeId,
     ): array {
+        $error = $this->checkOfflineMode('Listing store models');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $models = [];
 
@@ -124,6 +136,12 @@ final readonly class StoreResources extends AbstractResources
     )]
     public function listStores(): array
     {
+        $error = $this->checkOfflineMode('Listing stores');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $stores = [];
 

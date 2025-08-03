@@ -88,14 +88,14 @@ describe('StoreTools Integration', function (): void {
     });
 
     it('respects read-only mode', function (): void {
-        $_ENV['OPENFGA_MCP_API_READONLY'] = 'true';
+        $_ENV['OPENFGA_MCP_API_WRITEABLE'] = 'false';
 
         $result = $this->storeTools->createStore('should-not-create');
 
-        expect($result)->toBe('❌ The MCP server is configured in read only mode. You cannot create stores in this mode.');
+        expect($result)->toBe('❌ Write operations are disabled for safety. To enable create stores, set OPENFGA_MCP_API_WRITEABLE=true.');
 
-        putenv('OPENFGA_MCP_API_READONLY=false');
-        $_ENV['OPENFGA_MCP_API_READONLY'] = 'false';
+        putenv('OPENFGA_MCP_API_WRITEABLE=true');
+        $_ENV['OPENFGA_MCP_API_WRITEABLE'] = 'true';
     });
 
     it('respects restricted mode for store access', function (): void {

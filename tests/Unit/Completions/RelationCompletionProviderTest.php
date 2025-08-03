@@ -57,15 +57,14 @@ describe('RelationCompletionProvider', function (): void {
     it('filters relations based on current value', function (): void {
         putenv('OPENFGA_MCP_API_STORE=false');
 
-        $result = $this->provider->getCompletions('can_', $this->session);
+        $result = $this->provider->getCompletions('ed', $this->session);
 
-        // Should filter to relations starting with 'can_'
-        expect($result)->toContain('can_view');
-        expect($result)->toContain('can_edit');
-        expect($result)->toContain('can_delete');
-        expect($result)->toContain('can_share');
+        // Should filter to relations starting with 'ed'
+        expect($result)->toContain('editor');
         expect($result)->not->toContain('viewer');
-        expect($result)->not->toContain('editor');
+        expect($result)->not->toContain('admin');
+        expect($result)->not->toContain('owner');
+        expect($result)->not->toContain('member');
 
         // Clean up
         putenv('OPENFGA_MCP_API_STORE=false');

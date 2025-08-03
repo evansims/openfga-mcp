@@ -129,7 +129,7 @@ type document
 
     it('respects read-only mode', function (): void {
         $storeId = setupTestStore();
-        $_ENV['OPENFGA_MCP_API_READONLY'] = 'true';
+        $_ENV['OPENFGA_MCP_API_WRITEABLE'] = 'false';
 
         $dsl = 'model
   schema 1.1
@@ -137,10 +137,10 @@ type user';
 
         $result = $this->modelTools->createModel($dsl, $storeId);
 
-        expect($result)->toBe('❌ The MCP server is configured in read only mode. You cannot create authorization models in this mode.');
+        expect($result)->toBe('❌ Write operations are disabled for safety. To enable create authorization models, set OPENFGA_MCP_API_WRITEABLE=true.');
 
-        putenv('OPENFGA_MCP_API_READONLY=false');
-        $_ENV['OPENFGA_MCP_API_READONLY'] = 'false';
+        putenv('OPENFGA_MCP_API_WRITEABLE=true');
+        $_ENV['OPENFGA_MCP_API_WRITEABLE'] = 'true';
     });
 
     it('respects restricted mode for model access', function (): void {

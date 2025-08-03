@@ -10,13 +10,19 @@ use OpenFGA\Responses\{CheckResponseInterface, ListObjectsResponseInterface, Wri
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
+    // Set up online mode for unit tests
+    putenv('OPENFGA_MCP_API_URL=http://localhost:8080');
+    // Enable write operations for unit tests
+    putenv('OPENFGA_MCP_API_WRITEABLE=true');
+
     $this->client = Mockery::mock(ClientInterface::class);
     $this->relationshipTools = new RelationshipTools($this->client);
 });
 
 afterEach(function (): void {
     Mockery::close();
-    putenv('OPENFGA_MCP_API_READONLY=');
+    putenv('OPENFGA_MCP_API_URL=');
+    putenv('OPENFGA_MCP_API_WRITEABLE=');
     putenv('OPENFGA_MCP_API_RESTRICT=');
     putenv('OPENFGA_MCP_API_STORE=');
     putenv('OPENFGA_MCP_API_MODEL=');
@@ -190,13 +196,13 @@ describe('grantPermission', function (): void {
     });
 
     it('prevents granting permission in read-only mode', function (): void {
-        putenv('OPENFGA_MCP_API_READONLY=true');
+        putenv('OPENFGA_MCP_API_WRITEABLE=false');
 
         $this->client->shouldReceive('writeTuples')->never();
 
         $result = $this->relationshipTools->grantPermission('store-123', 'model-456', 'user:1', 'writer', 'doc:1');
 
-        expect($result)->toBe('❌ The MCP server is configured in read only mode. You cannot grant permissions in this mode.');
+        expect($result)->toBe('❌ Write operations are disabled for safety. To enable grant permissions, set OPENFGA_MCP_API_WRITEABLE=true.');
     });
 
     it('prevents granting permission with non-restricted store', function (): void {
@@ -243,13 +249,13 @@ describe('revokePermission', function (): void {
     });
 
     it('prevents revoking permission in read-only mode', function (): void {
-        putenv('OPENFGA_MCP_API_READONLY=true');
+        putenv('OPENFGA_MCP_API_WRITEABLE=false');
 
         $this->client->shouldReceive('writeTuples')->never();
 
         $result = $this->relationshipTools->revokePermission('store-123', 'model-456', 'user:1', 'writer', 'doc:1');
 
-        expect($result)->toBe('❌ The MCP server is configured in read only mode. You cannot revoke permissions in this mode.');
+        expect($result)->toBe('❌ Write operations are disabled for safety. To enable revoke permissions, set OPENFGA_MCP_API_WRITEABLE=true.');
     });
 });
 

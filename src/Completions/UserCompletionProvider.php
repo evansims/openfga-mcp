@@ -25,6 +25,11 @@ final readonly class UserCompletionProvider extends AbstractCompletions
     #[Override]
     public function getCompletions(string $currentValue, SessionInterface $session): array
     {
+        // Return common user patterns in offline mode
+        if ($this->isOffline()) {
+            return $this->getCommonUserPatterns($currentValue);
+        }
+
         try {
             // Try to get store ID from session context
             $storeId = $this->extractStoreIdFromSession($session);

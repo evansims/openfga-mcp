@@ -8,13 +8,19 @@ use OpenFGA\Responses\{CreateStoreResponseInterface, GetStoreResponseInterface};
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
+    // Set up online mode for unit tests
+    putenv('OPENFGA_MCP_API_URL=http://localhost:8080');
+    // Enable write operations for unit tests
+    putenv('OPENFGA_MCP_API_WRITEABLE=true');
+
     $this->client = Mockery::mock(ClientInterface::class);
     $this->storeTools = new StoreTools($this->client);
 });
 
 afterEach(function (): void {
     Mockery::close();
-    putenv('OPENFGA_MCP_API_READONLY=');
+    putenv('OPENFGA_MCP_API_URL=');
+    putenv('OPENFGA_MCP_API_WRITEABLE=');
     putenv('OPENFGA_MCP_API_RESTRICT=');
     putenv('OPENFGA_MCP_API_STORE=');
 });
@@ -71,13 +77,13 @@ describe('createStore', function (): void {
     });
 
     it('prevents store creation in read-only mode', function (): void {
-        putenv('OPENFGA_MCP_API_READONLY=true');
+        putenv('OPENFGA_MCP_API_WRITEABLE=false');
 
         $this->client->shouldReceive('createStore')->never();
 
         $result = $this->storeTools->createStore('test-store');
 
-        expect($result)->toBe('❌ The MCP server is configured in read only mode. You cannot create stores in this mode.');
+        expect($result)->toBe('❌ Write operations are disabled for safety. To enable create stores, set OPENFGA_MCP_API_WRITEABLE=true.');
     });
 
     it('prevents store creation in restricted mode', function (): void {
@@ -88,6 +94,16 @@ describe('createStore', function (): void {
         $result = $this->storeTools->createStore('test-store');
 
         expect($result)->toBe('❌ The MCP server is configured in restricted mode. You cannot create stores in this mode.');
+    });
+
+    it('prevents store creation in offline mode', function (): void {
+        putenv('OPENFGA_MCP_API_URL='); // Clear the URL to simulate offline mode
+
+        $this->client->shouldReceive('createStore')->never();
+
+        $result = $this->storeTools->createStore('test-store');
+
+        expect($result)->toBe('❌ Creating stores requires a live OpenFGA instance. Please configure OPENFGA_MCP_API_URL to enable administrative features.');
     });
 });
 
@@ -137,13 +153,13 @@ describe('deleteStore', function (): void {
     });
 
     it('prevents store deletion in read-only mode', function (): void {
-        putenv('OPENFGA_MCP_API_READONLY=true');
+        putenv('OPENFGA_MCP_API_WRITEABLE=false');
 
         $this->client->shouldReceive('deleteStore')->never();
 
         $result = $this->storeTools->deleteStore('store-123');
 
-        expect($result)->toBe('❌ The MCP server is configured in read only mode. You cannot delete stores in this mode.');
+        expect($result)->toBe('❌ Write operations are disabled for safety. To enable delete stores, set OPENFGA_MCP_API_WRITEABLE=true.');
     });
 
     it('prevents store deletion in restricted mode', function (): void {

@@ -5,19 +5,20 @@ declare(strict_types=1);
 namespace OpenFGA\MCP\Tools;
 
 use function getConfiguredString;
+use function isOfflineMode;
 
 abstract readonly class AbstractTools
 {
     /**
-     * Check if the server is in read-only mode.
+     * Check if the server is in offline mode.
      *
      * @param  string      $operation
-     * @return string|null Error message if in read-only mode, null otherwise
+     * @return string|null Error message if in offline mode, null otherwise
      */
-    protected function checkReadOnlyMode(string $operation): ?string
+    protected function checkOfflineMode(string $operation): ?string
     {
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_READONLY', 'false')) {
-            return '❌ The MCP server is configured in read only mode. You cannot ' . $operation . ' in this mode.';
+        if (isOfflineMode()) {
+            return '❌ ' . $operation . ' requires a live OpenFGA instance. Please configure OPENFGA_MCP_API_URL to enable administrative features.';
         }
 
         return null;
@@ -65,6 +66,22 @@ abstract readonly class AbstractTools
     {
         if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
             return '❌ The MCP server is configured in restricted mode. You cannot ' . $operation . ' in this mode.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if write operations are allowed.
+     *
+     * @param  string      $operation
+     * @return string|null Error message if writes are not allowed, null otherwise
+     */
+    protected function checkWritePermission(string $operation): ?string
+    {
+        // Write operations require explicit opt-in via OPENFGA_MCP_API_WRITEABLE
+        if ('true' !== getConfiguredString('OPENFGA_MCP_API_WRITEABLE', 'false')) {
+            return '❌ Write operations are disabled for safety. To enable ' . $operation . ', set OPENFGA_MCP_API_WRITEABLE=true.';
         }
 
         return null;

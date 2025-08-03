@@ -48,6 +48,12 @@ final readonly class RelationshipTools extends AbstractTools
         string $relation,
         string $object,
     ): string {
+        $error = $this->checkOfflineMode('Checking permissions');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
 
@@ -102,11 +108,17 @@ final readonly class RelationshipTools extends AbstractTools
         string $relation,
         string $object,
     ): string {
+        $error = $this->checkOfflineMode('Granting permissions');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
         $called = false;
 
-        $error = $this->checkReadOnlyMode('grant permissions');
+        $error = $this->checkWritePermission('grant permissions');
 
         if (null !== $error) {
             return $error;
@@ -164,6 +176,12 @@ final readonly class RelationshipTools extends AbstractTools
         string $user,
         string $relation,
     ): string | array {
+        $error = $this->checkOfflineMode('Listing objects');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = [];
 
@@ -210,6 +228,12 @@ final readonly class RelationshipTools extends AbstractTools
         string $object,
         string $relation,
     ): string | array {
+        $error = $this->checkOfflineMode('Listing users');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = [];
         $called = false;
@@ -281,10 +305,16 @@ final readonly class RelationshipTools extends AbstractTools
         string $relation,
         string $object,
     ): string {
+        $error = $this->checkOfflineMode('Revoking permissions');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
 
-        $error = $this->checkReadOnlyMode('revoke permissions');
+        $error = $this->checkWritePermission('revoke permissions');
 
         if (null !== $error) {
             return $error;

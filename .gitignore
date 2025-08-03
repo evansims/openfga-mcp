@@ -8,3 +8,4 @@ integration-junit.xml
 *.cache
 tests/Fuzzing/corpus
 tests/Fuzzing/crashes
+docs/PHP_MCP_SERVER.md

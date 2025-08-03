@@ -1,0 +1,20 @@
+{
+    "name": "openfga/documentation-sync",
+    "description": "Standalone tool for syncing OpenFGA documentation from GitHub repositories",
+    "type": "project",
+    "license": "Apache-2.0",
+    "require": {
+        "php": "^8.1",
+        "guzzlehttp/guzzle": "^7.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "OpenFGA\\DocumentationSync\\": "./"
+        }
+    },
+    "scripts": {
+        "sync": "php sync.php",
+        "sync:verbose": "php sync.php -v",
+        "sync:all": "php sync.php -v -o ../../docs"
+    }
+}

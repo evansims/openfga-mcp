@@ -21,14 +21,14 @@ final readonly class ModelDesignPrompts extends AbstractPrompts
      * Generate a prompt to convert traditional RBAC (Role-Based Access Control) to OpenFGA's ReBAC model.
      *
      * @param  string                            $roleDescription Description of existing roles and permissions
-     * @param  string                            $migrationScope  Scope of migration (full, incremental, hybrid)
+     * @param  string                            $migrationScope  Scope of migration (additive, gradual, full)
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'convert_rbac_to_rebac')]
     public function convertRbacToRebac(
         string $roleDescription,
-        #[CompletionProvider(values: ['full', 'incremental', 'hybrid', 'pilot', 'phased'])]
-        string $migrationScope = 'incremental',
+        #[CompletionProvider(values: ['additive', 'gradual', 'full', 'backwards-compatible'])]
+        string $migrationScope = 'additive',
     ): array {
         $error = $this->checkRestrictedMode();
 
@@ -36,7 +36,7 @@ final readonly class ModelDesignPrompts extends AbstractPrompts
             return $this->createErrorResponse($error);
         }
 
-        $prompt = "Convert the following RBAC (Role-Based Access Control) system to OpenFGA's ReBAC (Relationship-Based Access Control) model:
+        $prompt = "Convert the following RBAC (Role-Based Access Control) system to OpenFGA's ReBAC (Relationship-Based Access Control) model. OpenFGA primarily champions ReBAC while also supporting RBAC and ABAC use cases.
 
 **Existing RBAC System:**
 {$roleDescription}
@@ -46,17 +46,20 @@ final readonly class ModelDesignPrompts extends AbstractPrompts
 Please provide:
 1. **RBAC Analysis**: Break down the existing roles, permissions, and hierarchies
 2. **ReBAC Mapping**: Map roles to types and relationships in OpenFGA
-3. **OpenFGA Model**: Complete DSL model that replaces the RBAC system
-4. **Migration Strategy**: Step-by-step approach for {$migrationScope} migration
-5. **Relationship Examples**: Show how existing role assignments become relationships
-6. **Benefits**: Explain advantages of the ReBAC approach over traditional RBAC
+3. **OpenFGA Model**: Complete DSL model (schema 1.1) that replaces or augments the RBAC system
+4. **Migration Strategy**: Following the {$migrationScope} approach:
+   - Additive: Introduce custom roles alongside existing static roles
+   - Gradual: Move permissions one at a time to custom roles
+   - Backwards-compatible: Maintain existing static role behavior during transition
+5. **Relationship Tuples**: Show how existing role assignments become relationship tuples
+6. **Custom Roles**: If applicable, show how to implement user-defined roles
 
 Consider:
 - Preserving existing access patterns during migration
 - Maintaining security boundaries
-- Enabling more flexible access patterns with ReBAC
-- Performance implications of the new model
-- Training requirements for the development team";
+- Using OpenFGA patterns: direct relationships, concentric (or), indirect (X from Y)
+- The separation between static authorization model and dynamic relationship tuples
+- Performance implications of the new model";
 
         return [
             ['role' => 'user', 'content' => $prompt],
@@ -90,21 +93,24 @@ Consider:
 Please provide:
 1. **Type Definitions**: Define the main entity types (users, resources, groups, etc.)
 2. **Relations**: Specify the relationships between types with proper inheritance
-3. **OpenFGA DSL**: Write the complete model in OpenFGA's Domain Specific Language
-4. **Example Relationships**: Show 3-5 example relationships that would be created
-5. **Security Considerations**: Highlight important security aspects of this design
+3. **OpenFGA DSL**: Write the complete model in OpenFGA's Domain Specific Language (schema 1.1)
+4. **Example Relationship Tuples**: Show 3-5 example tuples that would be created
+5. **Permissions**: Define can_* permissions following OpenFGA best practices
+6. **Security Considerations**: Highlight important security aspects of this design
 
 Focus on:
+- Using OpenFGA's core relationship patterns (direct, concentric, indirect 'X from Y')
 - Scalability and maintainability
-- Clear separation of concerns
+- Clear separation between static model and dynamic tuples
 - Efficient query patterns
 - Real-world use cases for {$domain}
 
 Consider these best practices:
 - Use meaningful type and relation names
-- Implement proper inheritance hierarchies
+- Implement proper inheritance using 'or' and 'X from Y' patterns
 - Avoid circular dependencies
-- Design for query performance";
+- Design for query performance
+- Always define permissions in the authorization model using can_* relations";
 
         return [
             ['role' => 'user', 'content' => $prompt],
@@ -114,16 +120,16 @@ Consider these best practices:
     /**
      * Generate a prompt to model hierarchical relationships and inheritance patterns.
      *
-     * @param  string                            $hierarchyType    Type of hierarchy (organizational, resource, permission)
-     * @param  string                            $inheritanceModel How inheritance should work (strict, flexible, conditional)
+     * @param  string                            $hierarchyType      Type of hierarchy (organizational, resource, folder, team)
+     * @param  string                            $inheritancePattern How inheritance should work (parent-to-child, selective, conditional)
      * @return array<int, array<string, string>>
      */
     #[McpPrompt(name: 'model_hierarchical_relationships')]
     public function modelHierarchicalRelationships(
-        #[CompletionProvider(values: ['organizational', 'resource', 'permission', 'role', 'group', 'geographic', 'functional'])]
+        #[CompletionProvider(values: ['organizational', 'resource', 'folder', 'team', 'group', 'department'])]
         string $hierarchyType,
-        #[CompletionProvider(values: ['strict', 'flexible', 'conditional', 'selective', 'reverse', 'bidirectional'])]
-        string $inheritanceModel = 'flexible',
+        #[CompletionProvider(values: ['parent-to-child', 'selective', 'conditional', 'with-usersets'])]
+        string $inheritancePattern = 'parent-to-child',
     ): array {
         $error = $this->checkRestrictedMode();
 
@@ -131,32 +137,32 @@ Consider these best practices:
             return $this->createErrorResponse($error);
         }
 
-        $prompt = "Design hierarchical relationships and inheritance patterns for a {$hierarchyType} hierarchy using {$inheritanceModel} inheritance in OpenFGA.
+        $prompt = "Design hierarchical relationships and inheritance patterns for a {$hierarchyType} hierarchy using {$inheritancePattern} inheritance in OpenFGA.
 
 **Requirements:**
 - Hierarchy Type: {$hierarchyType}
-- Inheritance Model: {$inheritanceModel}
+- Inheritance Pattern: {$inheritancePattern}
 
 Please provide:
 1. **Hierarchy Design**: Structure of the {$hierarchyType} hierarchy
-2. **Inheritance Rules**: How permissions flow through the hierarchy
+2. **Inheritance Rules**: How permissions flow through the hierarchy using 'X from Y' syntax
 3. **OpenFGA Model**: DSL implementation with proper relation definitions
-4. **Permission Propagation**: Examples of how permissions inherit down/up the hierarchy
-5. **Edge Cases**: Handle scenarios like multiple inheritance, cycles, and exceptions
+4. **Permission Propagation**: Examples of how permissions inherit through the hierarchy
+5. **Edge Cases**: Handle scenarios like deeply nested hierarchies and permission boundaries
 6. **Performance Considerations**: Query optimization for hierarchical lookups
 
 Focus on:
+- Using the 'X from Y' pattern for scalable hierarchical access
 - Clear inheritance patterns that are easy to understand
 - Avoiding permission escalation vulnerabilities
 - Efficient query paths for authorization checks
-- Flexibility for future hierarchy changes
-- Documentation of inheritance rules
+- Proper use of concentric relationships (or) for permission inheritance
 
-Consider these inheritance patterns:
-- Direct inheritance (parent permissions apply to children)
-- Reverse inheritance (child permissions apply to parents)
-- Selective inheritance (only specific permissions inherit)
-- Conditional inheritance (inheritance based on additional criteria)";
+Use OpenFGA's standard patterns:
+- **Indirect Relationships ('X from Y')**: For hierarchical inheritance
+- **Concentric Relationships**: Using 'or' for nested permissions (e.g., editors are viewers)
+- **Usersets**: For group-based access control
+- **Conditions**: For dynamic, contextual permissions with CEL";
 
         return [
             ['role' => 'user', 'content' => $prompt],
@@ -208,10 +214,11 @@ Focus on:
 
 Consider these optimization techniques:
 - Relation consolidation and simplification
-- Query path optimization
+- Query path optimization using efficient 'X from Y' patterns
 - Type hierarchy restructuring
 - Removal of unnecessary indirection
-- Caching-friendly patterns";
+- Proper use of concentric relationships to reduce tuple count
+- Leveraging usersets for group-based access";
 
         return [
             ['role' => 'user', 'content' => $prompt],

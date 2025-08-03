@@ -7,7 +7,6 @@ use OpenFGA\MCP\Completions\{
     AuditFrequency,
     ComplexityLevel,
     ComplianceFramework,
-    DelegationType,
     QueryType,
     RiskLevel,
     SecurityLevel,
@@ -60,17 +59,6 @@ describe('Completion Enums', function (): void {
         expect($values)->toContain('complex');
         expect($values)->toContain('enterprise');
         expect($values)->toContain('highly nested');
-    });
-
-    it('DelegationType enum has expected values', function (): void {
-        $values = array_map(fn ($case) => $case->value, DelegationType::cases());
-
-        expect($values)->toContain('temporary');
-        expect($values)->toContain('permanent');
-        expect($values)->toContain('conditional');
-        expect($values)->toContain('time-bound');
-        expect($values)->toContain('role-based');
-        expect($values)->toContain('emergency');
     });
 
     it('QueryType enum has expected values', function (): void {

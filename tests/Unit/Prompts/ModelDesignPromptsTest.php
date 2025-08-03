@@ -57,12 +57,12 @@ describe('designModelForDomain', function (): void {
 describe('convertRbacToRebac', function (): void {
     it('generates RBAC to ReBAC conversion prompt', function (): void {
         $roleDescription = 'Admin, Manager, User roles with hierarchical permissions';
-        $result = $this->modelDesignPrompts->convertRbacToRebac($roleDescription, 'incremental');
+        $result = $this->modelDesignPrompts->convertRbacToRebac($roleDescription, 'gradual');
 
         expect($result)->toBeArray()
             ->and($result[0]['role'])->toBe('user')
             ->and($result[0]['content'])->toContain($roleDescription)
-            ->and($result[0]['content'])->toContain('incremental')
+            ->and($result[0]['content'])->toContain('gradual')
             ->and($result[0]['content'])->toContain('RBAC')
             ->and($result[0]['content'])->toContain('ReBAC');
     });
@@ -70,25 +70,25 @@ describe('convertRbacToRebac', function (): void {
     it('uses default migration scope', function (): void {
         $result = $this->modelDesignPrompts->convertRbacToRebac('Simple role system');
 
-        expect($result[0]['content'])->toContain('incremental');
+        expect($result[0]['content'])->toContain('additive');
     });
 });
 
 describe('modelHierarchicalRelationships', function (): void {
     it('generates hierarchical relationship modeling prompt', function (): void {
-        $result = $this->modelDesignPrompts->modelHierarchicalRelationships('organizational', 'strict');
+        $result = $this->modelDesignPrompts->modelHierarchicalRelationships('organizational', 'parent-to-child');
 
         expect($result)->toBeArray()
             ->and($result[0]['role'])->toBe('user')
             ->and($result[0]['content'])->toContain('organizational')
-            ->and($result[0]['content'])->toContain('strict')
+            ->and($result[0]['content'])->toContain('parent-to-child')
             ->and($result[0]['content'])->toContain('hierarchy');
     });
 
     it('uses default inheritance model', function (): void {
         $result = $this->modelDesignPrompts->modelHierarchicalRelationships('resource');
 
-        expect($result[0]['content'])->toContain('flexible');
+        expect($result[0]['content'])->toContain('parent-to-child');
     });
 });
 

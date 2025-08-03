@@ -26,6 +26,11 @@ final readonly class ModelIdCompletionProvider extends AbstractCompletions
     #[Override]
     public function getCompletions(string $currentValue, SessionInterface $session): array
     {
+        // Return ['latest'] in offline mode
+        if ($this->isOffline()) {
+            return $this->filterCompletions(['latest'], $currentValue);
+        }
+
         try {
             // Try to get store ID from session context
             $storeId = $this->extractStoreIdFromSession($session);

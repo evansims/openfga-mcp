@@ -36,11 +36,17 @@ final readonly class ModelTools extends AbstractTools
         string $dsl,
         string $store,
     ): string {
+        $error = $this->checkOfflineMode('Creating authorization models');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
         $authorizationModel = null;
 
-        $error = $this->checkReadOnlyMode('create authorization models');
+        $error = $this->checkWritePermission('create authorization models');
 
         if (null !== $error) {
             return $error;
@@ -97,6 +103,12 @@ final readonly class ModelTools extends AbstractTools
         string $store,
         string $model,
     ): string {
+        $error = $this->checkOfflineMode('Getting authorization model');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
 
@@ -139,21 +151,19 @@ final readonly class ModelTools extends AbstractTools
         string $store,
         string $model,
     ): string {
+        $error = $this->checkOfflineMode('Getting authorization model DSL');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
 
-        if ('true' === getConfiguredString('OPENFGA_MCP_API_RESTRICT', 'false')) {
-            $restrictedStore = getConfiguredString('OPENFGA_MCP_API_STORE', '');
+        $error = $this->checkRestrictedMode(storeId: $store, modelId: $model);
 
-            if ('' !== $restrictedStore && $restrictedStore !== $store) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query stores other than ' . $restrictedStore . ' in this mode.';
-            }
-
-            $restrictedModel = getConfiguredString('OPENFGA_MCP_API_MODEL', '');
-
-            if ('' !== $restrictedModel && $restrictedModel !== $model) {
-                return '❌ The MCP server is configured in restricted mode. You cannot query using authorization models other than ' . $restrictedModel . ' in this mode.';
-            }
+        if (null !== $error) {
+            return $error;
         }
 
         $this->client->getAuthorizationModel(store: $store, model: $model)
@@ -183,6 +193,12 @@ final readonly class ModelTools extends AbstractTools
     public function listModels(
         string $store,
     ): string | array {
+        $error = $this->checkOfflineMode('Listing authorization models');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = [];
 
@@ -223,6 +239,12 @@ final readonly class ModelTools extends AbstractTools
     public function verifyModel(
         string $dsl,
     ): string {
+        $error = $this->checkOfflineMode('Verifying authorization model');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
 

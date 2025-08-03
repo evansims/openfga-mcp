@@ -1,0 +1,63 @@
+# Example Docker Compose configuration for running OpenFGA MCP Server with OpenFGA
+# 
+# This example shows how to run both OpenFGA and the MCP server together.
+# Copy this file to docker-compose.yml and run: docker-compose up
+
+services:
+  # OpenFGA authorization server
+  openfga:
+    image: openfga/openfga:latest
+    container_name: openfga
+    command: run
+    environment:
+      - OPENFGA_PLAYGROUND_ENABLED=true  # Enable playground at http://localhost:3000/playground
+      - OPENFGA_DATASTORE_ENGINE=memory  # Use memory for development (use postgres for production)
+      - OPENFGA_LOG_LEVEL=info
+    ports:
+      - "8080:8080"  # HTTP API
+      - "8081:8081"  # gRPC API
+      - "3000:3000"  # Playground UI
+    networks:
+      - openfga-network
+
+  # OpenFGA MCP Server in online mode (read-only by default)
+  mcp-server:
+    image: evansims/openfga-mcp:latest
+    container_name: openfga-mcp
+    depends_on:
+      - openfga
+    environment:
+      # Connect to OpenFGA service by container name
+      - OPENFGA_MCP_API_URL=http://openfga:8080
+      # Enable write operations (disabled by default for safety)
+      - OPENFGA_MCP_API_WRITEABLE=true
+      # Optional: Use HTTP transport instead of stdio for testing
+      # - OPENFGA_MCP_TRANSPORT=http
+      # - OPENFGA_MCP_TRANSPORT_PORT=9090
+    # Uncomment if using HTTP transport
+    # ports:
+    #   - "9090:9090"
+    networks:
+      - openfga-network
+    # For stdio transport, keep container running
+    stdin_open: true
+    tty: true
+
+  # Example: MCP Server in offline mode (no OpenFGA required)
+  # mcp-server-offline:
+  #   image: evansims/openfga-mcp:latest
+  #   container_name: openfga-mcp-offline
+  #   # No OPENFGA_MCP_API_URL = offline mode
+  #   stdin_open: true
+  #   tty: true
+
+networks:
+  openfga-network:
+    driver: bridge
+
+# Notes:
+# 1. The MCP server connects to OpenFGA using the container name (openfga:8080)
+# 2. To connect from host machine to OpenFGA: http://localhost:8080
+# 3. To view OpenFGA Playground: http://localhost:3000/playground
+# 4. For production, use postgres instead of memory for OPENFGA_DATASTORE_ENGINE
+# 5. The MCP server runs in stdio mode by default (for use with MCP clients)

@@ -25,6 +25,11 @@ final readonly class ObjectCompletionProvider extends AbstractCompletions
     #[Override]
     public function getCompletions(string $currentValue, SessionInterface $session): array
     {
+        // Return common object patterns in offline mode
+        if ($this->isOffline()) {
+            return $this->getCommonObjectPatterns($currentValue);
+        }
+
         try {
             // Try to get store ID from session context
             $storeId = $this->extractStoreIdFromSession($session);
@@ -96,17 +101,52 @@ final readonly class ObjectCompletionProvider extends AbstractCompletions
      */
     private function getCommonObjectPatterns(string $currentValue): array
     {
+        // If the value already has a type prefix, provide common ID suggestions
+        if (str_contains($currentValue, ':')) {
+            [$type] = explode(':', $currentValue, 2);
+
+            // Provide common ID patterns based on the type
+            $suggestions = match ($type) {
+                'document', 'doc' => [
+                    $type . ':budget',
+                    $type . ':plan',
+                    $type . ':report',
+                    $type . ':proposal',
+                ],
+                'folder' => [
+                    $type . ':root',
+                    $type . ':shared',
+                    $type . ':public',
+                    $type . ':private',
+                ],
+                'user' => [
+                    $type . ':alice',
+                    $type . ':bob',
+                    $type . ':admin',
+                ],
+                'group' => [
+                    $type . ':admins',
+                    $type . ':editors',
+                    $type . ':viewers',
+                ],
+                // For unknown types, suggest generic IDs
+                default => [
+                    $type . ':1',
+                    $type . ':default',
+                    $type . ':main',
+                ],
+            };
+
+            return $this->filterCompletions($suggestions, $currentValue);
+        }
+
+        // If no type prefix, suggest common type prefixes
         $commonPatterns = [
-            'document:budget',
-            'document:plan',
-            'document:report',
-            'folder:project',
-            'folder:shared',
-            'repository:main',
-            'repository:backend',
-            'workspace:team',
-            'workspace:public',
-            'organization:company',
+            'document:',
+            'doc:',
+            'folder:',
+            'user:',
+            'group:',
         ];
 
         return $this->filterCompletions($commonPatterns, $currentValue);

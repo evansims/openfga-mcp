@@ -36,10 +36,16 @@ final readonly class StoreTools extends AbstractTools
     public function createStore(
         string $name,
     ): string {
+        $error = $this->checkOfflineMode('Creating stores');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
 
-        $error = $this->checkReadOnlyMode('create stores');
+        $error = $this->checkWritePermission('create stores');
 
         if (null !== $error) {
             return $error;
@@ -91,10 +97,16 @@ final readonly class StoreTools extends AbstractTools
     public function deleteStore(
         string $id,
     ): string {
+        $error = $this->checkOfflineMode('Deleting stores');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
 
-        $error = $this->checkReadOnlyMode('delete stores');
+        $error = $this->checkWritePermission('delete stores');
 
         if (null !== $error) {
             return $error;
@@ -130,6 +142,12 @@ final readonly class StoreTools extends AbstractTools
     public function getStore(
         string $id,
     ): string | array {
+        $error = $this->checkOfflineMode('Getting store details');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = '';
 
@@ -168,6 +186,12 @@ final readonly class StoreTools extends AbstractTools
     #[McpTool(name: 'list_stores')]
     public function listStores(): string | array
     {
+        $error = $this->checkOfflineMode('Listing stores');
+
+        if (null !== $error) {
+            return $error;
+        }
+
         $failure = null;
         $success = [];
 

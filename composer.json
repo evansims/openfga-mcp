@@ -95,14 +95,12 @@
   },
   "scripts": {
     "lint": [
-      "@putenv PHP_CS_FIXER_IGNORE_ENV=1",
       "@php vendor/bin/phpstan analyze",
       "@php vendor/bin/psalm",
       "@php vendor/bin/rector process src --dry-run",
       "@php vendor/bin/php-cs-fixer fix --dry-run --diff"
     ],
     "lint:fix": [
-      "@putenv PHP_CS_FIXER_IGNORE_ENV=1",
       "@php vendor/bin/rector process src",
       "@php vendor/bin/php-cs-fixer fix"
     ],

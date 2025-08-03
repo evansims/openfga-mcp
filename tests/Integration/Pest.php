@@ -16,13 +16,17 @@ declare(strict_types=1);
 function clearTestEnvironment(): void
 {
     // Clear from both $_ENV and system environment
-    $vars = ['OPENFGA_MCP_API_READONLY', 'OPENFGA_MCP_API_RESTRICT', 'OPENFGA_MCP_API_STORE', 'OPENFGA_MCP_API_MODEL'];
+    $vars = ['OPENFGA_MCP_API_RESTRICT', 'OPENFGA_MCP_API_STORE', 'OPENFGA_MCP_API_MODEL'];
 
     foreach ($vars as $var) {
         // Set to explicit 'false' string which will be treated as false by our helper functions
         putenv($var . '=false');
         $_ENV[$var] = 'false';
     }
+
+    // Enable write operations by default for integration tests
+    putenv('OPENFGA_MCP_API_WRITEABLE=true');
+    $_ENV['OPENFGA_MCP_API_WRITEABLE'] = 'true';
 }
 
 // Ensure clean environment before each test

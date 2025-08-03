@@ -25,6 +25,11 @@ final readonly class RelationCompletionProvider extends AbstractCompletions
     #[Override]
     public function getCompletions(string $currentValue, SessionInterface $session): array
     {
+        // Return common relations in offline mode
+        if ($this->isOffline()) {
+            return $this->getCommonRelations($currentValue);
+        }
+
         try {
             // Try to get store ID from session context
             $storeId = $this->extractStoreIdFromSession($session);
@@ -57,6 +62,7 @@ final readonly class RelationCompletionProvider extends AbstractCompletions
                             $typeRelations = $typeDefinition->getRelations();
 
                             if ($typeRelations instanceof TypeDefinitionRelationsInterface) {
+                                // TypeDefinitionRelations is iterable - iterate to get relation names
                                 foreach ($typeRelations as $relationName => $_) {
                                     if ('' !== $relationName) {
                                         $relations[] = $relationName;
@@ -95,15 +101,9 @@ final readonly class RelationCompletionProvider extends AbstractCompletions
             'reader',
             'editor',
             'writer',
-            'admin',
             'owner',
             'member',
-            'can_view',
-            'can_edit',
-            'can_delete',
-            'can_share',
-            'parent',
-            'assignee',
+            'admin',
         ];
 
         return $this->filterCompletions($commonRelations, $currentValue);

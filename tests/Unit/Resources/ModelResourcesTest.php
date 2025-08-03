@@ -7,12 +7,16 @@ use OpenFGA\MCP\Resources\ModelResources;
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
+    // Set up online mode for unit tests
+    putenv('OPENFGA_MCP_API_URL=http://localhost:8080');
+
     $this->client = Mockery::mock(ClientInterface::class);
     $this->modelResources = new ModelResources($this->client);
 });
 
 afterEach(function (): void {
     Mockery::close();
+    putenv('OPENFGA_MCP_API_URL=');
 });
 
 describe('getModel resource', function (): void {
@@ -88,5 +92,27 @@ describe('getLatestModel resource', function (): void {
 
         // Without executing callbacks, result is empty
         expect($result)->toBeArray();
+    });
+});
+
+describe('offline mode behavior', function (): void {
+    it('prevents getModel in offline mode', function (): void {
+        putenv('OPENFGA_MCP_API_URL='); // Clear the URL to simulate offline mode
+
+        $this->client->shouldReceive('getAuthorizationModel')->never();
+
+        $result = $this->modelResources->getModel('test-store-id', 'test-model-id');
+
+        expect($result)->toBe(['error' => '❌ Getting model details requires a live OpenFGA instance. Please configure OPENFGA_MCP_API_URL to enable administrative features.']);
+    });
+
+    it('prevents getLatestModel in offline mode', function (): void {
+        putenv('OPENFGA_MCP_API_URL='); // Clear the URL to simulate offline mode
+
+        $this->client->shouldReceive('listAuthorizationModels')->never();
+
+        $result = $this->modelResources->getLatestModel('test-store-id');
+
+        expect($result)->toBe(['error' => '❌ Getting latest model requires a live OpenFGA instance. Please configure OPENFGA_MCP_API_URL to enable administrative features.']);
     });
 });

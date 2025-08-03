@@ -7,12 +7,16 @@ use OpenFGA\MCP\Resources\StoreResources;
 use OpenFGA\Results\{FailureInterface, SuccessInterface};
 
 beforeEach(function (): void {
+    // Set up online mode for unit tests
+    putenv('OPENFGA_MCP_API_URL=http://localhost:8080');
+
     $this->client = Mockery::mock(ClientInterface::class);
     $this->storeResources = new StoreResources($this->client);
 });
 
 afterEach(function (): void {
     Mockery::close();
+    putenv('OPENFGA_MCP_API_URL=');
 });
 
 describe('listStores resource', function (): void {
@@ -121,5 +125,37 @@ describe('listStoreModels resource', function (): void {
 
         expect($result)->toBeArray()
             ->and($result['store_id'])->toBe($storeId);
+    });
+});
+
+describe('offline mode behavior', function (): void {
+    it('prevents listStores in offline mode', function (): void {
+        putenv('OPENFGA_MCP_API_URL='); // Clear the URL to simulate offline mode
+
+        $this->client->shouldReceive('listStores')->never();
+
+        $result = $this->storeResources->listStores();
+
+        expect($result)->toBe(['error' => '❌ Listing stores requires a live OpenFGA instance. Please configure OPENFGA_MCP_API_URL to enable administrative features.']);
+    });
+
+    it('prevents getStore in offline mode', function (): void {
+        putenv('OPENFGA_MCP_API_URL='); // Clear the URL to simulate offline mode
+
+        $this->client->shouldReceive('getStore')->never();
+
+        $result = $this->storeResources->getStore('test-store-id');
+
+        expect($result)->toBe(['error' => '❌ Fetching store details requires a live OpenFGA instance. Please configure OPENFGA_MCP_API_URL to enable administrative features.']);
+    });
+
+    it('prevents listStoreModels in offline mode', function (): void {
+        putenv('OPENFGA_MCP_API_URL='); // Clear the URL to simulate offline mode
+
+        $this->client->shouldReceive('listAuthorizationModels')->never();
+
+        $result = $this->storeResources->listStoreModels('test-store-id');
+
+        expect($result)->toBe(['error' => '❌ Listing store models requires a live OpenFGA instance. Please configure OPENFGA_MCP_API_URL to enable administrative features.']);
     });
 });

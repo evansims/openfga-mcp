@@ -8,6 +8,7 @@ use OpenFGA\ClientInterface;
 use PhpMcp\Server\Contracts\{CompletionProviderInterface, SessionInterface};
 
 use function getConfiguredString;
+use function isOfflineMode;
 
 abstract readonly class AbstractCompletions implements CompletionProviderInterface
 {
@@ -52,6 +53,16 @@ abstract readonly class AbstractCompletions implements CompletionProviderInterfa
             $completions,
             static fn (string $completion): bool => str_starts_with(strtolower($completion), strtolower($currentValue)),
         ));
+    }
+
+    /**
+     * Check if the server is in offline mode.
+     *
+     * @return bool True if in offline mode, false otherwise
+     */
+    protected function isOffline(): bool
+    {
+        return isOfflineMode();
     }
 
     /**

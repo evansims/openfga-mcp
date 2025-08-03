@@ -131,10 +131,18 @@ To use Client Credentials authentication, the server accepts the following confi
 
 #### Authorization Model Design
 
-- `design_model_for_domain`: Generate guidance for designing OpenFGA authorization models for specific domains (e.g., document management, e-commerce, healthcare).
-- `convert_rbac_to_rebac`: Provide step-by-step guidance for converting traditional RBAC systems to OpenFGA's ReBAC patterns.
-- `model_hierarchical_relationships`: Help design complex hierarchical relationships and inheritance patterns.
-- `optimize_model_structure`: Analyze and optimize existing authorization models for performance and maintainability.
+- `design_model_for_domain`: Generate guidance for designing OpenFGA authorization models for specific domains (e.g., document management, e-commerce, healthcare) with hierarchical, flat, or hybrid access patterns.
+- `convert_rbac_to_rebac`: Provide step-by-step guidance for converting traditional RBAC systems to OpenFGA's ReBAC patterns using additive, gradual, or backwards-compatible migration strategies.
+- `model_hierarchical_relationships`: Help design complex hierarchical relationships using parent-to-child, selective, conditional, or userset-based inheritance patterns.
+- `optimize_model_structure`: Analyze and optimize existing authorization models for performance, maintainability, security, flexibility, scalability, or readability.
+
+#### Authorization Model Authoring Guidance
+
+- `guide_model_authoring`: Comprehensive guidance for authoring OpenFGA models, covering core concepts, DSL syntax, relationship patterns, and best practices for specific use cases.
+- `create_model_step_by_step`: Step-by-step guidance for creating OpenFGA models from requirements, including type identification, relation mapping, DSL creation, permissions design, and testing.
+- `design_relationship_patterns`: Design and implement OpenFGA relationship patterns (direct, concentric, indirect, conditional, usersets) for specific scenarios.
+- `implement_custom_roles`: Guide implementation of custom roles in OpenFGA, supporting global organization-wide roles or resource-specific role assignments.
+- `test_model_comprehensive`: Generate comprehensive test cases and .fga.yaml files for validating OpenFGA models, including permission checks, inheritance verification, and security testing.
 
 #### Relationship Troubleshooting
 
@@ -146,8 +154,8 @@ To use Client Credentials authentication, the server accepts the following confi
 #### Security Guidance
 
 - `security_review_model`: Conduct comprehensive security reviews of authorization models for compliance.
-- `implement_least_privilege`: Provide guidance for implementing principle of least privilege in authorization design.
-- `secure_delegation_patterns`: Help design secure delegation patterns for temporary and permanent access.
+- `implement_least_privilege`: Provide guidance for implementing principle of least privilege in authorization design using OpenFGA's core patterns.
+- `implement_access_patterns`: Design secure temporary, shared, delegated, or conditional access patterns using OpenFGA's documented features.
 - `audit_friendly_patterns`: Generate audit-friendly authorization patterns for regulatory compliance.
 
 ### Completion Providers
@@ -168,7 +176,7 @@ The server also includes enum-based completion providers for common parameters:
 
 - **Security & Compliance**: Security levels (low, medium, high, critical), compliance frameworks (SOC2, HIPAA, PCI-DSS, GDPR), audit frequencies.
 - **System Classification**: System types (microservices, monolith, hybrid), criticality levels, access patterns.
-- **Authorization Patterns**: Delegation types (temporary, permanent, conditional), complexity levels, query types, risk levels.
+- **Authorization Patterns**: Complexity levels, query types, risk levels.
 
 ---
 

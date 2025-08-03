@@ -73,9 +73,9 @@ describe('implementLeastPrivilege', function (): void {
     });
 });
 
-describe('secureDelegationPatterns', function (): void {
-    it('generates secure delegation pattern prompt', function (): void {
-        $result = $this->securityPrompts->secureDelegationPatterns(
+describe('implementAccessPatterns', function (): void {
+    it('generates access pattern implementation prompt', function (): void {
+        $result = $this->securityPrompts->implementAccessPatterns(
             'temporary',
             'vacation coverage',
             'high',
@@ -86,11 +86,11 @@ describe('secureDelegationPatterns', function (): void {
             ->and($result[0]['content'])->toContain('temporary')
             ->and($result[0]['content'])->toContain('vacation coverage')
             ->and($result[0]['content'])->toContain('high')
-            ->and($result[0]['content'])->toContain('delegation');
+            ->and($result[0]['content'])->toContain('access');
     });
 
     it('uses default risk level', function (): void {
-        $result = $this->securityPrompts->secureDelegationPatterns('permanent', 'role transition');
+        $result = $this->securityPrompts->implementAccessPatterns('shared', 'role transition');
 
         expect($result[0]['content'])->toContain('medium');
     });

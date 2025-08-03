@@ -66,6 +66,7 @@ final class TupleKeyTarget
             'User identifier too long',
             'Relation identifier too long',
             'Object identifier too long',
+            'Tuple key too long',
             'User type not allowed',
             'Object type not allowed',
             'Invalid character in user',

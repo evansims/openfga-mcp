@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OpenFGA\MCP\Prompts;
 
 use OpenFGA\ClientInterface;
-use OpenFGA\MCP\Completions\{AuditFrequency, ComplianceFramework, DelegationType, RiskLevel, SecurityLevel, SystemCriticality, SystemType};
+use OpenFGA\MCP\Completions\{AuditFrequency, ComplianceFramework, RiskLevel, SecurityLevel, SystemCriticality, SystemType};
 use PhpMcp\Server\Attributes\{CompletionProvider, McpPrompt};
 
 final readonly class SecurityGuidancePrompts extends AbstractPrompts
@@ -112,6 +112,94 @@ Focus on creating authorization patterns that not only meet {$auditRequirements}
     }
 
     /**
+     * Generate a prompt to implement temporary and shared access patterns using OpenFGA.
+     *
+     * @param  string                            $accessType      Type of access pattern (temporary, shared, delegated, conditional)
+     * @param  string                            $businessContext Business context requiring special access
+     * @param  string                            $riskLevel       Risk level of the access pattern (low, medium, high)
+     * @return array<int, array<string, string>>
+     */
+    #[McpPrompt(name: 'implement_access_patterns')]
+    public function implementAccessPatterns(
+        #[CompletionProvider(values: ['temporary', 'shared', 'delegated', 'conditional'])]
+        string $accessType,
+        string $businessContext,
+        #[CompletionProvider(enum: RiskLevel::class)]
+        string $riskLevel = 'medium',
+    ): array {
+        $error = $this->checkRestrictedMode();
+
+        if ($this->hasError($error)) {
+            return $this->createErrorResponse($error);
+        }
+
+        $prompt = "Implement secure {$accessType} access patterns using OpenFGA's documented features:
+
+**Access Requirements:**
+- Access Type: {$accessType}
+- Business Context: {$businessContext}
+- Risk Level: {$riskLevel}
+
+Please provide an implementation using OpenFGA's core patterns:
+
+1. **Using OpenFGA's Relationship Patterns**:
+   - Implement {$accessType} access using direct relationships, concentric (or), or indirect (X from Y) patterns
+   - Design appropriate relationship tuples for granting and revoking access
+   - Use usersets for group-based {$accessType} access where appropriate
+
+2. **Conditional Relations for Temporal Access**:
+   - For temporary access, implement using conditional relationships with CEL expressions
+   - Design time-based conditions (e.g., grant_expiry, valid_from, valid_until)
+   - Show how to create conditional relationship tuples with context parameters
+
+3. **Model Design for {$accessType} Access**:
+   - Create type definitions that support {$accessType} access patterns
+   - Define relations that clearly express the access intent
+   - Use meaningful relation names (e.g., temporary_editor, shared_viewer)
+
+4. **Using Custom Roles for Flexible Access**:
+   - Implement {$accessType} access through custom role patterns if applicable
+   - Show how role assignments can provide temporary or shared permissions
+   - Design role-based access that can be easily granted and revoked
+
+5. **Hierarchical Access Patterns**:
+   - Use 'X from Y' pattern for inherited {$accessType} permissions
+   - Design parent-child relationships that support access propagation
+   - Implement organizational or resource hierarchies as needed
+
+6. **Security Controls Using OpenFGA**:
+   - Implement principle of least privilege through minimal relation grants
+   - Use concentric relationships to ensure proper permission inheritance
+   - Design relations that prevent privilege escalation
+
+7. **Managing Access Lifecycle**:
+   - Show how to grant {$accessType} access by creating relationship tuples
+   - Demonstrate revocation by deleting specific tuples
+   - For conditional access, show context-based enable/disable
+
+8. **Testing with .fga.yaml**:
+   - Provide comprehensive test cases for {$accessType} access scenarios
+   - Include positive and negative test cases
+   - Test access expiration and revocation scenarios
+
+9. **Practical Implementation**:
+   - Provide complete DSL model for the {$businessContext} use case
+   - Show example relationship tuples for common scenarios
+   - Include OpenFGA API calls for managing the access
+
+10. **Risk Mitigation**:
+    - Address {$riskLevel} risk through appropriate model design
+    - Implement audit-friendly relation names and structures
+    - Design for easy access review and compliance reporting
+
+Focus on using OpenFGA's documented patterns (direct, concentric, indirect 'X from Y', conditional, usersets) to implement secure {$accessType} access for {$businessContext}.";
+
+        return [
+            ['role' => 'user', 'content' => $prompt],
+        ];
+    }
+
+    /**
      * Generate a prompt to implement principle of least privilege in authorization design.
      *
      * @param  string                            $systemType    Type of system (web app, API, enterprise, microservices)
@@ -139,142 +227,54 @@ Focus on creating authorization patterns that not only meet {$auditRequirements}
 - User Roles: {$userRoles}
 - Sensitive Data: {$sensitiveData}
 
-Please provide a least privilege implementation:
+Please provide a least privilege implementation using OpenFGA's core features:
 
 1. **Minimal Permission Analysis**:
    - Analyze each role's actual job requirements
    - Identify the minimum permissions needed for each function
-   - Eliminate unnecessary or excessive permissions
+   - Map requirements to specific OpenFGA relations
 
-2. **Granular Access Control**:
-   - Design fine-grained permissions rather than broad access
-   - Create specific relations for distinct operations
-   - Avoid bundling unrelated permissions together
+2. **Granular Relations Design**:
+   - Create fine-grained relations using direct relationships [user]
+   - Use separate relations for distinct operations (e.g., can_read, can_write, can_delete)
+   - Avoid bundling unrelated permissions in single relations
 
-3. **Role-Based Restrictions**:
-   - Limit each role to only essential permissions
-   - Implement temporal restrictions where appropriate
-   - Design for regular permission reviews and audits
+3. **Controlled Inheritance with Concentric Relationships**:
+   - Use 'or' operator carefully to avoid excessive permission grants
+   - Design concentric relationships that follow principle of least privilege
+   - Example: define can_read: [user] or can_write (writers can read, but not vice versa)
 
-4. **Data Access Minimization**:
-   - Restrict access to {sensitiveData} based on need-to-know
-   - Implement data classification and protection levels
-   - Design context-aware access controls
+4. **Restricted Access Using Indirect Relationships**:
+   - Implement 'X from Y' patterns for hierarchical access control
+   - Ensure parent objects don't automatically grant all child permissions
+   - Design selective inheritance patterns
 
-5. **OpenFGA Model Design**:
-   - Create relations that enforce minimal access
-   - Design inheritance patterns that don't grant excessive permissions
-   - Implement proper separation between read and write operations
+5. **OpenFGA Model Implementation**:
+   - Create type definitions with minimal default permissions
+   - Use specific relation names that clearly indicate scope (e.g., can_view_summary vs can_view_details)
+   - Implement separate relations for read and write operations
 
-6. **Administrative Controls**:
-   - Limit administrative privileges to essential personnel
-   - Implement approval workflows for sensitive operations
-   - Design secure delegation and temporary access patterns
+6. **Conditional Relations for Context-Aware Access**:
+   - Use conditional relationships with CEL for time-based or context-dependent access
+   - Implement conditions that restrict access based on business rules
+   - Example: define admin: [user with active_hours_check]
 
-7. **Security Boundaries**:
-   - Create clear security zones and access boundaries
-   - Implement network and resource segmentation
-   - Design defense in depth through layered access controls
+7. **Usersets for Controlled Group Access**:
+   - Use usersets (e.g., team#member) only when group access is truly needed
+   - Avoid wildcard permissions (user:*) except for truly public resources
+   - Design usersets that grant minimal necessary permissions
 
-8. **Monitoring and Compliance**:
-   - Design for continuous access monitoring
-   - Implement automated privilege reviews
-   - Create audit trails for all access decisions
+8. **Testing Least Privilege with .fga.yaml**:
+   - Create test cases that verify users cannot exceed their intended permissions
+   - Test that permission inheritance doesn't grant unintended access
+   - Validate that each role has exactly the permissions needed
 
-9. **Implementation Strategy**:
-   - Provide step-by-step implementation plan
-   - Recommend gradual rollout to minimize disruption
-   - Include user training and change management considerations
+9. **Implementation Example**:
+   - Provide complete DSL model demonstrating least privilege for {$userRoles}
+   - Show relationship tuples that grant minimal necessary access
+   - Include examples of what permissions are explicitly NOT granted
 
-Focus on creating a practical, implementable least privilege model that enhances security without hindering productivity in a {$systemType} environment.";
-
-        return [
-            ['role' => 'user', 'content' => $prompt],
-        ];
-    }
-
-    /**
-     * Generate a prompt to design secure delegation patterns in OpenFGA.
-     *
-     * @param  string                            $delegationType  Type of delegation needed (temporary, permanent, conditional)
-     * @param  string                            $businessContext Business context requiring delegation
-     * @param  string                            $riskLevel       Risk level of delegated permissions (low, medium, high)
-     * @return array<int, array<string, string>>
-     */
-    #[McpPrompt(name: 'secure_delegation_patterns')]
-    public function secureDelegationPatterns(
-        #[CompletionProvider(enum: DelegationType::class)]
-        string $delegationType,
-        string $businessContext,
-        #[CompletionProvider(enum: RiskLevel::class)]
-        string $riskLevel = 'medium',
-    ): array {
-        $error = $this->checkRestrictedMode();
-
-        if ($this->hasError($error)) {
-            return $this->createErrorResponse($error);
-        }
-
-        $prompt = "Design secure delegation patterns in OpenFGA for the following requirements:
-
-**Delegation Requirements:**
-- Delegation Type: {$delegationType}
-- Business Context: {$businessContext}
-- Risk Level: {$riskLevel}
-
-Please provide a secure delegation design:
-
-1. **Delegation Architecture**:
-   - Design the overall delegation structure in OpenFGA
-   - Define delegator and delegatee relationships
-   - Create clear delegation boundaries and limitations
-
-2. **Permission Scoping**:
-   - Limit delegated permissions to specific scopes
-   - Implement time-based restrictions for {$delegationType} delegation
-   - Design granular control over what can be delegated
-
-3. **Security Controls**:
-   - Implement approval workflows for {$riskLevel} risk delegations
-   - Create monitoring and auditing for delegated access
-   - Design automatic revocation mechanisms
-
-4. **OpenFGA Model Implementation**:
-   - Create relations that support secure delegation
-   - Design inheritance patterns for delegated permissions
-   - Implement conditional relations based on delegation context
-
-5. **Business Context Integration**:
-   - Align delegation patterns with {$businessContext} requirements
-   - Ensure delegation supports business processes
-   - Balance security with operational efficiency
-
-6. **Delegation Lifecycle**:
-   - Design creation, modification, and revocation processes
-   - Implement periodic review and renewal requirements
-   - Create emergency revocation capabilities
-
-7. **Audit and Compliance**:
-   - Design comprehensive audit trails for all delegated actions
-   - Implement reporting for delegation usage and compliance
-   - Create alerts for unusual delegation patterns
-
-8. **Risk Mitigation**:
-   - Address specific risks associated with {$riskLevel} delegation
-   - Implement compensating controls for high-risk scenarios
-   - Design fail-safe mechanisms for delegation failures
-
-9. **Edge Cases and Exceptions**:
-   - Handle delegation conflicts and overlapping permissions
-   - Design for delegation chains and sub-delegation scenarios
-   - Implement safeguards against delegation abuse
-
-10. **Implementation Guidance**:
-    - Provide step-by-step implementation instructions
-    - Include testing strategies for delegation patterns
-    - Recommend deployment and rollback procedures
-
-Focus on creating a robust, secure delegation system that meets {$businessContext} needs while maintaining strong security controls for {$riskLevel} risk scenarios.";
+Focus on using OpenFGA's patterns (direct, concentric 'or', indirect 'X from Y', conditional, usersets) to enforce least privilege for {$systemType} while protecting {$sensitiveData}.";
 
         return [
             ['role' => 'user', 'content' => $prompt],

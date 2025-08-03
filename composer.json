@@ -122,6 +122,15 @@
     ],
     "docker": [
       "docker build -t openfga-mcp:local ."
-    ]
+    ],
+    "docs:sync": [
+      "@composer install -d tools/documentation-sync --no-interaction",
+      "@php tools/documentation-sync/sync.php -v -o docs"
+    ],
+    "docs:sync:quiet": [
+      "@composer install -d tools/documentation-sync --no-interaction --quiet",
+      "@php tools/documentation-sync/sync.php -o docs"
+    ],
+    "docs:sync:source": "composer install -d tools/documentation-sync --no-interaction && php tools/documentation-sync/sync.php -v -o docs -s"
   }
 }

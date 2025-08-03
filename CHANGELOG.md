@@ -7,6 +7,8 @@
 - feat: new AuthoringGuidancePrompts class providing comprehensive OpenFGA model authoring guidance
 - feat: offline mode support - server now works without OpenFGA instance for planning and code generation
 - feat: comprehensive error message guidance to configure OpenFGA when administrative features are invoked
+- feat: standalone documentation sync tool for fetching OpenFGA documentation from GitHub repositories
+- feat: composer commands for syncing documentation (`docs:sync`, `docs:sync:quiet`, `docs:sync:source`)
 
 ### Changed
 
@@ -24,6 +26,7 @@
 - fix: integration tests now properly enable write operations in Docker environment
 - fix: fuzzing test for tuple key validation to handle expected errors correctly
 - fix: removed unused DelegationType enum causing test failures
+- fix: documentation sync tool now properly handles `.mdx` files from OpenFGA documentation repository
 
 ## [1.0.0] - 2025-07-13
 

@@ -38,6 +38,9 @@ COPY phpunit.xml ./
 # Copy tests directory
 COPY tests ./tests
 
+# Copy documentation directory for integration tests
+COPY docs ./docs
+
 # Ensure coverage and output directories exist
 RUN mkdir -p coverage output
 

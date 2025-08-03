@@ -44,8 +44,7 @@ Connect to an OpenFGA instance for full functionality:
       "command": "docker",
       "args": [
         "run", "--rm", "-i", "--pull=always",
-        "-e", "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",  // Local
-        "-e", "OPENFGA_MCP_API_WRITEABLE=true",                        // Optional: Enable writes
+        "-e", "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
         "evansims/openfga-mcp:latest"
       ]
     }
@@ -63,20 +62,22 @@ Works with [Claude Desktop](https://claude.ai/download), [Claude Code](https://w
 
 ### Key Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENFGA_MCP_API_URL` | _(not set)_ | OpenFGA server URL. Omit for offline mode |
-| `OPENFGA_MCP_API_WRITEABLE` | `false` | Enable write operations |
-| `OPENFGA_MCP_API_RESTRICT` | `false` | Restrict to configured store/model |
-| `OPENFGA_MCP_API_STORE` | `null` | Default store ID |
-| `OPENFGA_MCP_API_MODEL` | `null` | Default model ID |
+| Variable                    | Default     | Description                               |
+| --------------------------- | ----------- | ----------------------------------------- |
+| `OPENFGA_MCP_API_URL`       | _(not set)_ | OpenFGA server URL. Omit for offline mode |
+| `OPENFGA_MCP_API_WRITEABLE` | `false`     | Enable write operations                   |
+| `OPENFGA_MCP_API_RESTRICT`  | `false`     | Restrict to configured store/model        |
+| `OPENFGA_MCP_API_STORE`     | `null`      | Default store ID                          |
+| `OPENFGA_MCP_API_MODEL`     | `null`      | Default model ID                          |
 
 ### Authentication
 
 **Token Authentication:**
+
 - `OPENFGA_MCP_API_TOKEN` - API token
 
 **Client Credentials:**
+
 - `OPENFGA_MCP_API_CLIENT_ID` - Client ID
 - `OPENFGA_MCP_API_CLIENT_SECRET` - Client secret
 - `OPENFGA_MCP_API_ISSUER` - Token issuer
@@ -89,13 +90,16 @@ See [`docker-compose.example.yml`](docker-compose.example.yml) for complete exam
 ### Tools
 
 **Store Management**
+
 - `create_store`, `list_stores`, `get_store`, `delete_store`
 
 **Model Management**
+
 - `create_model` - Create models using [DSL](https://openfga.dev/docs/configuration-language)
 - `list_models`, `get_model`, `verify_model`, `get_model_dsl`
 
 **Permissions**
+
 - `check_permission` - Check user permissions
 - `grant_permission`, `revoke_permission` - Manage access
 - `list_users`, `list_objects` - Query relationships
@@ -103,26 +107,41 @@ See [`docker-compose.example.yml`](docker-compose.example.yml) for complete exam
 ### Resources & Templates
 
 Access OpenFGA data via URIs:
+
 - `openfga://stores` - List stores
 - `openfga://store/{storeId}` - Store details
 - `openfga://store/{storeId}/model/{modelId}` - Model details
 - `openfga://store/{storeId}/check?user={user}&relation={relation}&object={object}` - Permission check
 
+### SDK Documentation
+
+Access comprehensive SDK documentation for accurate code generation:
+
+- `openfga://docs` - List all SDK documentation
+- `openfga://docs/{sdk}` - SDK overview (php, go, python, java, dotnet, js, laravel)
+- `openfga://docs/{sdk}/class/{className}` - Class documentation
+- `openfga://docs/search/{query}` - Search across all documentation
+- `search_documentation` - Advanced search with filtering
+- `search_code_examples` - Find language-specific examples
+
 ### AI Prompts
 
 **Model Design**
+
 - `design_model_for_domain` - Domain-specific models
 - `convert_rbac_to_rebac` - Migration guidance
 - `model_hierarchical_relationships` - Complex hierarchies
 - `optimize_model_structure` - Performance optimization
 
 **Authoring Guidance**
+
 - `guide_model_authoring` - Comprehensive authoring help
 - `create_model_step_by_step` - Step-by-step creation
 - `design_relationship_patterns` - Pattern implementation
 - `test_model_comprehensive` - Test generation
 
 **Troubleshooting & Security**
+
 - `debug_permission_denial` - Debug access issues
 - `security_review_model` - Security audits
 - `implement_least_privilege` - Security patterns
@@ -133,4 +152,4 @@ The server provides intelligent auto-completion for store IDs, model IDs, relati
 
 ---
 
-- [Contributing](./.github/CONTRIBUTING.md) | [Apache 2.0 License](./LICENSE)
+[Contributing](./.github/CONTRIBUTING.md) | [Apache 2.0 License](./LICENSE)

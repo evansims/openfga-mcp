@@ -9,18 +9,24 @@
     <a href="https://www.bestpractices.dev/projects/10901"><img src="https://www.bestpractices.dev/projects/10901/badge"></a>
   </p>
 
-  <p>Stop writing authorization logic. Start asking questions.</p>
+  <p>AI-powered authorization management for OpenFGA</p>
 </div>
 
 <p><br /></p>
 
-**Manage and query OpenFGA using AI agents.** Connect [OpenFGA](https://openfga.dev/) and [Auth0 FGA](https://auth0.com/fine-grained-authorization) to your AI workflows via the Model Context Protocol.
+Connect [OpenFGA](https://openfga.dev/) and [Auth0 FGA](https://auth0.com/fine-grained-authorization) to AI agents via the Model Context Protocol.
+
+## Use Cases
+
+- **Plan & Design** - Design efficient authorization model using best practice patterns
+- **Generate Code** - Create accurate SDK code with comprehensive documentation context
+- **Manage Instances** - Query and control live OpenFGA servers through AI agents
 
 ## Quick Start
 
 ### Offline Mode (Default)
 
-Planning and code generation without a live server:
+Design models and generate code without a server:
 
 ```json
 {
@@ -35,7 +41,7 @@ Planning and code generation without a live server:
 
 ### Online Mode
 
-Connect to an OpenFGA instance for full functionality:
+Connect to OpenFGA for full management capabilities:
 
 ```json
 {
@@ -86,50 +92,49 @@ See [`docker-compose.example.yml`](docker-compose.example.yml) for complete exam
 
 ## Features
 
-### Tools
+### Management Tools
 
-**Store Management**
-- `create_store`, `list_stores`, `get_store`, `delete_store`
+- **Stores**: Create, list, get, delete stores
+- **Models**: Create models with [DSL](https://openfga.dev/docs/configuration-language), list, get, verify
+- **Permissions**: Check, grant, revoke permissions; query users and objects
 
-**Model Management**
-- `create_model` - Create models using [DSL](https://openfga.dev/docs/configuration-language)
-- `list_models`, `get_model`, `verify_model`, `get_model_dsl`
+### SDK Documentation
 
-**Permissions**
-- `check_permission` - Check user permissions
-- `grant_permission`, `revoke_permission` - Manage access
-- `list_users`, `list_objects` - Query relationships
+Comprehensive documentation for accurate code generation:
 
-### Resources & Templates
-
-Access OpenFGA data via URIs:
-- `openfga://stores` - List stores
-- `openfga://store/{storeId}` - Store details
-- `openfga://store/{storeId}/model/{modelId}` - Model details
-- `openfga://store/{storeId}/check?user={user}&relation={relation}&object={object}` - Permission check
+- All OpenFGA SDKs (PHP, Go, Python, Java, .NET, JavaScript, Laravel)
+- Class and method documentation with code examples
+- Advanced search with language filtering
 
 ### AI Prompts
 
-**Model Design**
-- `design_model_for_domain` - Domain-specific models
-- `convert_rbac_to_rebac` - Migration guidance
-- `model_hierarchical_relationships` - Complex hierarchies
-- `optimize_model_structure` - Performance optimization
+**Design & Planning**
+- Domain-specific model design
+- RBAC to ReBAC migration
+- Hierarchical relationships
+- Performance optimization
 
-**Authoring Guidance**
-- `guide_model_authoring` - Comprehensive authoring help
-- `create_model_step_by_step` - Step-by-step creation
-- `design_relationship_patterns` - Pattern implementation
-- `test_model_comprehensive` - Test generation
+**Implementation**
+- Step-by-step model creation
+- Relationship patterns
+- Test generation
+- Security patterns
 
-**Troubleshooting & Security**
-- `debug_permission_denial` - Debug access issues
-- `security_review_model` - Security audits
-- `implement_least_privilege` - Security patterns
+**Troubleshooting**
+- Permission debugging
+- Security audits
+- Least privilege implementation
+
+### Resources & URIs
+
+- `openfga://stores` - List stores
+- `openfga://store/{id}/model/{modelId}` - Model details
+- `openfga://docs/{sdk}/class/{className}` - SDK documentation
+- `openfga://docs/search/{query}` - Search documentation
 
 ### Smart Completions
 
-The server provides intelligent auto-completion for store IDs, model IDs, relations, users, and objects when connected to OpenFGA.
+Auto-completion for store IDs, model IDs, relations, users, and objects when connected.
 
 ---
 

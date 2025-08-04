@@ -6,7 +6,6 @@ namespace OpenFGA\MCP\Tools;
 
 use Exception;
 use OpenFGA\MCP\Documentation\DocumentationIndex;
-use PhpMcp\Schema\Request\CallToolRequest;
 use PhpMcp\Server\Attributes\McpTool;
 use RuntimeException;
 
@@ -27,32 +26,20 @@ final readonly class SearchDocumentationTool extends AbstractTools
     }
 
     /**
-     * @param  CallToolRequest          $request
      * @return array<int|string, mixed>
      */
     #[McpTool(
         name: 'find_similar_documentation',
         description: 'Find documentation sections similar to a given text or concept',
     )]
-    public function findSimilarDocumentation(CallToolRequest $request): array
-    {
-        $arguments = $request->arguments;
-
-        /** @var mixed $referenceTextValue */
-        $referenceTextValue = $arguments['reference_text'] ?? '';
-        $referenceText = is_string($referenceTextValue) ? $referenceTextValue : '';
-
-        /** @var mixed $sdkValue */
-        $sdkValue = $arguments['sdk'] ?? null;
-        $sdk = is_string($sdkValue) ? $sdkValue : null;
-
-        /** @var mixed $limitValue */
-        $limitValue = $arguments['limit'] ?? 5;
-        $limit = is_numeric($limitValue) ? (int) $limitValue : 5;
-
-        /** @var mixed $minScoreValue */
-        $minScoreValue = $arguments['min_score'] ?? 0.1;
-        $minScore = is_numeric($minScoreValue) ? (float) $minScoreValue : 0.1;
+    public function findSimilarDocumentation(
+        string $reference_text,
+        ?string $sdk = null,
+        int $limit = 5,
+        float $min_score = 0.1,
+    ): array {
+        $referenceText = $reference_text;
+        $minScore = $min_score;
 
         if ('' === $referenceText) {
             return [
@@ -131,33 +118,18 @@ final readonly class SearchDocumentationTool extends AbstractTools
     }
 
     /**
-     * @param  CallToolRequest          $request
      * @return array<int|string, mixed>
      */
     #[McpTool(
         name: 'search_code_examples',
         description: 'Find code examples in documentation with language filtering',
     )]
-    public function searchCodeExamples(CallToolRequest $request): array
-    {
-        $arguments = $request->arguments;
-
-        /** @var mixed $queryValue */
-        $queryValue = $arguments['query'] ?? '';
-        $query = is_string($queryValue) ? $queryValue : '';
-
-        /** @var mixed $languageValue */
-        $languageValue = $arguments['language'] ?? null;
-        $language = is_string($languageValue) ? $languageValue : null;
-
-        /** @var mixed $sdkValue */
-        $sdkValue = $arguments['sdk'] ?? null;
-        $sdk = is_string($sdkValue) ? $sdkValue : null;
-
-        /** @var mixed $limitValue */
-        $limitValue = $arguments['limit'] ?? 10;
-        $limit = is_numeric($limitValue) ? (int) $limitValue : 10;
-
+    public function searchCodeExamples(
+        string $query,
+        ?string $language = null,
+        ?string $sdk = null,
+        int $limit = 10,
+    ): array {
         if ('' === $query) {
             return [
                 '❌ Search query is required',
@@ -249,36 +221,21 @@ final readonly class SearchDocumentationTool extends AbstractTools
     }
 
     /**
-     * @param  CallToolRequest          $request
      * @return array<int|string, mixed>
      */
     #[McpTool(
         name: 'search_documentation',
         description: 'Search for content across OpenFGA SDK documentation with advanced filtering options',
     )]
-    public function searchDocumentation(CallToolRequest $request): array
-    {
-        $arguments = $request->arguments;
-
-        /** @var mixed $queryValue */
-        $queryValue = $arguments['query'] ?? '';
-        $query = is_string($queryValue) ? $queryValue : '';
-
-        /** @var mixed $sdkValue */
-        $sdkValue = $arguments['sdk'] ?? null;
-        $sdk = is_string($sdkValue) ? $sdkValue : null;
-
-        /** @var mixed $limitValue */
-        $limitValue = $arguments['limit'] ?? 10;
-        $limit = is_numeric($limitValue) ? (int) $limitValue : 10;
-
-        /** @var mixed $searchTypeValue */
-        $searchTypeValue = $arguments['search_type'] ?? 'content';
-        $searchType = is_string($searchTypeValue) ? $searchTypeValue : 'content';
-
-        /** @var mixed $includeContentValue */
-        $includeContentValue = $arguments['include_content'] ?? false;
-        $includeContent = (bool) $includeContentValue;
+    public function searchDocumentation(
+        string $query,
+        ?string $sdk = null,
+        int $limit = 10,
+        string $search_type = 'content',
+        bool $include_content = false,
+    ): array {
+        $searchType = $search_type;
+        $includeContent = $include_content;
 
         if ('' === $query) {
             return [

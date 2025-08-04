@@ -48,6 +48,7 @@ The project has a minimal structure focused on implementing an MCP server:
 - **src/Resources/**: Directory containing classes that expose resources for MCP client to access
 - **src/Templates/**: Directory containing classes that expose resource templates for MCP client to generate resources from
 - **src/Prompts/**: Directory containing classes that expose prompts for MCP client to generate structured prompts from
+- **src/Documentation/**: Directory containing documentation indexing and chunking system for SDK knowledge base
 - Built on top of `php-mcp/server` framework
 - Uses `evansims/openfga-php` for OpenFGA client functionality
 
@@ -110,6 +111,37 @@ The server follows a **safety-first approach** for write operations:
 - **To Enable**: Must explicitly set `OPENFGA_MCP_API_WRITEABLE=true`
 - This prevents accidental destructive operations (create, update, delete) on OpenFGA instances
 - Read operations are always allowed when connected to an OpenFGA instance
+
+## Documentation System
+
+The server includes a comprehensive documentation system that exposes OpenFGA SDK documentation as MCP resources and tools, enabling AI agents to access framework-specific knowledge for accurate code generation.
+
+### Available Documentation Resources
+
+- `openfga://docs` - List all available SDK documentation and guides
+- `openfga://docs/{sdk}` - Get SDK overview (php, go, python, java, dotnet, js, laravel)
+- `openfga://docs/{sdk}/class/{className}` - Get detailed class documentation
+- `openfga://docs/{sdk}/method/{className}/{methodName}` - Get method documentation
+- `openfga://docs/{sdk}/section/{sectionName}` - Get documentation section content
+- `openfga://docs/{sdk}/chunk/{chunkId}` - Get specific content chunk
+- `openfga://docs/search/{query}` - Search across all documentation
+
+### Available Documentation Tools
+
+- `search_documentation` - Advanced search with SDK filtering, search types (content, class, method, section), and result limiting
+- `search_code_examples` - Find code examples with language filtering and context information
+- `find_similar_documentation` - Semantic similarity search for finding related content
+
+### Documentation Features
+
+- **Smart Chunking**: Multiple chunking strategies (by size, headers, source blocks, code blocks)
+- **Offline Support**: Full documentation access without OpenFGA connection required
+- **Multi-SDK Coverage**: Supports all major OpenFGA SDKs (PHP, Go, Python, Java, .NET, JavaScript, Laravel)
+- **Context-Aware Search**: Relevance scoring based on class names, methods, and sections
+- **Code Example Extraction**: Automatic identification and extraction of runnable code examples
+- **Hierarchical Navigation**: Browse documentation by SDK → Class → Method structure
+
+The documentation system automatically indexes and chunks the compiled SDK documentation from the `docs/` directory, providing agents with comprehensive knowledge for generating accurate, framework-specific code.
 
 ## Important Implementation Notes
 

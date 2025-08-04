@@ -37,7 +37,6 @@ rector.php
 
 # Documentation
 *.md
-docs/
 .github/
 
 # Logs

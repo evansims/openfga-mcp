@@ -50,8 +50,8 @@ Connect to OpenFGA for full management capabilities:
       "command": "docker",
       "args": [
         "run", "--rm", "-i", "--pull=always",
-        "-e", "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",  // Local
-        "-e", "OPENFGA_MCP_API_WRITEABLE=true",                        // Optional: Enable writes
+        "-e", "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
+        "-e", "OPENFGA_MCP_API_WRITEABLE=true", // Optional: Enable writes
         "evansims/openfga-mcp:latest"
       ]
     }

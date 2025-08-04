@@ -6,8 +6,7 @@ namespace OpenFGA\MCP\Tools;
 
 use Exception;
 use OpenFGA\MCP\Documentation\DocumentationIndex;
-use PhpMcp\Server\Attributes\McpTool;
-use PhpMcp\Server\Attributes\Schema;
+use PhpMcp\Server\Attributes\{McpTool, Schema};
 use RuntimeException;
 
 use function array_slice;

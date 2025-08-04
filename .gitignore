@@ -9,3 +9,4 @@ integration-junit.xml
 tests/Fuzzing/corpus
 tests/Fuzzing/crashes
 docs/PHP_MCP_SERVER.md
+logs/

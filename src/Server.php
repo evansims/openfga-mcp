@@ -8,7 +8,7 @@ require_once __DIR__ . '/Helpers.php';
 
 use OpenFGA\Authentication\{ClientCredentialAuthentication, TokenAuthentication};
 use OpenFGA\{Client, ClientInterface};
-use OpenFGA\MCP\OfflineClient;
+use OpenFGA\MCP\{LoggingStdioTransport, OfflineClient};
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PhpMcp\Server\Transports\{StdioServerTransport, StreamableHttpServerTransport};
@@ -93,7 +93,9 @@ try {
             port: getConfiguredInt('OPENFGA_MCP_TRANSPORT_PORT', 9090),
             enableJsonResponse: getConfiguredBool('OPENFGA_MCP_TRANSPORT_JSON', false),
         ),
-        default => new StdioServerTransport,
+        default => getConfiguredBool('OPENFGA_MCP_DEBUG', true)
+            ? new LoggingStdioTransport
+            : new StdioServerTransport,
     };
 
     $server->listen($transport);

@@ -112,6 +112,42 @@ The server follows a **safety-first approach** for write operations:
 - This prevents accidental destructive operations (create, update, delete) on OpenFGA instances
 - Read operations are always allowed when connected to an OpenFGA instance
 
+## Debug Logging
+
+For development and troubleshooting, the server includes comprehensive debug logging:
+
+### Enable Debug Logging
+Set the environment variable:
+```bash
+OPENFGA_MCP_DEBUG=true
+```
+
+### What Gets Logged
+When debug mode is enabled, all MCP requests and responses are logged to `logs/mcp-debug.log`:
+
+- **Incoming requests** - Method name, parameters, request ID
+- **Outgoing responses** - Full response data with matching request ID
+- **Tool calls** - Tool name, arguments, and results for all tool invocations
+- **Errors** - Exception details with context and stack traces
+
+### Log Format
+Each log entry is a JSON object with structured data:
+```json
+{
+  "timestamp": "2025-01-15 10:30:45",
+  "type": "REQUEST|RESPONSE|TOOL_CALL|ERROR",
+  "id": "request-id",
+  "method": "tools/call",
+  "params": {...}
+}
+```
+
+### Usage Tips
+- Enable debug logging when MCP client calls are not working as expected
+- Check the log file to see exactly what parameters are being sent/received
+- Use request IDs to match requests with their responses
+- Debug logs help identify parameter naming mismatches between client and server
+
 ## Documentation System
 
 The server includes a comprehensive documentation system that exposes OpenFGA SDK documentation as MCP resources and tools, enabling AI agents to access framework-specific knowledge for accurate code generation.

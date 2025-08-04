@@ -7,6 +7,7 @@ namespace OpenFGA\MCP\Tools;
 use Exception;
 use OpenFGA\MCP\Documentation\DocumentationIndex;
 use PhpMcp\Server\Attributes\McpTool;
+use PhpMcp\Server\Attributes\Schema;
 use RuntimeException;
 
 use function array_slice;
@@ -33,9 +34,13 @@ final readonly class SearchDocumentationTool extends AbstractTools
         description: 'Find documentation sections similar to a given text or concept',
     )]
     public function findSimilarDocumentation(
+        #[Schema(description: 'Text or concept to find similar content for')]
         string $reference_text,
+        #[Schema(description: 'Filter by SDK (optional)')]
         ?string $sdk = null,
+        #[Schema(description: 'Maximum number of results (default: 5, max: 20)', minimum: 1, maximum: 20)]
         int $limit = 5,
+        #[Schema(description: 'Minimum similarity score (default: 0.1)', minimum: 0.0, maximum: 1.0)]
         float $min_score = 0.1,
     ): array {
         $referenceText = $reference_text;
@@ -125,9 +130,13 @@ final readonly class SearchDocumentationTool extends AbstractTools
         description: 'Find code examples in documentation with language filtering',
     )]
     public function searchCodeExamples(
+        #[Schema(description: 'Search terms for code examples')]
         string $query,
+        #[Schema(description: 'Programming language: php, go, python, java, csharp, javascript, typescript')]
         ?string $language = null,
+        #[Schema(description: 'Filter by SDK (optional)')]
         ?string $sdk = null,
+        #[Schema(description: 'Maximum number of results (default: 10, max: 20)', minimum: 1, maximum: 20)]
         int $limit = 10,
     ): array {
         if ('' === $query) {
@@ -228,10 +237,15 @@ final readonly class SearchDocumentationTool extends AbstractTools
         description: 'Search for content across OpenFGA SDK documentation with advanced filtering options',
     )]
     public function searchDocumentation(
+        #[Schema(description: 'Search terms to look for in documentation')]
         string $query,
+        #[Schema(description: 'Filter by SDK: php, go, python, java, dotnet, js, laravel')]
         ?string $sdk = null,
+        #[Schema(description: 'Maximum number of results (default: 10, max: 50)', minimum: 1, maximum: 50)]
         int $limit = 10,
+        #[Schema(description: 'Search type: content, class, method, section', enum: ['content', 'class', 'method', 'section'])]
         string $search_type = 'content',
+        #[Schema(description: 'Include full chunk content in results')]
         bool $include_content = false,
     ): array {
         $searchType = $search_type;

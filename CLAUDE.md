@@ -123,12 +123,24 @@ OPENFGA_MCP_DEBUG=false
 ```
 
 ### What Gets Logged
-All MCP requests and responses are logged to `logs/mcp-debug.log`:
+All MCP requests and responses are logged to `logs/mcp-debug.log` in the project root directory. The logger automatically finds the project root by looking for `composer.json`, ensuring logs are written to the correct location regardless of the working directory from which the MCP server is invoked.
 
-- **Incoming requests** - Method name, parameters, request ID
-- **Outgoing responses** - Full response data with matching request ID
-- **Tool calls** - Tool name, arguments, and results for all tool invocations
-- **Errors** - Exception details with context and stack traces
+**Comprehensive Coverage:** The `LoggingStdioTransport` logs ALL MCP protocol interactions at the JSON-RPC transport level, including:
+
+- **Tools** - All tool invocations (`tools/call`) with parameters and results
+- **Resources** - All resource access (`resources/read`) including URIs and content  
+- **Resource Templates** - All template-based resource generation
+- **Prompts** - All prompt retrievals (`prompts/get`) with arguments and responses
+- **Completions** - All completion requests (`completion/complete`) with context
+- **System Messages** - Initialization, heartbeats (ping), and notifications
+- **Errors** - Complete error responses with stack traces and context
+
+Each log entry includes:
+- **Timestamp** - When the interaction occurred
+- **Request ID** - For matching requests with responses
+- **Method** - The MCP protocol method being called
+- **Parameters** - Full request parameters (with array keys normalized to strings)
+- **Response** - Complete response data
 
 ### Log Format
 Each log entry is a JSON object with structured data:

@@ -19,7 +19,7 @@ Connect [OpenFGA](https://openfga.dev/) and [Auth0 FGA](https://auth0.com/fine-g
 ## Use Cases
 
 - **Plan & Design** - Design efficient authorization model using best practice patterns
-- **Generate Code** - Create accurate SDK code with comprehensive documentation context
+- **Generate Code** - Generate accurate SDK integrations with comprehensive documentation context
 - **Manage Instances** - Query and control live OpenFGA servers through AI agents
 
 ## Quick Start
@@ -51,7 +51,6 @@ Connect to OpenFGA for full management capabilities:
       "args": [
         "run", "--rm", "-i", "--pull=always",
         "-e", "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
-        "-e", "OPENFGA_MCP_API_WRITEABLE=true", // Optional: Enable writes
         "evansims/openfga-mcp:latest"
       ]
     }
@@ -69,20 +68,22 @@ Works with [Claude Desktop](https://claude.ai/download), [Claude Code](https://w
 
 ### Key Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENFGA_MCP_API_URL` | _(not set)_ | OpenFGA server URL. Omit for offline mode |
-| `OPENFGA_MCP_API_WRITEABLE` | `false` | Enable write operations |
-| `OPENFGA_MCP_API_RESTRICT` | `false` | Restrict to configured store/model |
-| `OPENFGA_MCP_API_STORE` | `null` | Default store ID |
-| `OPENFGA_MCP_API_MODEL` | `null` | Default model ID |
+| Variable                    | Default     | Description                               |
+| --------------------------- | ----------- | ----------------------------------------- |
+| `OPENFGA_MCP_API_URL`       | _(not set)_ | OpenFGA server URL. Omit for offline mode |
+| `OPENFGA_MCP_API_WRITEABLE` | `false`     | Enable write operations                   |
+| `OPENFGA_MCP_API_RESTRICT`  | `false`     | Restrict to configured store/model        |
+| `OPENFGA_MCP_API_STORE`     | `null`      | Default store ID                          |
+| `OPENFGA_MCP_API_MODEL`     | `null`      | Default model ID                          |
 
 ### Authentication
 
 **Token Authentication:**
+
 - `OPENFGA_MCP_API_TOKEN` - API token
 
 **Client Credentials:**
+
 - `OPENFGA_MCP_API_CLIENT_ID` - Client ID
 - `OPENFGA_MCP_API_CLIENT_SECRET` - Client secret
 - `OPENFGA_MCP_API_ISSUER` - Token issuer
@@ -109,18 +110,21 @@ Comprehensive documentation for accurate code generation:
 ### AI Prompts
 
 **Design & Planning**
+
 - Domain-specific model design
 - RBAC to ReBAC migration
 - Hierarchical relationships
 - Performance optimization
 
 **Implementation**
+
 - Step-by-step model creation
 - Relationship patterns
 - Test generation
 - Security patterns
 
 **Troubleshooting**
+
 - Permission debugging
 - Security audits
 - Least privilege implementation

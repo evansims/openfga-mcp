@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace OpenFGA\MCP;
 
+use function assert;
 use function date;
+use function dirname;
 use function file_put_contents;
+use function getmypid;
 use function is_array;
 use function is_dir;
+use function is_string;
 use function json_encode;
 use function mkdir;
 
 final class DebugLogger
 {
-    private const string LOG_DIR = __DIR__ . '/../logs';
+    private static ?string $logDir = null;
 
-    private const string LOG_FILE = self::LOG_DIR . '/mcp-debug.log';
+    private static ?string $logFile = null;
 
     /**
      * @param array<string, mixed>|null $context
@@ -28,6 +32,7 @@ final class DebugLogger
             return;
         }
 
+        self::initializePaths();
         self::ensureLogDirectory();
 
         $entry = [
@@ -52,6 +57,7 @@ final class DebugLogger
             return;
         }
 
+        self::initializePaths();
         self::ensureLogDirectory();
 
         $entry = [
@@ -75,6 +81,7 @@ final class DebugLogger
             return;
         }
 
+        self::initializePaths();
         self::ensureLogDirectory();
 
         $entry = [
@@ -82,6 +89,30 @@ final class DebugLogger
             'type' => 'RESPONSE',
             'id' => $id,
             'response' => $response,
+        ];
+
+        self::writeLog($entry);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @param string               $event
+     */
+    public static function logServerLifecycle(string $event, array $context = []): void
+    {
+        if (! self::isDebugEnabled()) {
+            return;
+        }
+
+        self::initializePaths();
+        self::ensureLogDirectory();
+
+        $entry = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'type' => 'SERVER_LIFECYCLE',
+            'event' => $event,
+            'context' => $context,
+            'pid' => getmypid(),
         ];
 
         self::writeLog($entry);
@@ -99,6 +130,7 @@ final class DebugLogger
             return;
         }
 
+        self::initializePaths();
         self::ensureLogDirectory();
 
         $entry = [
@@ -115,14 +147,75 @@ final class DebugLogger
 
     private static function ensureLogDirectory(): void
     {
-        if (! is_dir(self::LOG_DIR)) {
-            mkdir(self::LOG_DIR, 0o755, true);
+        assert(null !== self::$logDir, 'Log directory path must be initialized');
+        assert(null !== self::$logFile, 'Log file path must be initialized');
+
+        $logDir = self::$logDir; // For Psalm null-safety
+        $logFile = self::$logFile; // For Psalm null-safety
+
+        if (! is_dir($logDir) && ! mkdir($logDir, 0o755, true)) {
+            // If we can't create the directory, log to stderr as fallback
+            error_log('[MCP DEBUG] Failed to create log directory: ' . $logDir);
+
+            return;
+        }
+
+        // On first run, log where we're writing to help with debugging
+        static $logged = false;
+
+        if (! $logged) {
+            error_log('[MCP DEBUG] Logging to: ' . $logFile);
+            $logged = true;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     */
+    /**
+     * Get the project root directory by finding composer.json.
+     */
+    private static function getProjectRoot(): string
+    {
+        static $projectRoot = null;
+
+        if (null === $projectRoot) {
+            // Start from the current file's directory and walk up to find composer.json
+            $dir = __DIR__;
+
+            while ($dir !== dirname($dir)) {
+                if (file_exists($dir . '/composer.json')) {
+                    $projectRoot = $dir;
+
+                    break;
+                }
+                $dir = dirname($dir);
+            }
+
+            // Fallback to the directory above src if composer.json not found
+            if (null === $projectRoot) {
+                $projectRoot = dirname(__DIR__);
+            }
+        }
+
+        // PHPStan doesn't realize $projectRoot is guaranteed to be set above
+        assert(is_string($projectRoot));
+
+        return $projectRoot;
+    }
+
+    private static function initializePaths(): void
+    {
+        if (null === self::$logDir) {
+            self::$logDir = self::getProjectRoot() . '/logs';
+            self::$logFile = self::$logDir . '/mcp-debug.log';
         }
     }
 
     private static function isDebugEnabled(): bool
     {
-        return 'true' === getConfiguredString('OPENFGA_MCP_DEBUG', 'true');
+        // Default to true for debugging
+        return getConfiguredBool('OPENFGA_MCP_DEBUG', true);
     }
 
     /**
@@ -136,7 +229,13 @@ final class DebugLogger
             $jsonString = '{"error": "Failed to encode log entry"}';
         }
         $logLine = $jsonString . "\n";
-        file_put_contents(self::LOG_FILE, $logLine, FILE_APPEND | LOCK_EX);
+        assert(null !== self::$logFile, 'Log file path must be initialized');
+
+        $logFile = self::$logFile;
+        $result = file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
+
+        if (false === $result) {
+            error_log('[MCP DEBUG] Failed to write to log file: ' . $logFile);
+        }
     }
 }
-

@@ -4,80 +4,225 @@ declare(strict_types=1);
 
 namespace OpenFGA\MCP;
 
+use Override;
+use PhpMcp\Schema\JsonRpc\{Error, Message, Notification, Parser, Request, Response};
+use PhpMcp\Server\Exception\TransportException;
 use PhpMcp\Server\Transports\StdioServerTransport;
-use ReflectionClass;
-use ReflectionException;
+use React\Promise\PromiseInterface;
+use Throwable;
 
+use function array_combine;
+use function array_keys;
+use function array_map;
+use function array_values;
+use function count;
+use function error_log;
 use function is_array;
+use function is_numeric;
 use function is_string;
-use function json_decode;
 
 final class LoggingStdioTransport extends StdioServerTransport
 {
+    private string $messageBuffer = '';
+
     /**
-     * @param string $message
-     *
-     * @throws ReflectionException
+     * @throws TransportException
      */
-    protected function handleMessage(string $message): ?string
+    public function __construct()
     {
-        /** @var array<string, mixed>|null $decoded */
-        $decoded = json_decode($message, true);
+        parent::__construct();
+        error_log('[MCP DEBUG] LoggingStdioTransport initialized - logging is ACTIVE');
+    }
 
-        // Log incoming request
-        if (is_array($decoded)) {
-            /** @var mixed $method */
-            $method = $decoded['method'] ?? 'unknown';
+    /**
+     * Override listen to intercept and fix JSON before parsing.
+     */
+    #[Override]
+    public function listen(): void
+    {
+        // Call parent to set up streams and basic handlers
+        parent::listen();
 
-            /** @var mixed $params */
-            $params = $decoded['params'] ?? [];
-            $id = isset($decoded['id']) && (is_string($decoded['id']) || is_numeric($decoded['id']))
-                ? (string) $decoded['id']
-                : null;
+        // Remove the parent's data handler and add our custom one
+        $this->stdin?->removeAllListeners('data');
 
-            if (is_string($method) && is_array($params)) {
-                /** @var array<string, mixed> $stringKeyedParams */
-                $stringKeyedParams = [];
+        $this->stdin?->on('data', function (mixed $chunk): void {
+            if (is_string($chunk)) {
+                $this->messageBuffer .= $chunk;
+                $this->processBufferWithFixes();
+            }
+        });
+    }
 
-                /** @psalm-suppress MixedAssignment */
-                foreach ($params as $key => $value) {
-                    /** @psalm-suppress MixedAssignment */
-                    $stringKeyedParams[(string) $key] = $value;
+    /**
+     * Override sendMessage to log responses.
+     *
+     * @phpstan-param array<mixed> $context
+     *
+     * @return PromiseInterface<void>
+     */
+    #[Override]
+    public function sendMessage(Message $message, string $sessionId, array $context = []): PromiseInterface
+    {
+        // Log the outgoing message
+        $this->logOutgoingMessage($message);
+
+        return parent::sendMessage($message, $sessionId, $context);
+    }
+
+    /**
+     * Fix tool call JSON by ensuring arguments field exists.
+     * This prevents CallToolRequest constructor errors.
+     *
+     * @param string $jsonString
+     */
+    private function fixToolCallJson(string $jsonString): string
+    {
+        try {
+            $data = json_decode($jsonString, true, 512, JSON_THROW_ON_ERROR);
+
+            if (! is_array($data)) {
+                return $jsonString;
+            }
+
+            // Check if this is a tools/call request
+            if (
+                isset($data['method'])
+                && is_string($data['method'])
+                && 'tools/call' === $data['method']
+                && isset($data['params'])
+                && is_array($data['params'])
+            ) {
+                // Ensure params has arguments field as an array
+                if (! isset($data['params']['arguments'])) {
+                    $data['params']['arguments'] = [];
+                    $toolName = isset($data['params']['name']) && is_string($data['params']['name']) ? $data['params']['name'] : 'unknown';
+                    error_log('[MCP DEBUG] Added missing arguments array for tool call: ' . $toolName);
+                } elseif (! is_array($data['params']['arguments'])) {
+                    // Convert non-arrays to empty array
+                    $data['params']['arguments'] = [];
+                    $toolName = isset($data['params']['name']) && is_string($data['params']['name']) ? $data['params']['name'] : 'unknown';
+                    error_log('[MCP DEBUG] Converted non-array arguments to array for tool call: ' . $toolName);
                 }
 
-                DebugLogger::logRequest(
-                    method: $method,
-                    params: $stringKeyedParams,
-                    id: $id,
-                );
+                return json_encode($data, JSON_THROW_ON_ERROR);
+            }
+
+            // Not a tool call, return original
+            return $jsonString;
+        } catch (Throwable $throwable) {
+            // If JSON parsing fails, return original string
+            error_log('[MCP DEBUG] Failed to fix JSON, using original: ' . $throwable->getMessage());
+
+            return $jsonString;
+        }
+    }
+
+    /**
+     * @param Notification|Request $message
+     */
+    private function logIncomingMessage(Request | Notification $message): void
+    {
+        $params = [];
+        $id = null;
+
+        // Get method - both Request and Notification have this property
+        $method = $message->method;
+
+        // Get params if available
+        if (null !== $message->params) {
+            // Convert array keys to strings
+            $stringKeys = array_map('strval', array_keys($message->params));
+            $stringKeyedParams = array_combine($stringKeys, array_values($message->params));
+            $params = $stringKeyedParams;
+        }
+
+        // Get ID if it's a Request (Notification doesn't have id)
+        if ($message instanceof Request) {
+            $messageId = $message->getId();
+
+            if (is_string($messageId) || is_numeric($messageId)) {
+                $id = (string) $messageId;
             }
         }
 
-        // Process the message using parent logic via reflection (since handleMessage is protected)
-        $reflection = new ReflectionClass(parent::class);
-        $parentMethod = $reflection->getMethod('handleMessage');
+        // Log the request
+        DebugLogger::logRequest(
+            method: $method,
+            params: $params,
+            id: $id,
+        );
+    }
 
-        /** @var string|null $response */
-        $response = $parentMethod->invoke($this, $message);
+    private function logOutgoingMessage(Message $message): void
+    {
+        /** @var array<string, mixed> $response */
+        $response = [];
 
-        // Log outgoing response
-        if (is_string($response)) {
-            /** @var array<string, mixed>|null $decodedResponse */
-            $decodedResponse = json_decode($response, true);
-
-            if (is_array($decodedResponse) && is_array($decoded)) {
-                $id = isset($decoded['id']) && (is_string($decoded['id']) || is_numeric($decoded['id']))
-                    ? (string) $decoded['id']
-                    : null;
-
-                DebugLogger::logResponse(
-                    response: $decodedResponse,
-                    id: $id,
-                );
-            }
+        // Handle different message types
+        if ($message instanceof Error) {
+            $response['error'] = [
+                'code' => $message->code,
+                'message' => $message->message,
+                'data' => $message->data ?? null,
+            ];
+        } elseif ($message instanceof Response) {
+            // Response always has result
+            $response['result'] = $message->result;
         }
 
-        return $response;
+        // Get ID
+        $id = $message->getId();
+        $response['id'] = is_string($id) || is_numeric($id) ? (string) $id : null;
+
+        if (0 < count($response)) {
+            DebugLogger::logResponse(
+                response: $response,
+                id: $response['id'] ?? null,
+            );
+        }
+    }
+
+    /**
+     * Process buffer with JSON fixes applied before parsing.
+     * This method fixes tool call requests that are missing arguments.
+     */
+    private function processBufferWithFixes(): void
+    {
+        while (str_contains($this->messageBuffer, "\n")) {
+            $pos = strpos($this->messageBuffer, "\n");
+
+            if (false === $pos) {
+                break;
+            }
+
+            $line = substr($this->messageBuffer, 0, $pos);
+            $this->messageBuffer = substr($this->messageBuffer, $pos + 1);
+
+            $trimmedLine = trim($line);
+
+            if ('' === $trimmedLine) {
+                continue;
+            }
+
+            try {
+                // Fix the JSON before parsing
+                $fixedJson = $this->fixToolCallJson($trimmedLine);
+                $message = Parser::parse($fixedJson);
+
+                // Log the incoming message
+                if ($message instanceof Request || $message instanceof Notification) {
+                    $this->logIncomingMessage($message);
+                }
+
+                $this->emit('message', [$message, 'stdio']);
+            } catch (Throwable $e) {
+                $this->logger->error('Error parsing message', ['exception' => $e]);
+                $error = Error::forParseError('Invalid JSON: ' . $e->getMessage());
+                $this->sendMessage($error, 'stdio');
+
+                continue;
+            }
+        }
     }
 }
-

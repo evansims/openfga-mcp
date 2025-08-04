@@ -106,9 +106,9 @@ final class DocumentationIntegrationTest extends TestCase
     {
         $result = $this->resources->listDocumentation();
 
-        $this->assertStringContainsString('✅', $result[0]);
+        $this->assertStringContainsString('✅', $result['status']);
         $this->assertArrayHasKey('sdk_documentation', $result);
-        $this->assertArrayHasKey('general_documentation', $result);
+        $this->assertArrayHasKey('guides_documentation', $result);
         $this->assertArrayHasKey('total_sdks', $result);
 
         // Should have at least 7 SDKs
@@ -132,8 +132,8 @@ final class DocumentationIntegrationTest extends TestCase
 
         $result = $this->resources->getDocumentationSection('python', $firstSection);
 
-        if (str_contains($result[0], '✅')) {
-            $this->assertStringContainsString('✅', $result[0]);
+        if (str_contains($result['status'], '✅')) {
+            $this->assertStringContainsString('✅', $result['status']);
             $this->assertArrayHasKey('content', $result);
             $this->assertNotEmpty($result['content']);
             $this->assertEquals($firstSection, $result['metadata']['section']);
@@ -182,8 +182,8 @@ final class DocumentationIntegrationTest extends TestCase
 
         $result = $this->resources->getClassDocumentation('php', $className);
 
-        if (str_contains($result[0], '✅')) {
-            $this->assertStringContainsString('✅', $result[0]);
+        if (str_contains($result['status'], '✅')) {
+            $this->assertStringContainsString('✅', $result['status']);
             $this->assertArrayHasKey('content', $result);
             $this->assertNotEmpty($result['content']);
             $this->assertEquals($className, $result['metadata']['class']);
@@ -195,14 +195,14 @@ final class DocumentationIntegrationTest extends TestCase
     {
         $result = $this->resources->getSdkDocumentation('php');
 
-        $this->assertStringContainsString('✅', $result[0]);
+        $this->assertStringContainsString('✅', $result['status']);
         $this->assertEquals('php', $result['sdk']);
         $this->assertEquals('PHP SDK', $result['name']);
         $this->assertNotEmpty($result['sections']);
         $this->assertNotEmpty($result['classes']);
 
         // PHP SDK should have many classes
-        $this->assertGreaterThan(10, count($result['classes']));
+        $this->assertGreaterThan(10, $result['classes']);
     }
 
     public function testGoSdkDocumentationContent(): void

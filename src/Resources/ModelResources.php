@@ -33,7 +33,7 @@ final readonly class ModelResources extends AbstractResources
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/model/latest',
-        name: 'OpenFGA Latest Model',
+        name: 'get_latest_model',
         description: 'Get the latest authorization model in a store',
         mimeType: 'application/json',
     )]
@@ -91,7 +91,7 @@ final readonly class ModelResources extends AbstractResources
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/model/{modelId}',
-        name: 'OpenFGA Model Details',
+        name: 'get_model',
         description: 'Get detailed information about a specific authorization model',
         mimeType: 'application/json',
     )]

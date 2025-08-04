@@ -39,7 +39,7 @@ final readonly class RelationshipResources extends AbstractResources
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/check?user={user}&relation={relation}&object={object}&model={modelId}',
-        name: 'OpenFGA Permission Check',
+        name: 'check_permission',
         description: 'Check if a user has a specific permission on an object',
         mimeType: 'application/json',
     )]
@@ -116,7 +116,7 @@ final readonly class RelationshipResources extends AbstractResources
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/expand?object={object}&relation={relation}',
-        name: 'OpenFGA Relationship Expansion',
+        name: 'expand_relationship',
         description: 'Expand all users who have a specific relation to an object',
         mimeType: 'application/json',
     )]
@@ -198,7 +198,7 @@ final readonly class RelationshipResources extends AbstractResources
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/objects',
-        name: 'OpenFGA Store Objects',
+        name: 'list_objects',
         description: 'List all objects in a specific OpenFGA store',
         mimeType: 'application/json',
     )]
@@ -279,7 +279,7 @@ final readonly class RelationshipResources extends AbstractResources
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/relationships',
-        name: 'OpenFGA Store Relationships',
+        name: 'list_relationships',
         description: 'List all relationships (tuples) in a specific OpenFGA store',
         mimeType: 'application/json',
     )]
@@ -361,7 +361,7 @@ final readonly class RelationshipResources extends AbstractResources
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/users',
-        name: 'OpenFGA Store Users',
+        name: 'list_users',
         description: 'List all users in a specific OpenFGA store',
         mimeType: 'application/json',
     )]

@@ -31,7 +31,9 @@ final readonly class ModelTools extends AbstractTools
      *
      * @return string a success message, or an error message
      */
-    #[McpTool(name: 'create_model')]
+    #[McpTool(
+        name: 'create_model',
+    )]
     public function createModel(
         string $dsl,
         string $store,

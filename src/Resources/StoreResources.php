@@ -32,7 +32,7 @@ final readonly class StoreResources extends AbstractResources
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}',
-        name: 'OpenFGA Store Details',
+        name: 'get_store',
         description: 'Get detailed information about a specific OpenFGA store',
         mimeType: 'application/json',
     )]
@@ -79,7 +79,7 @@ final readonly class StoreResources extends AbstractResources
      */
     #[McpResourceTemplate(
         uriTemplate: 'openfga://store/{storeId}/models',
-        name: 'OpenFGA Store Models',
+        name: 'list_models',
         description: 'List all authorization models in a specific OpenFGA store',
         mimeType: 'application/json',
     )]
@@ -130,7 +130,7 @@ final readonly class StoreResources extends AbstractResources
      */
     #[McpResource(
         uri: 'openfga://stores',
-        name: 'OpenFGA Stores',
+        name: 'list_stores',
         description: 'List all available OpenFGA stores',
         mimeType: 'application/json',
     )]

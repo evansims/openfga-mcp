@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace OpenFGA\MCP;
 
 use Exception;
+use ReflectionClass;
+use ReflectionException;
+use ReflectionMethod;
 
 use function method_exists;
 use function sprintf;
@@ -34,13 +37,20 @@ final class LoggingToolWrapper
                     id: null,
                 );
 
-                // Call the original method
+                // Call the original method using reflection for proper type handling
                 if (method_exists($tool, $methodName)) {
-                    /** @psalm-suppress MixedAssignment */
-                    /** @phpstan-ignore-next-line method.dynamicName */
-                    $result = $tool->{$methodName}(...$args);
+                    try {
+                        $reflection = new ReflectionClass($tool);
+                        $method = $reflection->getMethod($methodName);
+
+                        // ReflectionMethod::invoke returns mixed, which is expected for dynamic tool calls
+                        /** @var mixed $result */
+                        $result = $method->invoke($tool, ...$args);
+                    } catch (ReflectionException $e) {
+                        throw new Exception(sprintf('Failed to invoke method %s on %s: %s', $methodName, $tool::class, $e->getMessage()), $e->getCode(), $e);
+                    }
                 } else {
-                    throw new Exception(sprintf('Method %s not found on ', $methodName) . $tool::class);
+                    throw new Exception(sprintf('Method %s not found on %s', $methodName, $tool::class));
                 }
 
                 // Log successful result
@@ -71,4 +81,3 @@ final class LoggingToolWrapper
         };
     }
 }
-

@@ -3,6 +3,11 @@
 
 declare(strict_types=1);
 
+// Prevent PHP from outputting warnings/errors to stdout which would corrupt JSON-RPC communication
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);
+
 // Find composer autoloader
 $autoloadPaths = [
     __DIR__ . '/../vendor/autoload.php',           // Local development

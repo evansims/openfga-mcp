@@ -1,0 +1,252 @@
+<?php
+
+declare(strict_types=1);
+
+use OpenFGA\MCP\Tools\SearchDocumentationTool;
+use PhpMcp\Schema\Request\CallToolRequest;
+
+beforeEach(function (): void {
+    // Set up online mode for unit tests
+    putenv('OPENFGA_MCP_API_URL=http://localhost:8080');
+
+    $this->tool = new SearchDocumentationTool;
+    
+    // Create helper function to make requests
+    $this->makeRequest = function(array $arguments = []) {
+        // Create a minimal CallToolRequest-like object
+        // Since CallToolRequest constructor requires specific params, we'll create a stub
+        $request = new CallToolRequest(
+            id: 1,
+            name: 'test_tool',
+            arguments: $arguments
+        );
+        return $request;
+    };
+});
+
+afterEach(function (): void {
+    Mockery::close();
+    putenv('OPENFGA_MCP_API_URL=');
+});
+
+describe('searchDocumentation tool', function (): void {
+    it('requires query parameter', function (): void {
+        $request = ($this->makeRequest)([]);
+
+        $result = $this->tool->searchDocumentation($request);
+
+        expect($result)->toBeArray();
+        expect($result[0])->toBe('❌ Search query is required');
+        expect($result)->toHaveKey('usage');
+        expect($result)->toHaveKey('examples');
+        expect($result['usage']['query'])->toContain('required');
+    });
+
+    it('performs basic content search', function (): void {
+        $request = ($this->makeRequest)(['query' => 'test_search_query'];
+
+        $result = $this->tool->searchDocumentation($request);
+
+        expect($result)->toBeArray();
+        expect($result[0])->toBeString(); // Should have status message
+        expect($result)->toHaveKey('query');
+        expect($result['query'])->toBe('test_search_query');
+        expect($result)->toHaveKey('search_type');
+        expect($result['search_type'])->toBe('content');
+        // Should have results array regardless of success/failure
+        expect($result)->toHaveKey('results');
+        expect($result['results'])->toBeArray();
+    });
+
+    it('filters search by SDK', function (): void {
+        $request = ($this->makeRequest)([
+            'query' => 'client',
+            'sdk' => 'php',
+        ];
+
+        $result = $this->tool->searchDocumentation($request);
+
+        expect($result)->toHaveKey('sdk_filter');
+        expect($result['sdk_filter'])->toBe('php');
+    });
+
+    it('limits search results', function (): void {
+        $request = ($this->makeRequest)([
+            'query' => 'test',
+            'limit' => 3,
+        ];
+
+        $result = $this->tool->searchDocumentation($request);
+
+        expect($result)->toBeArray();
+
+        if (str_contains($result[0], '✅')) {
+            expect(count($result['results']))->toBeLessThanOrEqual(3);
+        }
+    });
+
+    it('caps limit at maximum', function (): void {
+        $request = ($this->makeRequest)([
+            'query' => 'test',
+            'limit' => 100, // Above maximum
+        ];
+
+        $result = $this->tool->searchDocumentation($request);
+
+        expect($result)->toBeArray();
+
+        if (str_contains($result[0], '✅')) {
+            expect(count($result['results']))->toBeLessThanOrEqual(50);
+        }
+    });
+
+    it('performs class search', function (): void {
+        $request = ($this->makeRequest)([
+            'query' => 'Client',
+            'search_type' => 'class',
+        ];
+
+        $result = $this->tool->searchDocumentation($request);
+
+        expect($result['search_type'])->toBe('class');
+    });
+
+    it('performs method search', function (): void {
+        $request = ($this->makeRequest)([
+            'query' => 'check',
+            'search_type' => 'method',
+        ];
+
+        $result = $this->tool->searchDocumentation($request);
+
+        expect($result['search_type'])->toBe('method');
+    });
+
+    it('performs section search', function (): void {
+        $request = ($this->makeRequest)([
+            'query' => 'introduction',
+            'search_type' => 'section',
+        ];
+
+        $result = $this->tool->searchDocumentation($request);
+
+        expect($result['search_type'])->toBe('section');
+    });
+});
+
+describe('searchCodeExamples tool', function (): void {
+    it('requires query parameter', function (): void {
+        $request = ($this->makeRequest)([];
+
+        $result = $this->tool->searchCodeExamples($this->mockRequest);
+
+        expect($result[0])->toBe('❌ Search query is required');
+        expect($result)->toHaveKey('usage');
+        expect($result)->toHaveKey('examples');
+    });
+
+    it('searches for code examples', function (): void {
+        $request = ($this->makeRequest)([
+            'query' => 'createStore',
+            'language' => 'php',
+        ];
+
+        $result = $this->tool->searchCodeExamples($this->mockRequest);
+
+        expect($result)->toBeArray();
+        expect($result[0])->toBeString();
+        expect($result)->toHaveKey('query');
+        expect($result['query'])->toBe('createStore');
+        expect($result)->toHaveKey('language_filter');
+        expect($result['language_filter'])->toBe('php');
+        expect($result)->toHaveKey('total_examples');
+        expect($result)->toHaveKey('examples');
+        expect($result['examples'])->toBeArray();
+    });
+
+    it('filters by programming language', function (): void {
+        $request = ($this->makeRequest)([
+            'query' => 'client',
+            'language' => 'javascript',
+        ];
+
+        $result = $this->tool->searchCodeExamples($this->mockRequest);
+
+        expect($result['language_filter'])->toBe('javascript');
+    });
+});
+
+describe('findSimilarDocumentation tool', function (): void {
+    it('requires reference text parameter', function (): void {
+        $request = ($this->makeRequest)([];
+
+        $result = $this->tool->findSimilarDocumentation($this->mockRequest);
+
+        expect($result[0])->toBe('❌ Reference text is required');
+        expect($result)->toHaveKey('usage');
+        expect($result)->toHaveKey('examples');
+    });
+
+    it('finds similar documentation', function (): void {
+        $request = ($this->makeRequest)([
+            'reference_text' => 'This shows how to create a new store with proper configuration',
+        ];
+
+        $result = $this->tool->findSimilarDocumentation($this->mockRequest);
+
+        expect($result)->toBeArray();
+        expect($result[0])->toBeString();
+        expect($result)->toHaveKey('reference_text');
+        expect($result['reference_text'])->toContain('This shows how to create');
+        expect($result)->toHaveKey('total_results');
+        expect($result)->toHaveKey('results');
+        expect($result['results'])->toBeArray();
+    });
+
+    it('filters by minimum similarity score', function (): void {
+        $request = ($this->makeRequest)([
+            'reference_text' => 'Some reference text',
+            'min_score' => 0.8, // High threshold
+        ];
+
+        $result = $this->tool->findSimilarDocumentation($this->mockRequest);
+
+        // Should either find results or report no results due to high threshold
+        expect($result)->toBeArray();
+        expect($result[0])->toBeString();
+    });
+});
+
+describe('offline mode behavior', function (): void {
+    it('works normally in offline mode', function (): void {
+        putenv('OPENFGA_MCP_API_URL='); // Clear to simulate offline mode
+
+        $request = ($this->makeRequest)(['query' => 'test'];
+
+        $result = $this->tool->searchDocumentation($request);
+
+        // Search tools should work in offline mode (they access local documentation)
+        expect($result)->toBeArray();
+        expect($result[0])->toBeString();
+        expect($result)->toHaveKey('query');
+    });
+});
+
+describe('error handling', function (): void {
+    it('handles various input parameters gracefully', function (): void {
+        // Test with various parameter combinations
+        $testCases = [
+            ['query' => 'test', 'limit' => 'invalid'],
+            ['query' => 'test', 'include_content' => 'not_boolean'],
+            ['query' => '', 'sdk' => 'php'],
+        ];
+
+        foreach ($testCases as $args) {
+            $request = ($this->makeRequest)($args;
+            $result = $this->tool->searchDocumentation($request);
+
+            expect($result)->toBeArray();
+            expect($result[0])->toBeString();
+        }
+    });
+});

@@ -139,3 +139,4 @@ final class DebugLogger
         file_put_contents(self::LOG_FILE, $logLine, FILE_APPEND | LOCK_EX);
     }
 }
+

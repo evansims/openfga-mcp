@@ -94,8 +94,8 @@ try {
             enableJsonResponse: getConfiguredBool('OPENFGA_MCP_TRANSPORT_JSON', false),
         ),
         default => getConfiguredBool('OPENFGA_MCP_DEBUG', true)
-            ? new LoggingStdioTransport
-            : new StdioServerTransport,
+            ? new LoggingStdioTransport()
+            : new StdioServerTransport(),
     };
 
     $server->listen($transport);

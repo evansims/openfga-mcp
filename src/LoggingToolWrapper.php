@@ -71,3 +71,4 @@ final class LoggingToolWrapper
         };
     }
 }
+

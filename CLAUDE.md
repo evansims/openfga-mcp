@@ -114,16 +114,16 @@ The server follows a **safety-first approach** for write operations:
 
 ## Debug Logging
 
-For development and troubleshooting, the server includes comprehensive debug logging:
+For development and troubleshooting, the server includes comprehensive debug logging that is **enabled by default**.
 
-### Enable Debug Logging
-Set the environment variable:
+### Control Debug Logging
+Debug logging is enabled by default. To disable it, set:
 ```bash
-OPENFGA_MCP_DEBUG=true
+OPENFGA_MCP_DEBUG=false
 ```
 
 ### What Gets Logged
-When debug mode is enabled, all MCP requests and responses are logged to `logs/mcp-debug.log`:
+All MCP requests and responses are logged to `logs/mcp-debug.log`:
 
 - **Incoming requests** - Method name, parameters, request ID
 - **Outgoing responses** - Full response data with matching request ID

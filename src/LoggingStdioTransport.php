@@ -19,7 +19,7 @@ final class LoggingStdioTransport extends StdioServerTransport
      *
      * @throws ReflectionException
      */
-    private function handleMessage(string $message): ?string
+    protected function handleMessage(string $message): ?string
     {
         /** @var array<string, mixed>|null $decoded */
         $decoded = json_decode($message, true);
@@ -39,9 +39,9 @@ final class LoggingStdioTransport extends StdioServerTransport
                 /** @var array<string, mixed> $stringKeyedParams */
                 $stringKeyedParams = [];
 
-                /* @psalm-suppress MixedAssignment */
+                /** @psalm-suppress MixedAssignment */
                 foreach ($params as $key => $value) {
-                    /* @psalm-suppress MixedAssignment */
+                    /** @psalm-suppress MixedAssignment */
                     $stringKeyedParams[(string) $key] = $value;
                 }
 
@@ -80,3 +80,4 @@ final class LoggingStdioTransport extends StdioServerTransport
         return $response;
     }
 }
+

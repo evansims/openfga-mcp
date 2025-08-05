@@ -6,7 +6,6 @@ namespace Tests\Integration\Documentation;
 
 use OpenFGA\MCP\Documentation\{DocumentationChunker, DocumentationIndex};
 use OpenFGA\MCP\Resources\DocumentationResources;
-use OpenFGA\MCP\Tools\SearchDocumentationTool;
 use PHPUnit\Framework\TestCase;
 
 use function count;
@@ -19,15 +18,12 @@ final class DocumentationIntegrationTest extends TestCase
 
     private DocumentationResources $resources;
 
-    private SearchDocumentationTool $searchTool;
-
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->index = new DocumentationIndex;
         $this->resources = new DocumentationResources;
-        $this->searchTool = new SearchDocumentationTool;
         $this->chunker = new DocumentationChunker;
 
         // Initialize the index with real documentation

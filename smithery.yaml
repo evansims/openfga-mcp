@@ -6,6 +6,7 @@ build:
 
 startCommand:
   type: "http"
+  port: 9090
   configSchema:
     type: "object"
     properties:

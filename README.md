@@ -33,7 +33,13 @@ Design models and generate code without a server:
   "mcpServers": {
     "OpenFGA": {
       "command": "docker",
-      "args": ["run", "--rm", "-i", "--pull=always", "evansims/openfga-mcp:latest"]
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--pull=always",
+        "evansims/openfga-mcp:latest"
+      ]
     }
   }
 }
@@ -49,8 +55,12 @@ Connect to OpenFGA for full management capabilities:
     "OpenFGA": {
       "command": "docker",
       "args": [
-        "run", "--rm", "-i", "--pull=always",
-        "-e", "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
+        "run",
+        "--rm",
+        "-i",
+        "--pull=always",
+        "-e",
+        "OPENFGA_MCP_API_URL=http://host.docker.internal:8080",
         "evansims/openfga-mcp:latest"
       ]
     }
@@ -60,34 +70,41 @@ Connect to OpenFGA for full management capabilities:
 
 > **Safety:** Write operations are disabled by default. Set `OPENFGA_MCP_API_WRITEABLE=true` to enable.
 
-> **Docker Networking:** Use `host.docker.internal` for local OpenFGA, container names for Docker networks, or full URLs for remote instances.
+> **Docker Networking:** For your `OPENFGA_MCP_API_URL` use `host.docker.internal` when running OpenFGA on your local machine, container names for Docker networks, or full URLs for remote instances.
 
-Works with [Claude Desktop](https://claude.ai/download), [Claude Code](https://www.anthropic.com/claude-code), [Zed](https://zed.dev), [Cursor](https://cursor.sh), and other MCP clients.
+Works with [Claude Desktop](https://claude.ai/download), [Claude Code](https://www.anthropic.com/claude-code), [Cursor](https://cursor.sh), [Windsurf](https://windsurf.com), [Zed](https://zed.dev), and other MCP clients.
 
 ## Configuration
 
-### Key Environment Variables
+### Server Configuration Environment Variables
 
-| Variable                    | Default     | Description                               |
-| --------------------------- | ----------- | ----------------------------------------- |
-| `OPENFGA_MCP_API_URL`       | _(not set)_ | OpenFGA server URL. Omit for offline mode |
-| `OPENFGA_MCP_API_WRITEABLE` | `false`     | Enable write operations                   |
-| `OPENFGA_MCP_API_RESTRICT`  | `false`     | Restrict to configured store/model        |
-| `OPENFGA_MCP_API_STORE`     | `null`      | Default store ID                          |
-| `OPENFGA_MCP_API_MODEL`     | `null`      | Default model ID                          |
+| Variable                          | Default     | Description                                                                     |
+| --------------------------------- | ----------- | ------------------------------------------------------------------------------- |
+| `OPENFGA_MCP_TRANSPORT`           | `stdio`     | Supports `stdio` or `http` (Streamable HTTP.)                                   |
+| `OPENFGA_MCP_TRANSPORT_HOST`      | `127.0.0.1` | IP to listen for connections on. Only applicable when using `http` transport.   |
+| `OPENFGA_MCP_TRANSPORT_PORT`      | `9090`      | Port to listen for connections on. Only applicable when using `http` transport. |
+| `OPENFGA_MCP_TRANSPORT_SSE`       | `true`      | Enables Server-Sent Events (SSE) streams for responses.                         |
+| `OPENFGA_MCP_TRANSPORT_STATELESS` | `false`     | Enables stateless mode for session-less clients.                                |
 
-### Authentication
+### OpenFGA Configuration Environment Variables
 
-**Token Authentication:**
+| Variable                    | Default | Description                                         |
+| --------------------------- | ------- | --------------------------------------------------- |
+| `OPENFGA_MCP_API_URL`       |         | OpenFGA server URL                                  |
+| `OPENFGA_MCP_API_WRITEABLE` | `false` | Enables write operations                            |
+| `OPENFGA_MCP_API_STORE`     |         | Default requests to a specific store ID             |
+| `OPENFGA_MCP_API_MODEL`     |         | Default requests to a specific model ID             |
+| `OPENFGA_MCP_API_RESTRICT`  | `false` | Restrict requests to configured default store/model |
 
-- `OPENFGA_MCP_API_TOKEN` - API token
+#### OpenFGA Authentication Configuration
 
-**Client Credentials:**
-
-- `OPENFGA_MCP_API_CLIENT_ID` - Client ID
-- `OPENFGA_MCP_API_CLIENT_SECRET` - Client secret
-- `OPENFGA_MCP_API_ISSUER` - Token issuer
-- `OPENFGA_MCP_API_AUDIENCE` - API audience
+| Authentication     | Variable                        | Default | Description   |
+| ------------------ | ------------------------------- | ------- | ------------- |
+| Pre-Shared Keys    | `OPENFGA_MCP_API_TOKEN`         |         | API Token     |
+| Client Credentials | `OPENFGA_MCP_API_CLIENT_ID`     |         | Client ID     |
+|                    | `OPENFGA_MCP_API_CLIENT_SECRET` |         | Client Secret |
+|                    | `OPENFGA_MCP_API_ISSUER`        |         | Token Issuer  |
+|                    | `OPENFGA_MCP_API_AUDIENCE`      |         | API Audience  |
 
 See [`docker-compose.example.yml`](docker-compose.example.yml) for complete examples.
 

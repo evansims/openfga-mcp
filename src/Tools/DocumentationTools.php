@@ -213,7 +213,9 @@ final readonly class DocumentationTools extends AbstractTools
         $totalExamples = count($codeExamples);
 
         if (0 === $totalExamples) {
-            return "## Code Examples Search\n\nNo code examples found for: **{$query}**" .
+            return "## Code Examples
+
+No code examples found for: **{$query}**" .
                    (null !== $language ? sprintf(' (language: %s)', $language) : '') .
                    "\n\nTry:\n- Searching for specific method or class names\n- Using OpenFGA terminology (e.g., 'check', 'expand', 'tuples')\n- Removing language filter for broader results";
         }
@@ -312,9 +314,23 @@ final readonly class DocumentationTools extends AbstractTools
         $totalResults = count($allResults);
 
         if (0 === $totalResults) {
-            return "## Search Results\n\nNo results found for query: **{$query}**" .
-                   (null !== $sdk ? sprintf(' (filtered by SDK: %s)', $sdk) : '') .
-                   "\n\nTry:\n- Using different keywords\n- Checking spelling\n- Using broader search terms";
+            $markdown = '## Documentation Search Results
+
+';
+            $markdown .= "**Query:** `{$query}`
+";
+
+            if (null !== $sdk) {
+                $markdown .= sprintf('**SDK Filter:** %s%s', $sdk, PHP_EOL);
+            }
+            $markdown .= sprintf('**Search Type:** %s%s', $search_type, PHP_EOL);
+            $markdown .= "\nNo results found for query: **{$query}**";
+
+            if (null !== $sdk) {
+                $markdown .= sprintf(' (filtered by SDK: %s)', $sdk);
+            }
+
+            return $markdown . "\n\nTry:\n- Using different keywords\n- Checking spelling\n- Using broader search terms";
         }
 
         // Apply pagination

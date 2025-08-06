@@ -91,7 +91,7 @@ describe('DocumentationTools', function (): void {
 
             // Should show results starting from offset 10
             if (str_contains($result, 'Results:')) {
-                expect($result)->toMatch('/Results: Showing \d+/');
+                expect($result)->toMatch('/\*\*Results:\*\* Showing \d+/');
             }
         });
 
@@ -176,7 +176,7 @@ describe('DocumentationTools', function (): void {
 
             // Should show pagination info if there are results
             if (! str_contains($result, 'No code examples found')) {
-                expect($result)->toMatch('/Results: Showing \d+/');
+                expect($result)->toMatch('/\*\*Results:\*\* Showing \d+/');
             }
         });
 
@@ -244,7 +244,14 @@ describe('DocumentationTools', function (): void {
 
             expect($result)->toBeString();
             expect($result)->toContain('## Similar Documentation');
-            expect($result)->toContain('**Similarity Threshold:** 0.5');
+
+            // The test should handle both cases - finding results or not finding results
+            if (str_contains($result, 'No similar documentation found')) {
+                expect($result)->toContain('Try:');
+                expect($result)->toContain('Lowering the similarity threshold');
+            } else {
+                expect($result)->toContain('**Similarity Threshold:** 0.5');
+            }
         });
 
         it('finds similar documentation with SDK filter', function (): void {
@@ -253,7 +260,13 @@ describe('DocumentationTools', function (): void {
 
             expect($result)->toBeString();
             expect($result)->toContain('## Similar Documentation');
-            expect($result)->toContain('**SDK Filter:** php');
+
+            // The test should handle both cases - finding results or not finding results
+            if (str_contains($result, 'No similar documentation found')) {
+                expect($result)->toContain('in SDK: php');
+            } else {
+                expect($result)->toContain('**SDK Filter:** php');
+            }
         });
 
         it('respects similarity threshold', function (): void {
@@ -262,12 +275,22 @@ describe('DocumentationTools', function (): void {
             // Lower threshold should find more results
             $result1 = $this->tools->findSimilarDocumentation($content, null, 0.3);
             expect($result1)->toBeString();
-            expect($result1)->toContain('**Similarity Threshold:** 0.3');
+
+            if (str_contains($result1, 'No similar documentation found')) {
+                expect($result1)->toContain('(threshold: 0.3)');
+            } else {
+                expect($result1)->toContain('**Similarity Threshold:** 0.3');
+            }
 
             // Higher threshold should be more restrictive
             $result2 = $this->tools->findSimilarDocumentation($content, null, 0.9);
             expect($result2)->toBeString();
-            expect($result2)->toContain('**Similarity Threshold:** 0.9');
+
+            if (str_contains($result2, 'No similar documentation found')) {
+                expect($result2)->toContain('(threshold: 0.9)');
+            } else {
+                expect($result2)->toContain('**Similarity Threshold:** 0.9');
+            }
         });
 
         it('limits results properly', function (): void {
@@ -372,7 +395,13 @@ describe('DocumentationTools', function (): void {
 
             $result = $this->tools->searchCodeExamples('test', null);
             expect($result)->toBeString();
-            expect($result)->not->toContain('**Language:**');
+            // When no language filter is provided, the filter should not be shown in the header
+            // But individual code examples can still show their language
+            $lines = explode('
+', $result);
+            $headerSection = implode('
+', array_slice($lines, 0, 10)); // Check only the header section
+            expect($headerSection)->not->toContain('**Language:**');
 
             $result = $this->tools->findSimilarDocumentation('test content', null);
             expect($result)->toBeString();

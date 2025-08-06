@@ -314,6 +314,11 @@ final class DocumentationIndex
         $queryTerms = explode(' ', $query);
 
         foreach ($queryTerms as $queryTerm) {
+            // Skip empty terms that can occur with multiple spaces or long queries
+            if ('' === $queryTerm) {
+                continue;
+            }
+
             $termCount = substr_count($content, $queryTerm);
             $score += (float) $termCount * 1.0;
 

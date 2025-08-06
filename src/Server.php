@@ -151,7 +151,7 @@ try {
         'http' => new StreamableHttpServerTransport(
             host: getConfiguredString('OPENFGA_MCP_TRANSPORT_HOST', '127.0.0.1'),
             port: getConfiguredInt('OPENFGA_MCP_TRANSPORT_PORT', 9090),
-            enableJsonResponse: getConfiguredBool('OPENFGA_MCP_TRANSPORT_SSE', true) === false,
+            enableJsonResponse: false === getConfiguredBool('OPENFGA_MCP_TRANSPORT_SSE', true),
             stateless: getConfiguredBool('OPENFGA_MCP_TRANSPORT_STATELESS', false),
         ),
         default => getConfiguredBool('OPENFGA_MCP_DEBUG', true)

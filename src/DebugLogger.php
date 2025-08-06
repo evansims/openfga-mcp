@@ -8,6 +8,7 @@ use function assert;
 use function date;
 use function dirname;
 use function file_put_contents;
+use function function_exists;
 use function getmypid;
 use function is_array;
 use function is_dir;
@@ -155,7 +156,11 @@ final class DebugLogger
 
         if (! is_dir($logDir) && ! mkdir($logDir, 0o755, true)) {
             // If we can't create the directory, log to stderr as fallback
-            error_log('[MCP DEBUG] Failed to create log directory: ' . $logDir);
+            $inTestEnvironment = function_exists('test') || function_exists('it') || class_exists('PHPUnit\Framework\TestCase');
+
+            if (! $inTestEnvironment) {
+                error_log('[MCP DEBUG] Failed to create log directory: ' . $logDir);
+            }
 
             return;
         }
@@ -164,7 +169,11 @@ final class DebugLogger
         static $logged = false;
 
         if (! $logged) {
-            error_log('[MCP DEBUG] Logging to: ' . $logFile);
+            $inTestEnvironment = function_exists('test') || function_exists('it') || class_exists('PHPUnit\Framework\TestCase');
+
+            if (! $inTestEnvironment) {
+                error_log('[MCP DEBUG] Logging to: ' . $logFile);
+            }
             $logged = true;
         }
     }
@@ -235,7 +244,11 @@ final class DebugLogger
         $result = file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
 
         if (false === $result) {
-            error_log('[MCP DEBUG] Failed to write to log file: ' . $logFile);
+            $inTestEnvironment = function_exists('test') || function_exists('it') || class_exists('PHPUnit\Framework\TestCase');
+
+            if (! $inTestEnvironment) {
+                error_log('[MCP DEBUG] Failed to write to log file: ' . $logFile);
+            }
         }
     }
 }

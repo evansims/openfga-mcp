@@ -17,6 +17,7 @@ use function array_map;
 use function array_values;
 use function count;
 use function error_log;
+use function function_exists;
 use function is_array;
 use function is_numeric;
 use function is_string;
@@ -31,7 +32,14 @@ final class LoggingStdioTransport extends StdioServerTransport
     public function __construct()
     {
         parent::__construct();
-        error_log('[MCP DEBUG] LoggingStdioTransport initialized - logging is ACTIVE');
+
+        // Only output debug messages when not in testing environment
+        // Check if we're running tests by looking for test functions or PHPUnit classes
+        $inTestEnvironment = function_exists('test') || function_exists('it') || class_exists('PHPUnit\Framework\TestCase');
+
+        if (! $inTestEnvironment) {
+            error_log('[MCP DEBUG] LoggingStdioTransport initialized - logging is ACTIVE');
+        }
     }
 
     /**
@@ -97,12 +105,20 @@ final class LoggingStdioTransport extends StdioServerTransport
                 if (! isset($data['params']['arguments'])) {
                     $data['params']['arguments'] = [];
                     $toolName = isset($data['params']['name']) && is_string($data['params']['name']) ? $data['params']['name'] : 'unknown';
-                    error_log('[MCP DEBUG] Added missing arguments array for tool call: ' . $toolName);
+                    $inTestEnvironment = function_exists('test') || function_exists('it') || class_exists('PHPUnit\Framework\TestCase');
+
+                    if (! $inTestEnvironment) {
+                        error_log('[MCP DEBUG] Added missing arguments array for tool call: ' . $toolName);
+                    }
                 } elseif (! is_array($data['params']['arguments'])) {
                     // Convert non-arrays to empty array
                     $data['params']['arguments'] = [];
                     $toolName = isset($data['params']['name']) && is_string($data['params']['name']) ? $data['params']['name'] : 'unknown';
-                    error_log('[MCP DEBUG] Converted non-array arguments to array for tool call: ' . $toolName);
+                    $inTestEnvironment = function_exists('test') || function_exists('it') || class_exists('PHPUnit\Framework\TestCase');
+
+                    if (! $inTestEnvironment) {
+                        error_log('[MCP DEBUG] Converted non-array arguments to array for tool call: ' . $toolName);
+                    }
                 }
 
                 return json_encode($data, JSON_THROW_ON_ERROR);
@@ -112,7 +128,11 @@ final class LoggingStdioTransport extends StdioServerTransport
             return $jsonString;
         } catch (Throwable $throwable) {
             // If JSON parsing fails, return original string
-            error_log('[MCP DEBUG] Failed to fix JSON, using original: ' . $throwable->getMessage());
+            $inTestEnvironment = function_exists('test') || function_exists('it') || class_exists('PHPUnit\Framework\TestCase');
+
+            if (! $inTestEnvironment) {
+                error_log('[MCP DEBUG] Failed to fix JSON, using original: ' . $throwable->getMessage());
+            }
 
             return $jsonString;
         }

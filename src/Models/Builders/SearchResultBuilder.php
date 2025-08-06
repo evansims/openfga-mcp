@@ -116,7 +116,11 @@ final class SearchResultBuilder
         }
 
         if (isset($data['uri']) && is_scalar($data['uri'])) {
-            $this->withUri((string) $data['uri']);
+            $uriStr = (string) $data['uri'];
+
+            if ('' !== $uriStr) {
+                $this->withUri($uriStr);
+            }
         }
 
         return $this;

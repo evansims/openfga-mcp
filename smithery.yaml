@@ -1,0 +1,76 @@
+# Smithery.ai MCP marketplace configuration for OpenFGA MCP Server
+runtime: "container"
+
+# Docker configuration
+build:
+  dockerfile: "Dockerfile"
+  dockerBuildPath: "."
+
+# MCP server configuration
+startCommand:
+  type: "http"
+  configSchema:
+    type: "object"
+    properties:
+      openfgaUrl:
+        type: "string"
+        description: "OpenFGA server URL (e.g., http://localhost:8080). Leave empty for offline mode (planning & coding only)"
+        required: false
+      apiToken:
+        type: "string"
+        description: "API token for OpenFGA authentication (optional)"
+        required: false
+      clientId:
+        type: "string"
+        description: "Client ID for OAuth2 authentication (optional)"
+        required: false
+      clientSecret:
+        type: "string"
+        description: "Client secret for OAuth2 authentication (optional)"
+        required: false
+      issuer:
+        type: "string"
+        description: "Token issuer for OAuth2 (optional)"
+        required: false
+      audience:
+        type: "string"
+        description: "API audience for OAuth2 (optional)"
+        required: false
+      enableWrite:
+        type: "boolean"
+        description: "Enable write operations (create, update, delete). Disabled by default for safety"
+        default: false
+        required: false
+      defaultStore:
+        type: "string"
+        description: "Default OpenFGA store ID to use"
+        required: false
+      defaultModel:
+        type: "string"
+        description: "Default authorization model ID to use"
+        required: false
+      restrictToDefault:
+        type: "boolean"
+        description: "Restrict operations to the configured default store/model only"
+        default: false
+        required: false
+      debugLogging:
+        type: "boolean"
+        description: "Enable debug logging for troubleshooting"
+        default: false
+        required: false
+
+# Environment variable mappings from configSchema to container
+env:
+  OPENFGA_MCP_TRANSPORT: "stdio"
+  OPENFGA_MCP_API_URL: "${openfgaUrl}"
+  OPENFGA_MCP_API_TOKEN: "${apiToken}"
+  OPENFGA_MCP_API_CLIENT_ID: "${clientId}"
+  OPENFGA_MCP_API_CLIENT_SECRET: "${clientSecret}"
+  OPENFGA_MCP_API_ISSUER: "${issuer}"
+  OPENFGA_MCP_API_AUDIENCE: "${audience}"
+  OPENFGA_MCP_API_WRITEABLE: "${enableWrite}"
+  OPENFGA_MCP_API_STORE: "${defaultStore}"
+  OPENFGA_MCP_API_MODEL: "${defaultModel}"
+  OPENFGA_MCP_API_RESTRICT: "${restrictToDefault}"
+  OPENFGA_MCP_DEBUG: "${debugLogging}"

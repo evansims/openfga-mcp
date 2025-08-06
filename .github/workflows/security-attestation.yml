@@ -33,7 +33,7 @@ jobs:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@ccf2c627fe61b1b4d924adfcbd19d661a18133a0 # v2.3.3
+        uses: shivammathur/setup-php@ccf2c627fe61b1b4d924adfcbd19d661a18133a0 # v2.35.2
         with:
           php-version: "8.3"
           tools: composer
@@ -60,7 +60,7 @@ jobs:
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: "openfga-mcp-*.tar.gz"
-          show-summary: true  # Default is true, but being explicit
+          show-summary: true # Default is true, but being explicit
 
       - name: Display attestation info
         if: steps.attest.outputs.attestation-url != ''

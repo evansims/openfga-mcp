@@ -31,7 +31,7 @@ jobs:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@ccf2c627fe61b1b4d924adfcbd19d661a18133a0 # v2.3.3
+        uses: shivammathur/setup-php@ccf2c627fe61b1b4d924adfcbd19d661a18133a0 # v2.35.2
         with:
           php-version: "8.3"
           tools: composer
@@ -61,15 +61,15 @@ jobs:
           # Debug: Show files
           echo "Files in directory:"
           ls -la openfga-mcp-*.tar.gz
-          
+
           # Generate and show hash
           HASH=$(sha256sum openfga-mcp-*.tar.gz)
           echo "Generated hash: $HASH"
-          
+
           # Base64 encode
           DIGEST=$(echo "$HASH" | base64 -w0)
           echo "Base64 digest: $DIGEST"
-          
+
           # Set output
           echo "digests=$DIGEST" >> "$GITHUB_OUTPUT"
 
@@ -123,17 +123,17 @@ jobs:
         run: |
           TAG="${{ github.event.release.tag_name || inputs.tag }}"
           echo "Uploading artifacts to release $TAG"
-          
+
           # Find all files to upload
           FILES=$(find . -name "*.tar.gz" -o -name "*.intoto.jsonl" | tr '\n' ' ')
-          
+
           if [ -z "$FILES" ]; then
             echo "Error: No files found to upload"
             exit 1
           fi
-          
+
           echo "Found files to upload: $FILES"
-          
+
           # Upload to the existing release
           gh release upload "$TAG" $FILES \
             --repo "${{ github.repository }}" \

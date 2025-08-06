@@ -12,42 +12,53 @@ startCommand:
     properties:
       openfgaUrl:
         type: "string"
-        description: "OpenFGA server URL (e.g., http://localhost:8080). Leave empty for offline mode (planning & coding only)"
-      apiToken:
-        type: "string"
-        description: "API token for OpenFGA authentication (optional)"
-      clientId:
-        type: "string"
-        description: "Client ID for OAuth2 authentication (optional)"
-      clientSecret:
-        type: "string"
-        description: "Client secret for OAuth2 authentication (optional)"
-      issuer:
-        type: "string"
-        description: "Token issuer for OAuth2 (optional)"
-      audience:
-        type: "string"
-        description: "API audience for OAuth2 (optional)"
+        description: "Provide an OpenFGA server URL (e.g., http://localhost:8080) to enable 'live mode', with support for server management and querying."
+        default: ""
       enableWrite:
         type: "boolean"
-        description: "Enable write operations (create, update, delete). Disabled by default for safety"
+        description: "Enables write operations to OpenFGA. By default only read operations are allowed. Requires 'live mode' to be enabled."
+        default: false
+      apiToken:
+        type: "string"
+        description: "API token for OpenFGA, when using pre-shared key authentication. Requires 'live mode' to be enabled."
+        default: ""
+      clientId:
+        type: "string"
+        description: "Client ID for OpenFGA, when using client credentials authentication. Requires 'live mode' to be enabled."
+        default: ""
+      clientSecret:
+        type: "string"
+        description: "Client secret for OpenFGA, when using client credentials authentication. Requires 'live mode' to be enabled."
+        default: ""
+      issuer:
+        type: "string"
+        description: "Token issuer for OpenFGA, when using client credentials authentication. Requires 'live mode' to be enabled."
+        default: ""
+      audience:
+        type: "string"
+        description: "API audience for OpenFGA, when using client credentials authentication. Requires 'live mode' to be enabled."
+        default: ""
       defaultStore:
         type: "string"
-        description: "Default OpenFGA store ID to use"
+        description: "Default OpenFGA store ID to use for operations. Requires 'live mode' to be enabled."
+        default: ""
       defaultModel:
         type: "string"
-        description: "Default authorization model ID to use"
+        description: "Default authorization model ID to use. Requires 'live mode' to be enabled."
+        default: ""
       restrictToDefault:
         type: "boolean"
-        description: "Restrict operations to the configured default store/model only"
-      debugLogging:
-        type: "boolean"
-        description: "Enable debug logging for troubleshooting"
+        description: "Restrict operations to the configured default store/model only. Requires 'live mode' to be enabled."
+        default: false
     required: []
   exampleConfig:
 
 env:
   OPENFGA_MCP_TRANSPORT: "http"
+  OPENFGA_MCP_TRANSPORT_HOST: "127.0.0.1"
+  OPENFGA_MCP_TRANSPORT_PORT: 9090
+  OPENFGA_MCP_TRANSPORT_SSE: true
+  OPENFGA_MCP_TRANSPORT_STATELESS: false
   OPENFGA_MCP_API_URL: "${openfgaUrl}"
   OPENFGA_MCP_API_TOKEN: "${apiToken}"
   OPENFGA_MCP_API_CLIENT_ID: "${clientId}"
@@ -58,4 +69,3 @@ env:
   OPENFGA_MCP_API_STORE: "${defaultStore}"
   OPENFGA_MCP_API_MODEL: "${defaultModel}"
   OPENFGA_MCP_API_RESTRICT: "${restrictToDefault}"
-  OPENFGA_MCP_DEBUG: "${debugLogging}"

@@ -62,7 +62,7 @@ startCommand:
 
 # Environment variable mappings from configSchema to container
 env:
-  OPENFGA_MCP_TRANSPORT: "stdio"
+  OPENFGA_MCP_TRANSPORT: "http"
   OPENFGA_MCP_API_URL: "${openfgaUrl}"
   OPENFGA_MCP_API_TOKEN: "${apiToken}"
   OPENFGA_MCP_API_CLIENT_ID: "${clientId}"

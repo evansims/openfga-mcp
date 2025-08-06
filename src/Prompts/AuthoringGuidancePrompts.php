@@ -10,7 +10,9 @@ use PhpMcp\Server\Attributes\{CompletionProvider, McpPrompt};
 final readonly class AuthoringGuidancePrompts extends AbstractPrompts
 {
     public function __construct(
-        /** @phpstan-ignore property.onlyWritten */
+        /**
+         * @phpstan-ignore property.onlyWritten
+         */
         private ClientInterface $client,
     ) {
         // Client is injected for dependency injection but may be used in future implementations

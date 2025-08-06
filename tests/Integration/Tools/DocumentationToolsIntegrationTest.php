@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Integration\Tools;
+namespace OpenFGA\MCP\Tests\Integration\Tools;
 
 use Mockery;
 use OpenFGA\ClientInterface;

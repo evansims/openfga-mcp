@@ -20,7 +20,9 @@ use function strlen;
 final readonly class DocumentationTools extends AbstractTools
 {
     public function __construct(
-        /** @phpstan-ignore property.onlyWritten */
+        /**
+         * @phpstan-ignore property.onlyWritten
+         */
         private ClientInterface $client,
     ) {
     }

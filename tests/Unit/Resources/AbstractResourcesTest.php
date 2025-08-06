@@ -2,26 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Resources;
+namespace OpenFGA\MCP\Tests\Unit\Resources;
 
 use OpenFGA\MCP\Resources\AbstractResources;
 use ReflectionClass;
 
 use function in_array;
-
-// Create a concrete implementation for testing
-final readonly class AbstractResourcesTest extends AbstractResources
-{
-    public function testCheckOfflineMode(string $operation): ?array
-    {
-        return $this->checkOfflineMode($operation);
-    }
-
-    public function testCheckRestrictedMode(?string $storeId = null, ?string $modelId = null): ?array
-    {
-        return $this->checkRestrictedMode($storeId, $modelId);
-    }
-}
 
 beforeEach(function (): void {
     $this->resources = new TestableResources;

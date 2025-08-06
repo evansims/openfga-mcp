@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Integration\Documentation;
+namespace OpenFGA\MCP\Tests\Integration\Documentation;
 
 use OpenFGA\MCP\Documentation\{DocumentationChunker, DocumentationIndex};
 use OpenFGA\MCP\Resources\DocumentationResources;

@@ -49,6 +49,17 @@ final class DocumentationIndex
     }
 
     /**
+     * Get a specific chunk by its ID.
+     *
+     * @param  string                                                                                                                                                                                                           $chunkId
+     * @return array{id: string, sdk: string, content: string, metadata: array{section: string|null, class: string|null, method: string|null, line_count: int, size_bytes: int}, prev_chunk?: string, next_chunk?: string}|null
+     */
+    public function getChunkById(string $chunkId): ?array
+    {
+        return $this->chunks[$chunkId] ?? null;
+    }
+
+    /**
      * @param string $sdk
      * @param string $section
      *

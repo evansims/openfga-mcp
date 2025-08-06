@@ -7,22 +7,20 @@ namespace OpenFGA\MCP\Tools;
 use OpenFGA\ClientInterface;
 use OpenFGA\MCP\Documentation\{DocumentationIndex, DocumentationIndexSingleton};
 use PhpMcp\Server\Attributes\McpTool;
+use RuntimeException;
 
 use function array_slice;
 use function count;
 use function in_array;
 use function is_array;
+use function is_scalar;
 use function sprintf;
 use function strlen;
 
 final readonly class DocumentationTools extends AbstractTools
 {
-    /**
-     * @psalm-suppress PossiblyUnusedMethod
-     * @phpstan-ignore-next-line
-     */
     public function __construct(
-        /** @phpstan-ignore-next-line */
+        /** @phpstan-ignore property.onlyWritten */
         private ClientInterface $client,
     ) {
     }
@@ -30,11 +28,14 @@ final readonly class DocumentationTools extends AbstractTools
     /**
      * Find documentation similar to provided content.
      *
-     * @param  string      $content              Reference content to find similar documentation
-     * @param  string|null $sdk                  Limit search to specific SDK
-     * @param  float       $similarity_threshold Minimum similarity score (0.0-1.0, default: 0.5)
-     * @param  int         $limit                Maximum number of results (default: 5)
-     * @return string      Markdown-formatted related documentation
+     * @param string      $content              Reference content to find similar documentation
+     * @param string|null $sdk                  Limit search to specific SDK
+     * @param float       $similarity_threshold Minimum similarity score (0.0-1.0, default: 0.5)
+     * @param int         $limit                Maximum number of results (default: 5)
+     *
+     * @throws RuntimeException If documentation index initialization fails
+     *
+     * @return string Markdown-formatted related documentation
      */
     #[McpTool(name: 'find_similar_documentation')]
     public function findSimilarDocumentation(
@@ -75,32 +76,33 @@ final readonly class DocumentationTools extends AbstractTools
         }
 
         // Search for similar content using key terms
+        /** @var array<string, array{chunk_id: string, sdk: string, score: float, preview: string, metadata: array<mixed>, similarity?: float, content?: string}> $similarChunks */
         $similarChunks = [];
 
         foreach ($keyTerms as $keyTerm) {
             $chunks = $index->searchChunks($keyTerm, $sdk, $limit * 2);
 
             foreach ($chunks as $chunk) {
-                /** @var string $chunkContent */
-                $chunkContent = isset($chunk['content']) && is_scalar($chunk['content']) ? (string) $chunk['content'] : '';
+                // Get content from the chunk to calculate similarity
+                // We need to get the actual content - the preview is just a snippet
+                $chunkContent = $this->getChunkContent($chunk['chunk_id'], $index);
                 $similarity = $this->calculateSimilarity($content, $chunkContent);
 
                 if ($similarity >= $similarity_threshold) {
-                    $chunk['similarity'] = $similarity;
-                    /** @var string $sdkKey */
-                    $sdkKey = isset($chunk['sdk']) && is_scalar($chunk['sdk']) ? (string) $chunk['sdk'] : '';
-                    /** @var string $idKey */
-                    $idKey = isset($chunk['id']) && is_scalar($chunk['id']) ? (string) $chunk['id'] : '';
-                    $chunkKey = $sdkKey . '::' . $idKey;
+                    // Add similarity and content to the chunk
+                    $chunkWithSimilarity = $chunk;
+                    $chunkWithSimilarity['similarity'] = $similarity;
+                    $chunkWithSimilarity['content'] = $chunkContent;
+
+                    $chunkKey = $chunk['sdk'] . '::' . $chunk['chunk_id'];
 
                     if (! isset($similarChunks[$chunkKey])) {
-                        $similarChunks[$chunkKey] = $chunk;
+                        $similarChunks[$chunkKey] = $chunkWithSimilarity;
                     } elseif (isset($similarChunks[$chunkKey]['similarity'])) {
-                        /** @var float $existingSim */
-                        $existingSim = (float) $similarChunks[$chunkKey]['similarity'];
+                        $existingSim = $similarChunks[$chunkKey]['similarity'];
 
                         if ($existingSim < $similarity) {
-                            $similarChunks[$chunkKey] = $chunk;
+                            $similarChunks[$chunkKey] = $chunkWithSimilarity;
                         }
                     }
                 }
@@ -108,9 +110,10 @@ final readonly class DocumentationTools extends AbstractTools
         }
 
         // Sort by similarity score
-        usort($similarChunks, static function ($a, $b): int {
-            $aSimilarity = isset($a['similarity']) && is_numeric($a['similarity']) ? (float) $a['similarity'] : 0.0;
-            $bSimilarity = isset($b['similarity']) && is_numeric($b['similarity']) ? (float) $b['similarity'] : 0.0;
+        usort($similarChunks, static function (array $a, array $b): int {
+            // Since we know similarity is added above, we can safely access it
+            $aSimilarity = isset($a['similarity']) && is_numeric($a['similarity']) ? $a['similarity'] : 0.0;
+            $bSimilarity = isset($b['similarity']) && is_numeric($b['similarity']) ? $b['similarity'] : 0.0;
 
             return $bSimilarity <=> $aSimilarity;
         });
@@ -144,12 +147,15 @@ final readonly class DocumentationTools extends AbstractTools
     /**
      * Search for code examples in documentation.
      *
-     * @param  string      $query           Code pattern or concept to find
-     * @param  string|null $language        Programming language filter (php, go, python, java, csharp, javascript, typescript)
-     * @param  bool        $include_context Include surrounding explanatory context
-     * @param  int         $limit           Maximum number of examples to return (default: 5)
-     * @param  int         $offset          Pagination offset for results (default: 0)
-     * @return string      Markdown-formatted code examples with descriptions
+     * @param string      $query           Code pattern or concept to find
+     * @param string|null $language        Programming language filter (php, go, python, java, csharp, javascript, typescript)
+     * @param bool        $include_context Include surrounding explanatory context
+     * @param int         $limit           Maximum number of examples to return (default: 5)
+     * @param int         $offset          Pagination offset for results (default: 0)
+     *
+     * @throws RuntimeException If documentation index initialization fails
+     *
+     * @return string Markdown-formatted code examples with descriptions
      */
     #[McpTool(name: 'search_code_examples')]
     public function searchCodeExamples(
@@ -191,7 +197,12 @@ final readonly class DocumentationTools extends AbstractTools
         $codeExamples = [];
 
         foreach ($allChunks as $allChunk) {
-            $examples = $this->extractCodeFromChunk($allChunk, $language);
+            // Get the full content for this chunk
+            $chunkContent = $this->getChunkContent($allChunk['chunk_id'], $index);
+            $chunkWithContent = $allChunk;
+            $chunkWithContent['content'] = $chunkContent;
+
+            $examples = $this->extractCodeFromChunk($chunkWithContent, $language);
 
             foreach ($examples as $example) {
                 $example['chunk'] = $allChunk;
@@ -248,12 +259,15 @@ final readonly class DocumentationTools extends AbstractTools
     /**
      * Advanced documentation search with filtering and pagination.
      *
-     * @param  string      $query       Search query to find in documentation
-     * @param  string|null $sdk         Filter by specific SDK (php, go, python, java, dotnet, js, laravel)
-     * @param  string      $search_type Type of search: content (default), class, method, or section
-     * @param  int         $limit       Maximum number of results to return (default: 10)
-     * @param  int         $offset      Pagination offset for results (default: 0)
-     * @return string      Markdown-formatted search results with pagination metadata
+     * @param string      $query       Search query to find in documentation
+     * @param string|null $sdk         Filter by specific SDK (php, go, python, java, dotnet, js, laravel)
+     * @param string      $search_type Type of search: content (default), class, method, or section
+     * @param int         $limit       Maximum number of results to return (default: 10)
+     * @param int         $offset      Pagination offset for results (default: 0)
+     *
+     * @throws RuntimeException If documentation index initialization fails
+     *
+     * @return string Markdown-formatted search results with pagination metadata
      */
     #[McpTool(name: 'search_documentation')]
     public function searchDocumentation(
@@ -321,7 +335,7 @@ final readonly class DocumentationTools extends AbstractTools
         $markdown .= "---\n\n";
 
         foreach ($paginatedResults as $resultIndex => $result) {
-            $resultNumber = $offset + $resultIndex + 1;
+            $resultNumber = $offset + (int) $resultIndex + 1;
             $markdown .= $this->formatSearchResult($result, $resultNumber);
         }
 
@@ -368,11 +382,8 @@ final readonly class DocumentationTools extends AbstractTools
         $intersection = count(array_intersect($terms1, $terms2));
         $union = count(array_unique(array_merge($terms1, $terms2)));
 
-        if (0 === $union) {
-            return 0.0;
-        }
-
-        $jaccard = $intersection / $union;
+        // Union will always be at least 1 since we checked both term arrays are non-empty
+        $jaccard = (float) ($intersection / $union);
 
         // Also check for exact phrase matches for higher similarity
         $phrases = [
@@ -414,8 +425,11 @@ final readonly class DocumentationTools extends AbstractTools
 
         if (false !== $result && 0 < $result) {
             foreach ($matches as $match) {
-                $codeLang = isset($match[1]) ? (string) $match[1] : '';
-                $codeContent = isset($match[2]) ? (string) $match[2] : '';
+                // When preg_match_all succeeds with PREG_SET_ORDER, capture groups exist
+                // Optional groups will be empty strings if they don't match
+                /** @var array{0: string, 1: string, 2: string} $match */
+                $codeLang = $match[1];
+                $codeContent = $match[2];
 
                 // Filter by language if specified
                 if (null !== $language) {
@@ -531,7 +545,6 @@ final readonly class DocumentationTools extends AbstractTools
         // Filter out common words and short words
         $stopWords = ['the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are', 'was', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which', 'who', 'when', 'where', 'why', 'how', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'in', 'of', 'to', 'for', 'with', 'from', 'up', 'out', 'if', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once'];
 
-        $keyTerms = [];
         $termCounts = [];
 
         foreach ($words as $word) {
@@ -578,12 +591,15 @@ final readonly class DocumentationTools extends AbstractTools
             $markdown .= "**SDK:** `{$chunkSdk}`  \n";
         }
 
-        if (isset($chunk['class']) && '' !== $chunk['class']) {
-            $chunkClass = is_scalar($chunk['class']) ? (string) $chunk['class'] : '';
+        // Access class and method from metadata
+        $metadata = isset($chunk['metadata']) && is_array($chunk['metadata']) ? $chunk['metadata'] : [];
+
+        if (isset($metadata['class']) && '' !== $metadata['class']) {
+            $chunkClass = is_scalar($metadata['class']) ? (string) $metadata['class'] : '';
             $markdown .= sprintf('**Class:** `%s`', $chunkClass);
 
-            if (isset($chunk['method']) && '' !== $chunk['method']) {
-                $chunkMethod = is_scalar($chunk['method']) ? (string) $chunk['method'] : '';
+            if (isset($metadata['method']) && '' !== $metadata['method']) {
+                $chunkMethod = is_scalar($metadata['method']) ? (string) $metadata['method'] : '';
                 $markdown .= sprintf(' **Method:** `%s`', $chunkMethod);
             }
             $markdown .= "  \n";
@@ -622,15 +638,16 @@ final readonly class DocumentationTools extends AbstractTools
 
         // Build title based on available metadata
         $title = '';
+        $metadata = isset($result['metadata']) && is_array($result['metadata']) ? $result['metadata'] : [];
 
-        if (isset($result['class']) && '' !== $result['class']) {
-            $title .= is_scalar($result['class']) ? (string) $result['class'] : '';
+        if (isset($metadata['class']) && '' !== $metadata['class']) {
+            $title .= is_scalar($metadata['class']) ? (string) $metadata['class'] : '';
 
-            if (isset($result['method']) && '' !== $result['method']) {
-                $title .= '::' . (is_scalar($result['method']) ? (string) $result['method'] : '');
+            if (isset($metadata['method']) && '' !== $metadata['method']) {
+                $title .= '::' . (is_scalar($metadata['method']) ? (string) $metadata['method'] : '');
             }
-        } elseif (isset($result['section']) && '' !== $result['section']) {
-            $title .= is_scalar($result['section']) ? (string) $result['section'] : '';
+        } elseif (isset($metadata['section']) && '' !== $metadata['section']) {
+            $title .= is_scalar($metadata['section']) ? (string) $metadata['section'] : '';
         } else {
             $title .= 'Documentation Chunk';
         }
@@ -650,7 +667,7 @@ final readonly class DocumentationTools extends AbstractTools
 
         if (isset($result['score']) && 0.0 !== $result['score']) {
             $scoreValue = is_numeric($result['score']) ? (float) $result['score'] : 0.0;
-            $markdown .= '**Relevance:** ' . round($scoreValue * 100) . "%  \n";
+            $markdown .= '**Relevance:** ' . (string) round($scoreValue * 100.0) . "%  \n";
         }
 
         $markdown .= "\n";
@@ -667,9 +684,9 @@ final readonly class DocumentationTools extends AbstractTools
         }
 
         // Add navigation
-        if (isset($result['id']) && '' !== $result['id']) {
+        if (isset($result['chunk_id']) && '' !== $result['chunk_id']) {
             $sdk = isset($result['sdk']) && is_scalar($result['sdk']) ? (string) $result['sdk'] : 'unknown';
-            $id = isset($result['id']) && is_scalar($result['id']) ? (string) $result['id'] : 'unknown';
+            $id = isset($result['chunk_id']) && is_scalar($result['chunk_id']) ? (string) $result['chunk_id'] : 'unknown';
             $markdown .= "\n**Reference:** `{$sdk}::{$id}`\n";
         }
 
@@ -688,15 +705,16 @@ final readonly class DocumentationTools extends AbstractTools
 
         // Build title
         $title = '';
+        $metadata = isset($chunk['metadata']) && is_array($chunk['metadata']) ? $chunk['metadata'] : [];
 
-        if (isset($chunk['class']) && '' !== $chunk['class']) {
-            $title .= is_scalar($chunk['class']) ? (string) $chunk['class'] : '';
+        if (isset($metadata['class']) && '' !== $metadata['class']) {
+            $title .= is_scalar($metadata['class']) ? (string) $metadata['class'] : '';
 
-            if (isset($chunk['method']) && '' !== $chunk['method']) {
-                $title .= '::' . (is_scalar($chunk['method']) ? (string) $chunk['method'] : '');
+            if (isset($metadata['method']) && '' !== $metadata['method']) {
+                $title .= '::' . (is_scalar($metadata['method']) ? (string) $metadata['method'] : '');
             }
-        } elseif (isset($chunk['section']) && '' !== $chunk['section']) {
-            $title .= is_scalar($chunk['section']) ? (string) $chunk['section'] : '';
+        } elseif (isset($metadata['section']) && '' !== $metadata['section']) {
+            $title .= is_scalar($metadata['section']) ? (string) $metadata['section'] : '';
         } else {
             $title .= 'Related Documentation';
         }
@@ -711,7 +729,7 @@ final readonly class DocumentationTools extends AbstractTools
 
         if (isset($chunk['similarity']) && 0.0 !== $chunk['similarity']) {
             $simScore = is_numeric($chunk['similarity']) ? (float) $chunk['similarity'] : 0.0;
-            $markdown .= '**Similarity Score:** ' . round($simScore * 100) . "%  \n";
+            $markdown .= '**Similarity Score:** ' . (string) round($simScore * 100.0) . "%  \n";
         }
 
         if (isset($chunk['source']) && '' !== $chunk['source']) {
@@ -733,13 +751,32 @@ final readonly class DocumentationTools extends AbstractTools
         }
 
         // Add reference
-        if (isset($chunk['id']) && '' !== $chunk['id']) {
+        if (isset($chunk['chunk_id']) && '' !== $chunk['chunk_id']) {
             $sdk = isset($chunk['sdk']) && is_scalar($chunk['sdk']) ? (string) $chunk['sdk'] : 'unknown';
-            $id = isset($chunk['id']) && is_scalar($chunk['id']) ? (string) $chunk['id'] : 'unknown';
+            $id = isset($chunk['chunk_id']) && is_scalar($chunk['chunk_id']) ? (string) $chunk['chunk_id'] : 'unknown';
             $markdown .= "\n**Reference:** `{$sdk}::{$id}`\n";
         }
 
         return $markdown . "\n---\n\n";
+    }
+
+    /**
+     * Get the full content of a chunk by its ID.
+     *
+     * @param string             $chunkId
+     * @param DocumentationIndex $index
+     */
+    private function getChunkContent(string $chunkId, DocumentationIndex $index): string
+    {
+        // For now, we'll use the chunk ID to get content
+        // In a real implementation, we'd fetch this from the index
+        $chunk = $index->getChunkById($chunkId);
+
+        if (null === $chunk) {
+            return '';
+        }
+
+        return $chunk['content'] ?? '';
     }
 
     /**
@@ -769,10 +806,13 @@ final readonly class DocumentationTools extends AbstractTools
     /**
      * Perform search based on search type.
      *
-     * @param  DocumentationIndex          $index
-     * @param  string                      $query
-     * @param  string|null                 $sdk
-     * @param  string                      $searchType
+     * @param DocumentationIndex $index
+     * @param string             $query
+     * @param string|null        $sdk
+     * @param string             $searchType
+     *
+     * @throws RuntimeException If search fails
+     *
      * @return array<array<string, mixed>>
      */
     private function performSearch(DocumentationIndex $index, string $query, ?string $sdk, string $searchType): array
@@ -788,18 +828,23 @@ final readonly class DocumentationTools extends AbstractTools
     /**
      * Search specifically for classes.
      *
-     * @param  DocumentationIndex          $index
-     * @param  string                      $query
-     * @param  string|null                 $sdk
+     * @param DocumentationIndex $index
+     * @param string             $query
+     * @param string|null        $sdk
+     *
+     * @throws RuntimeException If search fails
+     *
      * @return array<array<string, mixed>>
      */
-    private function searchForClasses($index, string $query, ?string $sdk): array
+    private function searchForClasses(DocumentationIndex $index, string $query, ?string $sdk): array
     {
         $allChunks = $index->searchChunks($query, $sdk);
         $classResults = [];
 
         foreach ($allChunks as $allChunk) {
-            if (isset($allChunk['class']) && '' !== $allChunk['class'] && is_scalar($allChunk['class']) && false !== stripos((string) $allChunk['class'], $query)) {
+            $metadata = $allChunk['metadata'];
+
+            if (isset($metadata['class']) && '' !== $metadata['class'] && is_scalar($metadata['class']) && false !== stripos((string) $metadata['class'], $query)) {
                 $classResults[] = $allChunk;
             }
         }
@@ -810,18 +855,23 @@ final readonly class DocumentationTools extends AbstractTools
     /**
      * Search specifically for methods.
      *
-     * @param  DocumentationIndex          $index
-     * @param  string                      $query
-     * @param  string|null                 $sdk
+     * @param DocumentationIndex $index
+     * @param string             $query
+     * @param string|null        $sdk
+     *
+     * @throws RuntimeException If search fails
+     *
      * @return array<array<string, mixed>>
      */
-    private function searchForMethods($index, string $query, ?string $sdk): array
+    private function searchForMethods(DocumentationIndex $index, string $query, ?string $sdk): array
     {
         $allChunks = $index->searchChunks($query, $sdk);
         $methodResults = [];
 
         foreach ($allChunks as $allChunk) {
-            if (isset($allChunk['method']) && '' !== $allChunk['method'] && is_scalar($allChunk['method']) && false !== stripos((string) $allChunk['method'], $query)) {
+            $metadata = $allChunk['metadata'];
+
+            if (isset($metadata['method']) && '' !== $metadata['method'] && is_scalar($metadata['method']) && false !== stripos((string) $metadata['method'], $query)) {
                 $methodResults[] = $allChunk;
             }
         }
@@ -832,18 +882,23 @@ final readonly class DocumentationTools extends AbstractTools
     /**
      * Search specifically for sections.
      *
-     * @param  DocumentationIndex          $index
-     * @param  string                      $query
-     * @param  string|null                 $sdk
+     * @param DocumentationIndex $index
+     * @param string             $query
+     * @param string|null        $sdk
+     *
+     * @throws RuntimeException If search fails
+     *
      * @return array<array<string, mixed>>
      */
-    private function searchForSections($index, string $query, ?string $sdk): array
+    private function searchForSections(DocumentationIndex $index, string $query, ?string $sdk): array
     {
         $allChunks = $index->searchChunks($query, $sdk);
         $sectionResults = [];
 
         foreach ($allChunks as $allChunk) {
-            if (isset($allChunk['section']) && '' !== $allChunk['section'] && is_scalar($allChunk['section']) && false !== stripos((string) $allChunk['section'], $query)) {
+            $metadata = $allChunk['metadata'];
+
+            if (isset($metadata['section']) && '' !== $metadata['section'] && is_scalar($metadata['section']) && false !== stripos((string) $metadata['section'], $query)) {
                 $sectionResults[] = $allChunk;
             }
         }

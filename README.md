@@ -76,7 +76,7 @@ Works with [Claude Desktop](https://claude.ai/download), [Claude Code](https://w
 
 ## Configuration
 
-### Server Configuration Environment Variables
+### MCP Transport
 
 | Variable                          | Default     | Description                                                                     |
 | --------------------------------- | ----------- | ------------------------------------------------------------------------------- |
@@ -86,7 +86,7 @@ Works with [Claude Desktop](https://claude.ai/download), [Claude Code](https://w
 | `OPENFGA_MCP_TRANSPORT_SSE`       | `true`      | Enables Server-Sent Events (SSE) streams for responses.                         |
 | `OPENFGA_MCP_TRANSPORT_STATELESS` | `false`     | Enables stateless mode for session-less clients.                                |
 
-### OpenFGA Configuration Environment Variables
+### OpenFGA
 
 | Variable                    | Default | Description                                         |
 | --------------------------- | ------- | --------------------------------------------------- |
@@ -96,7 +96,7 @@ Works with [Claude Desktop](https://claude.ai/download), [Claude Code](https://w
 | `OPENFGA_MCP_API_MODEL`     |         | Default requests to a specific model ID             |
 | `OPENFGA_MCP_API_RESTRICT`  | `false` | Restrict requests to configured default store/model |
 
-#### OpenFGA Authentication Configuration
+### OpenFGA Authentication
 
 | Authentication     | Variable                        | Default | Description   |
 | ------------------ | ------------------------------- | ------- | ------------- |

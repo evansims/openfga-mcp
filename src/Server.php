@@ -12,11 +12,11 @@ require_once __DIR__ . '/Helpers.php';
 
 use OpenFGA\Authentication\{ClientCredentialAuthentication, TokenAuthentication};
 use OpenFGA\{Client, ClientInterface};
-use OpenFGA\MCP\{DebugLogger, LoggingStdioTransport, OfflineClient};
+use OpenFGA\MCP\{ConfigurableHttpServerTransport, DebugLogger, LoggingStdioTransport, OfflineClient};
 use OpenFGA\MCP\Documentation\DocumentationIndexSingleton;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
-use PhpMcp\Server\Transports\{StdioServerTransport, StreamableHttpServerTransport};
+use PhpMcp\Server\Transports\{StdioServerTransport};
 
 try {
     // Check if OpenFGA configuration is provided
@@ -148,7 +148,7 @@ try {
     }
 
     $transport = match (getConfiguredString('OPENFGA_MCP_TRANSPORT')) {
-        'http' => new StreamableHttpServerTransport(
+        'http' => new ConfigurableHttpServerTransport(
             host: getConfiguredString('OPENFGA_MCP_TRANSPORT_HOST', '127.0.0.1'),
             port: getConfiguredInt('OPENFGA_MCP_TRANSPORT_PORT', 9090),
             enableJsonResponse: false === getConfiguredBool('OPENFGA_MCP_TRANSPORT_SSE', true),

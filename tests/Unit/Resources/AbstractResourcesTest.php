@@ -15,6 +15,8 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     // Clean up environment variables
+    unset($_ENV['OPENFGA_MCP_API_URL'], $_ENV['OPENFGA_MCP_API_TOKEN'], $_ENV['OPENFGA_MCP_API_CLIENT_ID'], $_ENV['OPENFGA_MCP_API_RESTRICT'], $_ENV['OPENFGA_MCP_API_STORE'], $_ENV['OPENFGA_MCP_API_MODEL']);
+
     putenv('OPENFGA_MCP_API_URL');
     putenv('OPENFGA_MCP_API_TOKEN');
     putenv('OPENFGA_MCP_API_CLIENT_ID');
@@ -49,7 +51,7 @@ describe('AbstractResources', function (): void {
     describe('checkOfflineMode', function (): void {
         it('returns null when not in offline mode', function (): void {
             // Set up online mode
-            putenv('OPENFGA_MCP_API_URL=http://localhost:8080');
+            $_ENV['OPENFGA_MCP_API_URL'] = 'http://localhost:8080';
 
             $result = $this->resources->testCheckOfflineMode('Test Operation');
 
@@ -58,9 +60,7 @@ describe('AbstractResources', function (): void {
 
         it('returns error array when in offline mode (no URL)', function (): void {
             // Clear all connection settings for offline mode
-            putenv('OPENFGA_MCP_API_URL=');
-            putenv('OPENFGA_MCP_API_TOKEN=');
-            putenv('OPENFGA_MCP_API_CLIENT_ID=');
+            unset($_ENV['OPENFGA_MCP_API_URL'], $_ENV['OPENFGA_MCP_API_TOKEN'], $_ENV['OPENFGA_MCP_API_CLIENT_ID']);
 
             $result = $this->resources->testCheckOfflineMode('Test Operation');
 
@@ -73,7 +73,7 @@ describe('AbstractResources', function (): void {
         });
 
         it('returns error with custom operation name', function (): void {
-            putenv('OPENFGA_MCP_API_URL=');
+            unset($_ENV['OPENFGA_MCP_API_URL'], $_ENV['OPENFGA_MCP_API_TOKEN'], $_ENV['OPENFGA_MCP_API_CLIENT_ID']);
 
             $result = $this->resources->testCheckOfflineMode('Fetching authorization models');
 
@@ -82,7 +82,7 @@ describe('AbstractResources', function (): void {
         });
 
         it('returns error when URL is empty string', function (): void {
-            putenv('OPENFGA_MCP_API_URL=');
+            unset($_ENV['OPENFGA_MCP_API_URL'], $_ENV['OPENFGA_MCP_API_TOKEN'], $_ENV['OPENFGA_MCP_API_CLIENT_ID']);
 
             $result = $this->resources->testCheckOfflineMode('Operation');
 
@@ -92,8 +92,8 @@ describe('AbstractResources', function (): void {
 
         it('returns null when token is set without URL', function (): void {
             // Token with no URL is considered online mode (intent to connect)
-            putenv('OPENFGA_MCP_API_URL=');
-            putenv('OPENFGA_MCP_API_TOKEN=some-token');
+            unset($_ENV['OPENFGA_MCP_API_URL']);
+            $_ENV['OPENFGA_MCP_API_TOKEN'] = 'some-token';
 
             $result = $this->resources->testCheckOfflineMode('Operation');
 
@@ -103,8 +103,8 @@ describe('AbstractResources', function (): void {
 
         it('returns null when client ID is set without URL', function (): void {
             // Client ID with no URL is considered online mode (intent to connect)
-            putenv('OPENFGA_MCP_API_URL=');
-            putenv('OPENFGA_MCP_API_CLIENT_ID=client-123');
+            unset($_ENV['OPENFGA_MCP_API_URL']);
+            $_ENV['OPENFGA_MCP_API_CLIENT_ID'] = 'client-123';
 
             $result = $this->resources->testCheckOfflineMode('Operation');
 
@@ -116,7 +116,7 @@ describe('AbstractResources', function (): void {
     describe('checkRestrictedMode', function (): void {
         describe('when not in restricted mode', function (): void {
             it('returns null when restricted mode is disabled (default)', function (): void {
-                putenv('OPENFGA_MCP_API_RESTRICT=');
+                unset($_ENV['OPENFGA_MCP_API_RESTRICT']);
 
                 $result = $this->resources->testCheckRestrictedMode('any-store', 'any-model');
 
@@ -124,7 +124,7 @@ describe('AbstractResources', function (): void {
             });
 
             it('returns null when restricted mode is explicitly false', function (): void {
-                putenv('OPENFGA_MCP_API_RESTRICT=false');
+                $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'false';
 
                 $result = $this->resources->testCheckRestrictedMode('store-123', 'model-456');
 
@@ -132,15 +132,15 @@ describe('AbstractResources', function (): void {
             });
 
             it('returns null for any value other than "true"', function (): void {
-                putenv('OPENFGA_MCP_API_RESTRICT=yes');
+                $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'yes';
                 $result = $this->resources->testCheckRestrictedMode('store', 'model');
                 expect($result)->toBeNull();
 
-                putenv('OPENFGA_MCP_API_RESTRICT=1');
+                $_ENV['OPENFGA_MCP_API_RESTRICT'] = '1';
                 $result = $this->resources->testCheckRestrictedMode('store', 'model');
                 expect($result)->toBeNull();
 
-                putenv('OPENFGA_MCP_API_RESTRICT=TRUE');
+                $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'TRUE';
                 $result = $this->resources->testCheckRestrictedMode('store', 'model');
                 expect($result)->toBeNull();
             });
@@ -148,12 +148,12 @@ describe('AbstractResources', function (): void {
 
         describe('when in restricted mode', function (): void {
             beforeEach(function (): void {
-                putenv('OPENFGA_MCP_API_RESTRICT=true');
+                $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
             });
 
             describe('store restrictions', function (): void {
                 it('returns null when querying the configured store', function (): void {
-                    putenv('OPENFGA_MCP_API_STORE=allowed-store');
+                    $_ENV['OPENFGA_MCP_API_STORE'] = 'allowed-store';
 
                     $result = $this->resources->testCheckRestrictedMode('allowed-store', null);
 
@@ -161,7 +161,7 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('returns error when querying a different store', function (): void {
-                    putenv('OPENFGA_MCP_API_STORE=allowed-store');
+                    $_ENV['OPENFGA_MCP_API_STORE'] = 'allowed-store';
 
                     $result = $this->resources->testCheckRestrictedMode('different-store', null);
 
@@ -174,7 +174,7 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('returns null when no store restriction is configured', function (): void {
-                    putenv('OPENFGA_MCP_API_STORE=');
+                    unset($_ENV['OPENFGA_MCP_API_STORE']);
 
                     $result = $this->resources->testCheckRestrictedMode('any-store', null);
 
@@ -182,7 +182,7 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('returns null when store ID is null', function (): void {
-                    putenv('OPENFGA_MCP_API_STORE=restricted-store');
+                    $_ENV['OPENFGA_MCP_API_STORE'] = 'restricted-store';
 
                     $result = $this->resources->testCheckRestrictedMode(null, null);
 
@@ -190,7 +190,7 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('handles empty string store restriction', function (): void {
-                    putenv('OPENFGA_MCP_API_STORE=');
+                    unset($_ENV['OPENFGA_MCP_API_STORE']);
 
                     $result = $this->resources->testCheckRestrictedMode('some-store', null);
 
@@ -200,7 +200,7 @@ describe('AbstractResources', function (): void {
 
             describe('model restrictions', function (): void {
                 it('returns null when querying the configured model', function (): void {
-                    putenv('OPENFGA_MCP_API_MODEL=allowed-model');
+                    $_ENV['OPENFGA_MCP_API_MODEL'] = 'allowed-model';
 
                     $result = $this->resources->testCheckRestrictedMode(null, 'allowed-model');
 
@@ -208,7 +208,7 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('returns error when querying a different model', function (): void {
-                    putenv('OPENFGA_MCP_API_MODEL=allowed-model');
+                    $_ENV['OPENFGA_MCP_API_MODEL'] = 'allowed-model';
 
                     $result = $this->resources->testCheckRestrictedMode(null, 'different-model');
 
@@ -221,7 +221,7 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('returns null when no model restriction is configured', function (): void {
-                    putenv('OPENFGA_MCP_API_MODEL=');
+                    unset($_ENV['OPENFGA_MCP_API_MODEL']);
 
                     $result = $this->resources->testCheckRestrictedMode(null, 'any-model');
 
@@ -229,7 +229,7 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('returns null when model ID is null', function (): void {
-                    putenv('OPENFGA_MCP_API_MODEL=restricted-model');
+                    $_ENV['OPENFGA_MCP_API_MODEL'] = 'restricted-model';
 
                     $result = $this->resources->testCheckRestrictedMode(null, null);
 
@@ -237,7 +237,7 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('handles empty string model restriction', function (): void {
-                    putenv('OPENFGA_MCP_API_MODEL=');
+                    unset($_ENV['OPENFGA_MCP_API_MODEL']);
 
                     $result = $this->resources->testCheckRestrictedMode(null, 'some-model');
 
@@ -247,8 +247,8 @@ describe('AbstractResources', function (): void {
 
             describe('combined store and model restrictions', function (): void {
                 it('returns null when both store and model match', function (): void {
-                    putenv('OPENFGA_MCP_API_STORE=allowed-store');
-                    putenv('OPENFGA_MCP_API_MODEL=allowed-model');
+                    $_ENV['OPENFGA_MCP_API_STORE'] = 'allowed-store';
+                    $_ENV['OPENFGA_MCP_API_MODEL'] = 'allowed-model';
 
                     $result = $this->resources->testCheckRestrictedMode('allowed-store', 'allowed-model');
 
@@ -256,8 +256,8 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('returns error when store does not match', function (): void {
-                    putenv('OPENFGA_MCP_API_STORE=allowed-store');
-                    putenv('OPENFGA_MCP_API_MODEL=allowed-model');
+                    $_ENV['OPENFGA_MCP_API_STORE'] = 'allowed-store';
+                    $_ENV['OPENFGA_MCP_API_MODEL'] = 'allowed-model';
 
                     $result = $this->resources->testCheckRestrictedMode('wrong-store', 'allowed-model');
 
@@ -266,8 +266,8 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('returns error when model does not match', function (): void {
-                    putenv('OPENFGA_MCP_API_STORE=allowed-store');
-                    putenv('OPENFGA_MCP_API_MODEL=allowed-model');
+                    $_ENV['OPENFGA_MCP_API_STORE'] = 'allowed-store';
+                    $_ENV['OPENFGA_MCP_API_MODEL'] = 'allowed-model';
 
                     $result = $this->resources->testCheckRestrictedMode('allowed-store', 'wrong-model');
 
@@ -276,8 +276,8 @@ describe('AbstractResources', function (): void {
                 });
 
                 it('returns store error first when both do not match', function (): void {
-                    putenv('OPENFGA_MCP_API_STORE=allowed-store');
-                    putenv('OPENFGA_MCP_API_MODEL=allowed-model');
+                    $_ENV['OPENFGA_MCP_API_STORE'] = 'allowed-store';
+                    $_ENV['OPENFGA_MCP_API_MODEL'] = 'allowed-model';
 
                     $result = $this->resources->testCheckRestrictedMode('wrong-store', 'wrong-model');
 
@@ -289,15 +289,15 @@ describe('AbstractResources', function (): void {
 
                 it('allows partial restrictions', function (): void {
                     // Only store restricted
-                    putenv('OPENFGA_MCP_API_STORE=allowed-store');
-                    putenv('OPENFGA_MCP_API_MODEL=');
+                    $_ENV['OPENFGA_MCP_API_STORE'] = 'allowed-store';
+                    unset($_ENV['OPENFGA_MCP_API_MODEL']);
 
                     $result = $this->resources->testCheckRestrictedMode('allowed-store', 'any-model');
                     expect($result)->toBeNull();
 
                     // Only model restricted
-                    putenv('OPENFGA_MCP_API_STORE=');
-                    putenv('OPENFGA_MCP_API_MODEL=allowed-model');
+                    unset($_ENV['OPENFGA_MCP_API_STORE']);
+                    $_ENV['OPENFGA_MCP_API_MODEL'] = 'allowed-model';
 
                     $result = $this->resources->testCheckRestrictedMode('any-store', 'allowed-model');
                     expect($result)->toBeNull();
@@ -307,8 +307,8 @@ describe('AbstractResources', function (): void {
 
         describe('edge cases', function (): void {
             it('handles special characters in store/model names', function (): void {
-                putenv('OPENFGA_MCP_API_RESTRICT=true');
-                putenv('OPENFGA_MCP_API_STORE=store-with-special_chars.123');
+                $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
+                $_ENV['OPENFGA_MCP_API_STORE'] = 'store-with-special_chars.123';
 
                 $result = $this->resources->testCheckRestrictedMode('store-with-special_chars.123', null);
                 expect($result)->toBeNull();
@@ -319,8 +319,8 @@ describe('AbstractResources', function (): void {
             });
 
             it('handles case-sensitive comparisons', function (): void {
-                putenv('OPENFGA_MCP_API_RESTRICT=true');
-                putenv('OPENFGA_MCP_API_STORE=MyStore');
+                $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
+                $_ENV['OPENFGA_MCP_API_STORE'] = 'MyStore';
 
                 // Case must match exactly
                 $result = $this->resources->testCheckRestrictedMode('mystore', null);
@@ -332,8 +332,8 @@ describe('AbstractResources', function (): void {
             });
 
             it('handles whitespace in configuration', function (): void {
-                putenv('OPENFGA_MCP_API_RESTRICT=true');
-                putenv('OPENFGA_MCP_API_STORE= '); // Space
+                $_ENV['OPENFGA_MCP_API_RESTRICT'] = 'true';
+                $_ENV['OPENFGA_MCP_API_STORE'] = ' '; // Space
 
                 $result = $this->resources->testCheckRestrictedMode('any-store', null);
                 // Space is trimmed by getConfiguredString, becomes empty string

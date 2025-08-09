@@ -82,7 +82,7 @@ try {
     $container->set(ClientInterface::class, $openfga);
 
     $server = Server::make()
-        ->withServerInfo('OpenFGA MCP Server', '1.0.0')
+        ->withServerInfo('OpenFGA MCP Server', '2.0.0')
         ->withContainer($container)
         ->build();
 
@@ -161,7 +161,7 @@ try {
 
     // Log server startup
     DebugLogger::logServerLifecycle('startup', [
-        'version' => '1.0.0',
+        'version' => '2.0.0',
         'mode' => $isOfflineMode ? 'offline' : 'online',
         'transport' => '' !== getConfiguredString('OPENFGA_MCP_TRANSPORT', '') ? getConfiguredString('OPENFGA_MCP_TRANSPORT', '') : 'stdio',
         'debug' => getConfiguredBool('OPENFGA_MCP_DEBUG', true),

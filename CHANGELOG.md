@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-08-09
+
 ### Added
 
 - SDK documentation system exposing all OpenFGA SDKs as MCP resources

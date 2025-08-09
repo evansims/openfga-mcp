@@ -86,6 +86,49 @@ if (null !== $error) {
 }
 ```
 
+## Configuration Methods
+
+The server supports two methods for configuration:
+
+### Environment Variables (Traditional Method)
+Configuration values can be set via environment variables:
+```bash
+OPENFGA_MCP_API_URL=https://api.example.com \
+OPENFGA_MCP_API_TOKEN=your-token \
+OPENFGA_MCP_TRANSPORT=http \
+php bin/openfga-mcp
+```
+
+### JSON Query Parameters (New Method)
+When using HTTP transport, configuration can be provided via JSON-encoded query parameters:
+```
+GET /mcp?config={"OPENFGA_MCP_API_URL":"https://api.example.com","OPENFGA_MCP_API_TOKEN":"token"}
+```
+
+**Configuration Precedence Order:**
+1. JSON query parameter values (highest priority)
+2. Environment variables via $_ENV
+3. Environment variables via getenv()
+4. Default values (lowest priority)
+
+**Example JSON Configuration:**
+```json
+{
+  "OPENFGA_MCP_API_URL": "https://api.example.com",
+  "OPENFGA_MCP_API_TOKEN": "bearer-token",
+  "OPENFGA_MCP_API_WRITEABLE": true,
+  "OPENFGA_MCP_API_STORE": "store-id",
+  "OPENFGA_MCP_API_MODEL": "model-id",
+  "OPENFGA_MCP_DEBUG": false
+}
+```
+
+**Implementation Notes:**
+- The `ConfigurableHttpServerTransport` class extends the base HTTP transport
+- Configuration is parsed by the `ConfigurationParser` class
+- Invalid JSON returns a 400 error with detailed error messages
+- All configuration keys must match the environment variable names exactly
+
 ## Code Standards
 
 - **PHP Version**: 8.3+ required

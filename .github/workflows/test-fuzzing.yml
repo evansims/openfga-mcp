@@ -56,7 +56,7 @@ jobs:
 
       - name: Download existing corpus
         continue-on-error: true
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: fuzzing-corpus
           path: tests/Fuzzing/corpus
@@ -79,7 +79,7 @@ jobs:
 
       - name: Upload crash artifacts
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: fuzzing-crashes-${{ github.run_id }}
           path: tests/Fuzzing/crashes/
@@ -87,7 +87,7 @@ jobs:
 
       - name: Upload updated corpus
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: fuzzing-corpus
           path: tests/Fuzzing/corpus/
@@ -100,7 +100,7 @@ jobs:
 
       - name: Upload SARIF results
         if: failure()
-        uses: github/codeql-action/upload-sarif@d198d2fabf39a7f36b5ce57ce70d4942944f006e # v3.31.0
+        uses: github/codeql-action/upload-sarif@4e94bd11f71e507f7f87df81788dff88d1dacbfb # v4.31.0
         with:
           sarif_file: fuzzing-results.sarif
           category: fuzzing

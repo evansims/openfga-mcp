@@ -1,5 +1,5 @@
 # Build stage
-FROM composer:2@sha256:68e926a477000f12e8645e82a020b84904d49071c895c4951551fe80eed5d103 AS builder
+FROM composer:2@sha256:24f538daf6d1e33e0859033ca2b50955b68fa69f7f3d2d1cba9a51b6cfdcf606 AS builder
 
 WORKDIR /app
 

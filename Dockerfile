@@ -19,7 +19,7 @@ RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
 RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
 # Runtime stage
-FROM php:8.4-cli-alpine@sha256:99fd4ff2531035e737e6c7ddfbf033b2b63f2810f1a4f4318e3f57b7ff227a51
+FROM php:8.4-cli-alpine@sha256:69ee19e1bee51ad7d5b5e44ceaa317cc7904b22211de4fb0c85284ffec123341
 
 # Install runtime dependencies and PHP extensions
 RUN apk add --no-cache \
